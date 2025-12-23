@@ -1,0 +1,19 @@
+name: DragonEggLightning
+version: 1.0.0
+main: com.dragonegg.lightning.DragonEggLightningPlugin
+api-version: '1.21'
+description: Dragon Egg Lightning Ability Plugin
+author: Augustus
+website: https://github.com/ronaldtse/papermc-plugin-dragon-egg
+
+commands:
+  ability:
+    description: Activate dragon egg ability
+    usage: /ability <number>
+    permission: dragonegg.ability
+    permission-message: You do not have permission to use this ability
+
+permissions:
+  dragonegg.ability:
+    description: Allows use of dragon egg abilities
+    default: true
