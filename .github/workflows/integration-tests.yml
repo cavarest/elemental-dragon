@@ -13,19 +13,6 @@ jobs:
   integration-test:
     runs-on: ubuntu-latest
 
-    services:
-      # Use PostgreSQL if needed for complex server setups
-      postgres:
-        image: postgres:13
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: test
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -43,13 +30,6 @@ jobs:
         key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
         restore-keys: ${{ runner.os }}-m2
 
-    - name: Install Docker Compose
-      run: |
-        sudo rm /usr/local/bin/docker-compose
-        curl -L https://github.com/docker/compose/releases/latest/download/docker-compose-Linux-x86_64 > docker-compose
-        chmod +x docker-compose
-        sudo mv docker-compose /usr/local/bin
-
     - name: Build plugin
       run: mvn clean package -DskipTests
 
@@ -58,15 +38,9 @@ jobs:
         ls -la target/DragonEggLightning-*.jar
         echo "Plugin JAR size: $(du -h target/DragonEggLightning-*.jar | cut -f1)"
 
-    - name: Prepare server directory
-      run: |
-        mkdir -p server-data/plugins
-        cp target/DragonEggLightning-*.jar server-data/plugins/
-        ls -la server-data/plugins/
-
     - name: Start Paper server with plugin
       run: |
-        docker-compose up -d
+        docker compose up -d
         echo "Waiting for server to start..."
 
     - name: Wait for server startup
@@ -180,7 +154,7 @@ jobs:
       if: always()
       run: |
         echo "Stopping server..."
-        docker-compose down
+        docker compose down
         docker system prune -f
 
     - name: Upload integration test results
@@ -204,7 +178,7 @@ jobs:
     - name: Test Docker image builds
       run: |
         echo "Testing that Docker Compose configuration is valid..."
-        docker-compose config > /dev/null
+        docker compose config > /dev/null
         echo "✅ Docker Compose configuration is valid"
 
     - name: Test plugin JAR in clean environment
