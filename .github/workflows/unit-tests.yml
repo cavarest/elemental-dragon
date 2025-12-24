@@ -10,6 +10,10 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    permissions:
+      checks: write
+      contents: read
+
     strategy:
       matrix:
         java-version: [21, 22]
@@ -39,6 +43,17 @@ jobs:
 
     - name: Generate test report
       run: mvn surefire-report:report
+
+    - name: Publish Test Report
+      if: success() || failure()
+      uses: scacap/action-surefire-report@v1
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        report_paths: '**/surefire-reports/TEST-*.xml'
+        check_name: Test Report (Java ${{ matrix.java-version }})
+        fail_on_test_failures: false
+        fail_if_no_tests: true
+        skip_publishing: false
 
     - name: Build plugin JAR
       run: mvn package -DskipTests
