@@ -9,7 +9,7 @@ services:
       - "25565:25565"
     environment:
       - MEMORYSIZE=2G
-      - EULA=true
+      - JAVAFLAGS=-Dcom.mojang.eula.agree=true
       - PAPERMC_FLAGS=
     volumes:
       - ./server-data:/data:rw
