@@ -73,29 +73,52 @@ jobs:
         echo "- **Build Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> CHANGELOG.md
         echo "- **Commit**: ${{ github.sha }}" >> CHANGELOG.md
 
-    - name: Create Release using GitHub CLI
+    - name: Upload plugin JAR as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: plugin-jar-${{ steps.version.outputs.version }}
+        path: target/DragonEggLightning-*.jar
+        retention-days: 30
+
+    - name: Create Release (Manual Process Required)
+      run: |
+        echo "==============================================="
+        echo "RELEASE WORKFLOW - MANUAL STEPS REQUIRED"
+        echo "==============================================="
+        echo ""
+        echo "The plugin JAR has been built and uploaded as an artifact."
+        echo "Due to GitHub Actions permissions, manual release creation is required."
+        echo ""
+        echo "To create the release manually:"
+        echo "1. Download the plugin JAR from the artifacts"
+        echo "2. Use GitHub CLI locally:"
+        echo "   gh release create ${{ steps.version.outputs.tag }} \\"
+        echo "     <path-to-downloaded-jar> \\"
+        echo "     --title \"Release ${{ steps.version.outputs.version }}\" \\"
+        echo "     --notes-file CHANGELOG.md \\"
+        echo "     --latest"
+        echo ""
+        echo "Or create the release through GitHub's web interface:"
+        echo "https://github.com/${{ github.repository }}/releases/new?tag=${{ steps.version.outputs.tag }}"
+        echo ""
+        echo "Changelog content:"
+        echo "=================="
+        cat CHANGELOG.md
+        echo ""
+        echo "==============================================="
+
+    - name: Verify Release Assets (if release exists)
+      if: success()
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        # Check if release already exists
+        echo "Checking if release exists..."
         if gh release view ${{ steps.version.outputs.tag }} --json id --jq '.id' 2>/dev/null; then
-          echo "Release ${{ steps.version.outputs.tag }} already exists"
-          echo "Deleting existing release..."
-          gh release delete ${{ steps.version.outputs.tag }} --yes
+          echo "✅ Release ${{ steps.version.outputs.tag }} exists"
+          echo "Release assets:"
+          gh release view ${{ steps.version.outputs.tag }} --json assets --jq '.assets[] | "\(.name): \(.size) bytes"'
+          echo "Release URL: https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.tag }}"
+        else
+          echo "ℹ️  Release ${{ steps.version.outputs.tag }} does not exist yet"
+          echo "Manual release creation required"
         fi
-
-        # Create new release
-        echo "Creating new release..."
-        gh release create ${{ steps.version.outputs.tag }} \
-          target/DragonEggLightning-*.jar \
-          --title "Release ${{ steps.version.outputs.version }}" \
-          --notes-file CHANGELOG.md \
-          --latest
-
-        echo "Release created successfully!"
-
-    - name: Verify Release Assets
-      run: |
-        echo "Checking release assets..."
-        gh release view ${{ steps.version.outputs.tag }} --json assets --jq '.assets[] | "\(.name): \(.size) bytes"'
-        echo "Release URL: https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.tag }}"
