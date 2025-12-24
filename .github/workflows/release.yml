@@ -40,85 +40,117 @@ jobs:
       id: changelog
       run: |
         TAG=${{ steps.version.outputs.tag }}
-        echo "## Changes in $TAG" > CHANGELOG.md
+        echo "## Dragon Egg Lightning Plugin v${{ steps.version.outputs.version }}" > CHANGELOG.md
+        echo "" >> CHANGELOG.md
+        echo "🎉 **New Release Available!**" >> CHANGELOG.md
         echo "" >> CHANGELOG.md
 
         # Get previous tag
         PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
 
         if [ -n "$PREVIOUS_TAG" ]; then
-          echo "### Commits since $PREVIOUS_TAG:" >> CHANGELOG.md
+          echo "### 📝 Changes since $PREVIOUS_TAG:" >> CHANGELOG.md
           echo "" >> CHANGELOG.md
           git log --pretty=format:"- %s (%h)" $PREVIOUS_TAG..HEAD >> CHANGELOG.md
         else
-          echo "### Initial release" >> CHANGELOG.md
+          echo "### 🚀 Initial Release" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "This is the first release of the Dragon Egg Lightning plugin!" >> CHANGELOG.md
         fi
 
         echo "" >> CHANGELOG.md
-        echo "### Installation" >> CHANGELOG.md
+        echo "---" >> CHANGELOG.md
         echo "" >> CHANGELOG.md
-        echo "1. Download the plugin JAR file below" >> CHANGELOG.md
-        echo "2. Place it in your Paper server's \`plugins/\` directory" >> CHANGELOG.md
-        echo "3. Restart your server" >> CHANGELOG.md
-        echo "4. Players can use \`/ability 1\` with a Dragon Egg in offhand" >> CHANGELOG.md
+        echo "## 📥 Installation Instructions" >> CHANGELOG.md
+        echo "" >> CHANGELOG.md
+        echo "### For Server Administrators:" >> CHANGELOG.md
+        echo "" >> CHANGELOG.md
+        echo "1. **Download** the plugin JAR file below" >> CHANGELOG.md
+        echo "2. **Place** it in your Paper server's \`plugins/\` directory" >> CHANGELOG.md
+        echo "3. **Restart** your Paper 1.21.8+ server" >> CHANGELOG.md
+        echo "4. **Configure** - No additional configuration needed!" >> CHANGELOG.md
+        echo "" >> CHANGELOG.md
+        echo "### For Players:" >> CHANGELOG.md
+        echo "" >> CHANGELOG.md
+        echo "- Get a Dragon Egg: \`/give @p minecraft:dragon_egg\`" >> CHANGELOG.md
+        echo "- Move to offhand: Press \`F\` key" >> CHANGELOG.md
+        echo "- Use ability: \`/ability 1\`" >> CHANGELOG.md
+        echo "" >> CHANGELOG.md
+        echo "---" >> CHANGELOG.md
+        echo "" >> CHANGELOG.md
+        echo "## ⚡ Features" >> CHANGELOG.md
+        echo "" >> CHANGELOG.md
+        echo "- **3 Sequential Lightning Strikes** with 0.5s intervals" >> CHANGELOG.md
+        echo "- **Purple Visual Effects** and thunder sounds" >> CHANGELOG.md
+        echo "- **Smart Targeting** - finds closest entity in view" >> CHANGELOG.md
+        echo "- **60-Second Cooldown** prevents spam" >> CHANGELOG.md
+        echo "- **4.5 Hearts Total Damage** (1.5 per strike)" >> CHANGELOG.md
+        echo "- **HUD Display** with real-time cooldown status" >> CHANGELOG.md
+        echo "" >> CHANGELOG.md
+        echo "---" >> CHANGELOG.md
+        echo "" >> CHANGELOG.md
 
         # Add file info
         JAR_FILE=$(ls target/DragonEggLightning-*.jar | head -1)
         JAR_SIZE=$(du -h "$JAR_FILE" | cut -f1)
+        echo "## 📊 Build Information" >> CHANGELOG.md
         echo "" >> CHANGELOG.md
-        echo "### File Information" >> CHANGELOG.md
-        echo "" >> CHANGELOG.md
-        echo "- **File**: $JAR_FILE" >> CHANGELOG.md
-        echo "- **Size**: $JAR_SIZE" >> CHANGELOG.md
+        echo "- **Plugin Version**: ${{ steps.version.outputs.version }}" >> CHANGELOG.md
+        echo "- **JAR File**: $JAR_FILE" >> CHANGELOG.md
+        echo "- **File Size**: $JAR_SIZE" >> CHANGELOG.md
         echo "- **Build Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> CHANGELOG.md
-        echo "- **Commit**: ${{ github.sha }}" >> CHANGELOG.md
+        echo "- **Git Commit**: \`${{ github.sha }}\`" >> CHANGELOG.md
+        echo "- **Paper Version**: 1.21.8" >> CHANGELOG.md
+        echo "- **Java Version**: 21+" >> CHANGELOG.md
+        echo "" >> CHANGELOG.md
+        echo "---" >> CHANGELOG.md
+        echo "" >> CHANGELOG.md
+        echo "## 🐛 Issues & Support" >> CHANGELOG.md
+        echo "" >> CHANGELOG.md
+        echo "Report issues: [GitHub Issues](https://github.com/${{ github.repository }}/issues)" >> CHANGELOG.md
+        echo "Full documentation: [README.md](https://github.com/${{ github.repository }}/blob/main/README.md)" >> CHANGELOG.md
 
-    - name: Upload plugin JAR as artifact
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ steps.version.outputs.tag }}
+        name: Dragon Egg Lightning Plugin v${{ steps.version.outputs.version }}
+        body_path: CHANGELOG.md
+        files: |
+          target/DragonEggLightning-*.jar
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload plugin JAR as artifact (backup)
       uses: actions/upload-artifact@v4
       with:
         name: plugin-jar-${{ steps.version.outputs.version }}
         path: target/DragonEggLightning-*.jar
-        retention-days: 30
+        retention-days: 90
 
-    - name: Create Release (Manual Process Required)
-      run: |
-        echo "==============================================="
-        echo "RELEASE WORKFLOW - MANUAL STEPS REQUIRED"
-        echo "==============================================="
-        echo ""
-        echo "The plugin JAR has been built and uploaded as an artifact."
-        echo "Due to GitHub Actions permissions, manual release creation is required."
-        echo ""
-        echo "To create the release manually:"
-        echo "1. Download the plugin JAR from the artifacts"
-        echo "2. Use GitHub CLI locally:"
-        echo "   gh release create ${{ steps.version.outputs.tag }} \\"
-        echo "     <path-to-downloaded-jar> \\"
-        echo "     --title \"Release ${{ steps.version.outputs.version }}\" \\"
-        echo "     --notes-file CHANGELOG.md \\"
-        echo "     --latest"
-        echo ""
-        echo "Or create the release through GitHub's web interface:"
-        echo "https://github.com/${{ github.repository }}/releases/new?tag=${{ steps.version.outputs.tag }}"
-        echo ""
-        echo "Changelog content:"
-        echo "=================="
-        cat CHANGELOG.md
-        echo ""
-        echo "==============================================="
-
-    - name: Verify Release Assets (if release exists)
-      if: success()
+    - name: Verify Release Creation
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        echo "Checking if release exists..."
+        echo "🎉 Verifying release creation..."
+        echo ""
+
+        # Check if release was created
         if gh release view ${{ steps.version.outputs.tag }} --json id --jq '.id' 2>/dev/null; then
-          echo "✅ Release ${{ steps.version.outputs.tag }} exists"
-          echo "Release assets:"
-          gh release view ${{ steps.version.outputs.tag }} --json assets --jq '.assets[] | "\(.name): \(.size) bytes"'
-          echo "Release URL: https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.tag }}"
+          echo "✅ Release ${{ steps.version.outputs.tag }} created successfully!"
+          echo ""
+          echo "📦 Release Assets:"
+          gh release view ${{ steps.version.outputs.tag }} --json assets --jq '.assets[] | "  - \(.name): \(.size) bytes"'
+          echo ""
+          echo "🔗 Release URL: https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.tag }}"
+          echo ""
+          echo "📥 Direct Download Link:"
+          JAR_FILE=$(ls target/DragonEggLightning-*.jar | head -1 | xargs basename)
+          echo "  https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/$JAR_FILE"
         else
-          echo "ℹ️  Release ${{ steps.version.outputs.tag }} does not exist yet"
-          echo "Manual release creation required"
+          echo "❌ Failed to create release"
+          exit 1
         fi
