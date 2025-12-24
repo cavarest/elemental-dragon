@@ -9,8 +9,6 @@ services:
       - "25565:25565"
     environment:
       - MEMORYSIZE=2G
-      - JAVAFLAGS=-Dcom.mojang.eula.agree=true
-      - PAPERMC_FLAGS=-Dcom.mojang.eula.agree=true
     volumes:
       - ./server-data:/data:rw
       - ./target/DragonEggLightning-*.jar:/data/plugins/DragonEggLightning.jar:rw
