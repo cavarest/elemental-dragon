@@ -2,17 +2,18 @@ version: '3.8'
 
 services:
   minecraft:
-    image: marctv/minecraft-papermc-server:latest
+    image: marctv/minecraft-papermc-server:1.21.8
     container_name: papermc-dragonegg
     restart: unless-stopped
     ports:
       - "25565:25565"
     environment:
       - MEMORYSIZE=2G
+      - EULA=true
       - PAPERMC_FLAGS=
     volumes:
       - ./server-data:/data:rw
-      - ./target/DragonEggLightning-1.0.0.jar:/data/plugins/DragonEggLightning.jar:ro
+      - ./target/DragonEggLightning-*.jar:/data/plugins/DragonEggLightning.jar:ro
     stdin_open: true
     tty: true
     networks:
