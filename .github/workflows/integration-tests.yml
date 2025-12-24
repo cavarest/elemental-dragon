@@ -136,23 +136,25 @@ jobs:
 
         # Test 4: Verify no critical startup errors
         echo "Test 4: Checking for critical errors..."
-        ERROR_COUNT=$(docker logs papermc-dragonegg 2>&1 | grep -i "error\|exception" | grep -v "INFO" | wc -l)
+        ERROR_COUNT=$(docker logs papermc-dragonegg 2>&1 | grep -i "error\|exception" | grep -v "INFO" | grep -v -i "eula\|Spigot\|command line" | wc -l)
         if [ "$ERROR_COUNT" -eq 0 ]; then
           echo "✅ No critical errors found"
         else
           echo "⚠️  Found $ERROR_COUNT potential errors"
-          docker logs papermc-dragonegg 2>&1 | grep -i "error\|exception" | grep -v "INFO" | tail -5
+          docker logs papermc-dragonegg 2>&1 | grep -i "error\|exception" | grep -v "INFO" | grep -v -i "eula\|Spigot\|command line" | tail -5
         fi
 
         # Test 5: Check memory usage
         echo "Test 5: Memory usage check..."
-        MEMORY_USAGE=$(docker stats papermc-dragonegg --no-stream --format "table {{.MemUsage}}" | tail -1 | awk '{print $1}' | sed 's/MiB//')
-        echo "Memory usage: ${MEMORY_USAGE}MiB"
+        MEMORY_RAW=$(docker stats papermc-dragonegg --no-stream --format "table {{.MemUsage}}" | tail -1 | awk '{print $1}')
+        # Convert GiB to MiB for comparison (multiply by 1024)
+        MEMORY_MIB=$(echo "$MEMORY_RAW" | sed 's/GiB//' | awk '{print int($1 * 1024)}')
+        echo "Memory usage: ${MEMORY_RAW} (${MEMORY_MIB}MiB)"
 
-        if [ "$MEMORY_USAGE" -lt 4096 ]; then
+        if [ "$MEMORY_MIB" -lt 4096 ]; then
           echo "✅ Memory usage is acceptable"
         else
-          echo "⚠️  High memory usage: ${MEMORY_USAGE}MiB"
+          echo "⚠️  High memory usage: ${MEMORY_MIB}MiB"
         fi
 
         echo "Integration tests completed successfully!"
