@@ -7,16 +7,20 @@ FROM marctv/minecraft-papermc-server:1.21.8
 # Install required tools for Ubuntu-based PaperMC image
 RUN apt-get update && apt-get install -y jq uuid-runtime && apt-get clean
 
-# Copy the pre-built plugin JAR (use wildcard to find the versioned JAR)
+# Copy the pre-built plugin JAR to locations:
+# - /data/plugins/ for default use (may be shadowed by volume mount)
+# - /opt/minecraft/plugins/ as backup outside /data (won't be shadowed)
+RUN mkdir -p /data/plugins /opt/minecraft/plugins
 COPY target/DragonEggLightning-*.jar /data/plugins/DragonEggLightning.jar
+COPY target/DragonEggLightning-*.jar /opt/minecraft/plugins/DragonEggLightning.jar
 
 # Verify the plugin was copied successfully - FAIL BUILD IF NOT FOUND
-RUN if [ ! -f "/data/plugins/DragonEggLightning.jar" ]; then \
-        echo "❌ Plugin not found in /data/plugins/DragonEggLightning.jar"; \
-        ls -la /data/plugins/ || true; \
+RUN if [ ! -f "/opt/minecraft/plugins/DragonEggLightning.jar" ]; then \
+        echo "❌ Plugin not found in /opt/minecraft/plugins/DragonEggLightning.jar"; \
+        ls -la /opt/minecraft/plugins/ || true; \
         exit 1; \
     fi && \
-    echo "✅ Plugin successfully copied to /data/plugins/DragonEggLightning.jar"
+    echo "✅ Plugin successfully copied to /opt/minecraft/plugins/DragonEggLightning.jar"
 
 # Copy the entrypoint script
 COPY entrypoint.sh /entrypoint.sh
