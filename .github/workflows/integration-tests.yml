@@ -54,14 +54,11 @@ jobs:
         timeout 60 bash -c 'until docker info; do sleep 1; done'
         echo "Docker daemon ready"
 
-    - name: Create server data directories
+    - name: Setup server data from fixtures
       run: |
-        mkdir -p server-data
-        echo "eula=true" > server-data/eula.txt
-        echo "[]" > server-data/ops.json
-        touch server-data/server.properties
-        mkdir -p server-data/world
-        echo "Created server data directories"
+        cp -r fixtures/server-data ./server-data
+        echo "Copied server data from fixtures (single source of truth)"
+        ls -la server-data/
 
     - name: Start Paper server with plugin
       run: |
