@@ -1,6 +1,7 @@
 package com.dragonegg.lightning.hud;
 
 import com.dragonegg.lightning.DragonEggLightningPlugin;
+import com.dragonegg.lightning.ability.Ability;
 import com.dragonegg.lightning.ability.AbilityManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -55,6 +56,12 @@ public class HudManager {
    * @param player The player
    */
   private void updatePlayerHud(Player player) {
+    // Only show HUD if player has dragon egg in offhand
+    Ability lightningAbility = abilityManager.getAbility(1);
+    if (lightningAbility == null || !lightningAbility.hasRequiredItem(player)) {
+      return;
+    }
+
     int cooldown = abilityManager.getRemainingCooldown(player);
 
     Component hudText;
