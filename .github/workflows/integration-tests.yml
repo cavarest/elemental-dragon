@@ -54,11 +54,27 @@ jobs:
         timeout 60 bash -c 'until docker info; do sleep 1; done'
         echo "Docker daemon ready"
 
+    - name: Create server data directories
+      run: |
+        mkdir -p server-data
+        echo "eula=true" > server-data/eula.txt
+        echo "[]" > server-data/ops.json
+        touch server-data/server.properties
+        mkdir -p server-data/world
+        echo "Created server data directories"
+
     - name: Start Paper server with plugin
       run: |
         docker compose build
         docker compose up -d
         echo "Waiting for server to start..."
+
+    - name: Show container status
+      run: |
+        sleep 5
+        docker ps -a
+        echo "=== Container logs ==="
+        docker logs papermc-dragonegg 2>&1 | head -50 || true
 
     - name: Wait for server startup
       run: |
