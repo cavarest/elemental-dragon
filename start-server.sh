@@ -12,8 +12,8 @@ else
     exit 1
 fi
 
-# Extract version from pom.xml (single source of truth)
-PLUGIN_VERSION=$(grep -m1 '<version>' pom.xml | sed 's/.*<version>\(.*\)<\/version>.*/\1/')
+# Extract version from pom.xml using Maven (single source of truth)
+PLUGIN_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
 export PLUGIN_VERSION
 export ADMIN_USERNAME
 
