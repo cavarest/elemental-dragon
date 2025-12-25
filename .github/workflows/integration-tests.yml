@@ -248,8 +248,9 @@ jobs:
     - name: Verify plugin JAR in built image
       run: |
         echo "Verifying plugin JAR is present in the Docker image..."
-        docker run --rm dragon-egg-lightning:test \
-          ls -la /data/plugins/DragonEggLightning.jar
+        # Override entrypoint to just run ls command without starting server
+        docker run --rm --entrypoint /bin/bash dragon-egg-lightning:test \
+          -c "ls -la /opt/minecraft/plugins/DragonEggLightning.jar"
         echo "✅ Plugin JAR found in Docker image"
 
     - name: Test JAR file integrity
