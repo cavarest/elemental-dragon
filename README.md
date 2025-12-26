@@ -21,7 +21,8 @@
 - 🎯 **Strategic Gameplay** - Requires skill and timing to master
 - ⚡ **Epic Lightning Effects** - 3 sequential purple lightning strikes with thunder sounds
 - 🎮 **Intuitive Controls** - Simple `/ability 1` command with Dragon Egg in offhand
-- 🏆 **Balanced Combat** - 4.5 hearts total damage (1.5 per strike) with strategic cooldown
+- 🏆 **Balanced Combat** - 6.0 hearts total damage (2.0 per strike) with strategic cooldown
+- 🛡️ **Armor-Bypassing** - Lightning damage ignores all armor and protection enchantments
 - 📊 **Real-Time Feedback** - HUD displays cooldown status and ability readiness
 
 ### **For Server Administrators**
@@ -79,7 +80,8 @@ java -Xms2G -Xmx2G -jar paper-1.21.8-latest.jar nogui
 - **3 Sequential Strikes**: Each strike hits with 0.5-second intervals
 - **Purple Visual Effects**: Stunning particle effects and lightning bolts
 - **Thunder Audio**: Immersive sound effects with each lightning strike
-- **Damage Balancing**: 1.5 hearts per strike (total 4.5 hearts if all connect)
+- **Armor-Bypassing Damage**: Lightning ignores all armor, protection enchantments, and resistance effects
+- **Damage Balancing**: 2.0 hearts per strike (total 6.0 hearts if all connect)
 
 ### **⏱️ Smart Cooldown System**
 - **60-Second Cooldown**: Prevents spam and maintains balance
@@ -96,7 +98,8 @@ java -Xms2G -Xmx2G -jar paper-1.21.8-latest.jar nogui
 - ⚡ **Triple Strike**: 3 sequential lightning bolts with perfect timing
 - 🎨 **Purple Effects**: Custom particle effects and lightning visualization
 - 🔊 **Audio Experience**: Thunder sounds and impact audio
-- 💥 **Balanced Damage**: 1.5 hearts per strike (3 HP)
+- 💥 **Armor-Bypassing Damage**: 2.0 hearts per strike (4 HP) - ignores all protection
+- 🛡️ **Consistent Damage**: Same damage regardless of target's armor or enchantments
 
 ### **Player Interface**
 - 📊 **HUD Display**: Real-time cooldown status in action bar
@@ -125,7 +128,8 @@ java -Xms2G -Xmx2G -jar paper-1.21.8-latest.jar nogui
 - **Range Mastery**: Learn the 50-block range for optimal targeting
 - **Timing Strategy**: Use cooldown wisely - plan your next lightning strike
 - **Positioning**: Move to get clear line-of-sight on targets
-- **Survival Mode**: 4.5 hearts total damage can eliminate most mobs instantly
+- **Armor-Bypassing**: Lightning damage works equally well against heavily armored targets
+- **Survival Mode**: 6.0 hearts total damage can eliminate most mobs instantly
 
 ---
 
@@ -138,7 +142,7 @@ java -Xms2G -Xmx2G -jar paper-1.21.8-latest.jar nogui
 - **Memory Efficient**: No memory leaks or performance degradation
 
 ### **Code Quality**
-- **Test-Driven Development**: 13/13 unit tests passing
+- **Test-Driven Development**: 24/24 unit tests passing
 - **Clean Architecture**: Modular design with clear separation of concerns
 - **Future-Proof**: Extensible ability system for adding new powers
 - **Production Ready**: Comprehensive error handling and edge case management
@@ -180,7 +184,7 @@ java -Xms4G -Xmx4G -XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis
 ## 🎯 Perfect For These Server Types
 
 ### **🎮 PvP Servers**
-- Add exciting combat mechanics
+- Add exciting combat mechanics with consistent damage
 - Reward skilled players with powerful abilities
 - Create balanced risk-reward gameplay
 
@@ -469,6 +473,11 @@ op <username>
 # Verify target validation
 # Must have Dragon Egg in offhand and valid target
 ```
+
+#### **Lightning Damage Seems Low**
+- **Note**: Lightning now deals 2.0 hearts per strike (6.0 hearts total)
+- **Armor-Bypassing**: Damage ignores all armor and enchantments
+- **Consistent**: Same damage against any target, regardless of protection
 
 ---
 

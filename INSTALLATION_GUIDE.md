@@ -111,7 +111,8 @@ java -Xms2G -Xmx2G -jar paper-1.21.8-latest.jar nogui
 5. **Watch the Show**
    - Purple lightning strikes 3 times
    - 0.5 seconds between strikes
-   - Each strike deals 1.5 hearts damage
+   - Each strike deals 2.0 hearts damage (bypasses armor)
+   - Total damage: 6.0 hearts if all strikes connect
 
 ### What You'll See
 
@@ -138,6 +139,7 @@ java -Xms2G -Xmx2G -jar paper-1.21.8-latest.jar nogui
 3. **Multiple Targets**: Lightning targets the closest entity in your view
 4. **Cancel Safety**: Removing Dragon Egg during cast cancels ability
 5. **Survival Mode**: Dragon Eggs are rare but obtainable from End Cities
+6. **Armor-Bypassing**: Lightning damage ignores all armor and enchantments
 
 ---
 
@@ -220,7 +222,7 @@ Edit `LightningAbility.java` constants:
 ```java
 private static final int STRIKE_COUNT = 3;           // Number of strikes
 private static final long STRIKE_INTERVAL_TICKS = 10L; // Delay between strikes (ticks)
-private static final double DAMAGE_PER_STRIKE = 3.0;   // Damage per strike (HP)
+private static final double DAMAGE_PER_STRIKE = 4.0;   // Damage per strike (HP) - 2.0 hearts
 private static final long COOLDOWN_MILLIS = 60000L;    // Cooldown (milliseconds)
 private static final double MAX_RANGE = 50.0;          // Max targeting range
 ```
@@ -317,4 +319,4 @@ This plugin adds an exciting new combat mechanic while maintaining game balance.
 
 **Plugin Version**: 1.0.0
 **Tested With**: Paper 1.21.8, Java 21
-**Last Updated**: December 24, 2025
+**Last Updated**: December 26, 2025
