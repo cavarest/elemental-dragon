@@ -4,7 +4,7 @@
 
 ![Dragon Egg Lightning Banner](https://img.shields.io/badge/Minecraft-Paper%201.21.8-blue?logo=minecraft&style=for-the-badge)
 ![Java](https://img.shields.io/badge/Java-21+-ED8B00?logo=openjdk&logoColor=white&style=for-the-badge)
-![Version](https://img.shields.io/badge/Version-1.0.0-green?style=for-the-badge)
+![Version](https://img.shields.io/badge/Version-1.0.2-green?style=for-the-badge)
 ![Build](https://img.shields.io/badge/Build-Passing-brightgreen?style=for-the-badge)
 
 **Transform your server with the ultimate Dragon Egg lightning ability!**
@@ -15,48 +15,19 @@
 
 </div>
 
-## 🌟 Why Choose Dragon Egg Lightning?
+## 🌟 Quick Start (5 Minutes)
 
-### **For Players**
-- 🎯 **Strategic Gameplay** - Requires skill and timing to master
-- ⚡ **Epic Lightning Effects** - 3 sequential purple lightning strikes with thunder sounds
-- 🎮 **Intuitive Controls** - Simple `/ability 1` command with Dragon Egg in offhand
-- 🏆 **Balanced Combat** - 6.0 hearts total damage (2.0 per strike) with strategic cooldown
-- 🛡️ **Armor-Bypassing** - Lightning damage ignores all armor and protection enchantments
-- 📊 **Real-Time Feedback** - HUD displays cooldown status and ability readiness
-
-### **For Server Administrators**
-- ✅ **Instantly Boost Server Engagement** - Give players a unique, exciting ability
-- ✅ **Easy 5-Minute Installation** - Drop-in plugin with zero configuration needed
-- ✅ **Zero Performance Impact** - Optimized for Paper 1.21.8 with minimal resource usage
-- ✅ **Anti-Spam Protection** - Built-in 60-second cooldown prevents abuse
-- ✅ **Complete Player Experience** - Includes HUD, sound effects, and visual feedback
-
----
-
-## 🚀 Quick Start (5 Minutes)
-
-### **Step 1: Download & Install**
+### **Step 1: Install Plugin**
 ```bash
 # Download the latest JAR from releases
 # Place in your Paper server's plugins directory
-cp DragonEggLightning-1.0.0.jar /path/to/your/paper-server/plugins/
+cp DragonEggLightning-1.0.2.jar /path/to/your/paper-server/plugins/
 
 # Restart your Paper 1.21.8+ server
 java -Xms2G -Xmx2G -jar paper-1.21.8-latest.jar nogui
 ```
 
-### **Step 2: Verify Installation**
-```bash
-# Check server console for:
-[INFO] DragonEggLightning enabled
-
-# In-game test:
-/plugins
-# Should show: DragonEggLightning ✓
-```
-
-### **Step 3: Start Using Lightning!**
+### **Step 2: Use Lightning Ability**
 ```bash
 # Give yourself a Dragon Egg
 /give @p minecraft:dragon_egg
@@ -66,6 +37,21 @@ java -Xms2G -Xmx2G -jar paper-1.21.8-latest.jar nogui
 
 # Watch the magic happen! ⚡
 ```
+
+---
+
+## 📚 Documentation Index
+
+This repository has been organized into logical documentation categories:
+
+### 🎮 [User Documentation](docs/user/)
+- **[README.md](docs/user/README.md)** - Complete user guide and features overview
+- **[Installation Guide](docs/user/installation.md)** - Step-by-step installation instructions
+
+### 🔧 [Administrator Documentation](docs/admin/)
+- **[Testing Guide](docs/admin/testing.md)** - Real-world testing procedures
+- **[Docker Architecture](docs/admin/docker.md)** - Container setup and deployment
+- **[CI/CD Guide](docs/admin/cicd.md)** - Continuous integration and deployment
 
 ---
 
@@ -88,96 +74,6 @@ java -Xms2G -Xmx2G -jar paper-1.21.8-latest.jar nogui
 - **HUD Display**: Real-time countdown in action bar
 - **Cooldown Tracking**: Individual cooldowns per player
 - **Anti-Abuse Protection**: Smart validation prevents exploitation
-
----
-
-## 📋 Complete Feature List
-
-### **Core Lightning Ability**
-- 🎯 **Smart Targeting**: Ray-tracing finds closest living entity in player's view
-- ⚡ **Triple Strike**: 3 sequential lightning bolts with perfect timing
-- 🎨 **Purple Effects**: Custom particle effects and lightning visualization
-- 🔊 **Audio Experience**: Thunder sounds and impact audio
-- 💥 **Armor-Bypassing Damage**: 2.0 hearts per strike (4 HP) - ignores all protection
-- 🛡️ **Consistent Damage**: Same damage regardless of target's armor or enchantments
-
-### **Player Interface**
-- 📊 **HUD Display**: Real-time cooldown status in action bar
-- ⏰ **Countdown Timer**: Shows remaining cooldown in seconds
-- ✅ **Ready Indicator**: "⚡ Lightning ready" when ability is available
-- 💬 **Progress Messages**: "Lightning strike 1/3!" during casting
-
-### **Safety & Validation**
-- 🛡️ **Item Validation**: Fails if Dragon Egg not in offhand
-- 🎯 **Target Validation**: Requires line-of-sight to living entities
-- ⚖️ **Cooldown Enforcement**: Prevents spam and maintains balance
-- 🛑 **Smart Cancellation**: Stops if player switches items during casting
-
----
-
-## 🎮 Player Usage Guide
-
-### **Getting Started**
-1. **Obtain Dragon Egg**: `/give @p minecraft:dragon_egg`
-2. **Equip Offhand**: Press `F` key to move Dragon Egg to offhand
-3. **Find Target**: Look at nearest entity within 50 blocks
-4. **Cast Ability**: Execute `/ability 1`
-5. **Watch Effects**: Enjoy 3 sequential lightning strikes!
-
-### **Advanced Tips**
-- **Range Mastery**: Learn the 50-block range for optimal targeting
-- **Timing Strategy**: Use cooldown wisely - plan your next lightning strike
-- **Positioning**: Move to get clear line-of-sight on targets
-- **Armor-Bypassing**: Lightning damage works equally well against heavily armored targets
-- **Survival Mode**: 6.0 hearts total damage can eliminate most mobs instantly
-
----
-
-## 🏗️ Technical Excellence
-
-### **Performance Optimized**
-- **Efficient Ray Tracing**: Optimized entity detection within 50-block range
-- **Smart Particle System**: Limited effects to prevent client lag
-- **Minimal Resource Usage**: Designed for Paper 1.21.8 optimization
-- **Memory Efficient**: No memory leaks or performance degradation
-
-### **Code Quality**
-- **Test-Driven Development**: 24/24 unit tests passing
-- **Clean Architecture**: Modular design with clear separation of concerns
-- **Future-Proof**: Extensible ability system for adding new powers
-- **Production Ready**: Comprehensive error handling and edge case management
-
----
-
-## 🔧 Server Configuration
-
-### **Recommended Settings**
-```properties
-# server.properties
-gamemode=survival
-difficulty=normal
-view-distance=10
-simulation-distance=10
-max-players=20
-```
-
-### **JVM Arguments for Best Performance**
-```bash
-java -Xms4G -Xmx4G -XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis=200 -jar paper-1.21.8-latest.jar
-```
-
-### **Monitoring Commands**
-```bash
-# Check plugin status
-/plugins
-
-# Monitor server performance
-/tps  # Should remain ~20
-/mem  # Check memory usage
-
-# Test lightning ability
-/ability 1
-```
 
 ---
 
@@ -213,223 +109,52 @@ java -Xms4G -Xmx4G -XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis
 - **Java**: Version 21 or higher
 - **Memory**: Minimum 2GB RAM recommended
 
-### **Installation for Players**
-1. **Server Admin**: Install JAR in plugins directory
-2. **Player**: Obtain Dragon Egg via `/give @p minecraft:dragon_egg`
-3. **Equip**: Press `F` to move Dragon Egg to offhand
-4. **Use**: Execute `/ability 1` command
-5. **Enjoy**: Experience epic lightning strikes!
-
 ### **Developer Setup**
 
-#### **System Prerequisites**
-
 **Required Software:**
-- **Docker Desktop** - [Download for macOS/Windows/Linux](https://www.docker.com/products/docker-desktop/)
+- **Docker Desktop** - [Download](https://www.docker.com/products/docker-desktop/)
 - **Java 21+** - [OpenJDK](https://adoptium.net/) or Oracle JDK
-- **Maven 3.6+** - Install via Homebrew (`brew install maven`) or [official download](https://maven.apache.org/download.cgi)
-- **Git** - [Download](https://git-scm.com/downloads)
+- **Maven 3.6+** - [Maven](https://maven.apache.org/download.cgi)
+- **Git** - [Git](https://git-scm.com/downloads)
 
-**macOS Installation (Recommended):**
-```bash
-# Install Homebrew (if not already installed)
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-# Install prerequisites
-brew install openjdk@21 maven git
-
-# Install Docker Desktop from https://www.docker.com/products/docker-desktop/
-```
-
-#### **Quick Start for Developers**
+**Quick Start for Developers:**
 
 ```bash
 # 1. Clone repository
 git clone https://github.com/ronaldtse/papermc-plugin-dragon-egg.git
 cd papermc-plugin-dragon-egg
 
-# 2. Configure environment (optional - defaults are set)
-# Edit .env file to customize server settings if needed
-# Most developers can skip this step
-
-# 3. Build plugin JAR
+# 2. Build plugin JAR
 ./build.sh
 
-# 4. Start server with plugin
+# 3. Start server with plugin
 ./start-server.sh
 
-# 5. Connect and test
+# 4. Connect and test
 # Server: localhost:25565
 # Username: posiflow
 # RCON: localhost:25575 (password: dragon123)
 
-# 6. Stop server
+# 5. Stop server
 ./stop-server.sh
 ```
 
-#### **Development Commands**
+**Development Commands:**
 
-**Build Commands:**
 ```bash
-# Standard build
-./build.sh
+# Build commands
+./build.sh                    # Standard build
+./build.sh --clean           # Clean build
 
-# Clean build (removes previous builds)
-./build.sh --clean
-# or
-./build.sh -c
-```
+# Server management
+./start-server.sh            # Start normally
+./start-server.sh --rebuild  # Rebuild Docker image
+./start-server.sh --clean    # Clean server data
 
-**Server Management:**
-```bash
-# Start server normally
-./start-server.sh
-
-# Start with Docker image rebuild
-./start-server.sh --rebuild
-# or
-./start-server.sh -r
-
-# Clean build and start (removes all data)
-./start-server.sh --clean
-# or
-./start-server.sh -c
-
-# Combined clean rebuild
-./start-server.sh --rebuild --clean
-# or
-./start-server.sh -r -c
-
-# Show help
-./start-server.sh --help
-```
-
-**Development Workflow:**
-```bash
-# Make code changes
-# Edit Java files in src/main/java/
-
-# Build and test
-./build.sh --clean
-
-# Start fresh server for testing
-./start-server.sh --clean
-
-# Monitor server logs
-docker logs -f papermc-dragonegg
-
-# When done
-./stop-server.sh
-```
-
-#### **Configuration Files**
-
-**`.env` File (Optional Customization):**
-```bash
-# Server Configuration
-MEMORYSIZE=2G
-EULA=TRUE
-TYPE=PAPER
-VERSION=1.21.8
-MAX_PLAYERS=10
-RCON_PORT=25575
-RCON_PASSWORD=dragon123
-
-# Plugin Configuration
-PLUGIN_VERSION=1.0.0
-ADMIN_USERNAME=posiflow
-
-# Server Properties
-SERVER_NAME="Dragon Egg Lightning Server"
-MOTD="Dragon Egg Lightning Plugin Server"
-```
-
-#### **Development Tips**
-
-**Testing the Plugin:**
-```bash
-# Give yourself a Dragon Egg
-/give @p minecraft:dragon_egg
-
-# Move to offhand (press F key)
-/ability 1
-
-# Check plugin status
-/plugins
-
-# View server performance
-/tps
-/mem
-```
-
-**Debugging:**
-```bash
-# View live server logs
-docker logs -f papermc-dragonegg
-
-# View recent logs
-docker logs papermc-dragonegg --tail 50
-
-# Connect to server console
-docker attach papermc-dragonegg
-
-# Exit console without stopping server
-# Press Ctrl+C then Ctrl+P then Ctrl+Q
-```
-
-**Common Development Tasks:**
-```bash
-# Make small code changes and test
-# 1. Edit Java files
-# 2. Build: ./build.sh
-# 3. Restart server: ./start-server.sh -r
-
-# Major changes requiring clean environment
-# 1. Edit Java files
-# 2. Clean build: ./build.sh --clean
-# 3. Clean server: ./start-server.sh --clean
-
-# Test plugin loading
-# Check server logs for: [DragonEggLightning] DragonEggLightning plugin enabled!
-```
-
-#### **Troubleshooting Development Issues**
-
-**Build Errors:**
-```bash
-# Clean Maven cache and rebuild
-./build.sh --clean
-
-# Check Java version (must be 21+)
-java -version
-
-# Verify Maven installation
-mvn --version
-```
-
-**Docker Issues:**
-```bash
-# Restart Docker Desktop
-# Check Docker is running: docker ps
-
-# Force rebuild everything
-./start-server.sh --clean
-
-# Remove all Docker resources
-docker system prune -a
-```
-
-**Server Connection Issues:**
-```bash
-# Check if container is running
-docker ps
-
-# Check ports are not in use
-lsof -i :25565
-lsof -i :25575
-
-# View container logs
-docker logs papermc-dragonegg
+# Testing
+./test-plugin.sh             # Run all tests
+mvn test                     # Run unit tests
+mvn test -Dtest=*Yaml*       # Run YAML tests
 ```
 
 ---
@@ -474,14 +199,9 @@ op <username>
 # Must have Dragon Egg in offhand and valid target
 ```
 
-#### **Lightning Damage Seems Low**
-- **Note**: Lightning now deals 2.0 hearts per strike (6.0 hearts total)
-- **Armor-Bypassing**: Damage ignores all armor and enchantments
-- **Consistent**: Same damage against any target, regardless of protection
-
 ---
 
-## 📈 Why This Plugin Will Transform Your Server
+## 🎯 Why This Plugin Will Transform Your Server
 
 ### **🎯 Player Engagement**
 - **Unique Ability**: Dragon Egg lightning is unlike any other plugin
@@ -503,25 +223,15 @@ op <username>
 
 ---
 
-## 🎉 Ready to Lightning Your Server?
+## 📈 Architecture & Testing
 
-### **Download Now**
-[![Download Latest Release](https://img.shields.io/badge/Download-Now%20🚀-ff6b6b?style=for-the-badge&logo=github)](https://github.com/ronaldtse/papermc-plugin-dragon-egg/releases/latest)
+This plugin features a comprehensive testing framework including:
 
-### **Installation Time: 5 Minutes**
-1. Download the JAR file
-2. Place in your Paper server's plugins directory
-3. Restart your server
-4. Start casting lightning!
-
-### **Test It Today**
-```bash
-# Connect to your server
-# Give yourself: /give @p minecraft:dragon_egg
-# Move to offhand: Press F
-# Cast lightning: /ability 1
-# Experience the magic! ⚡
-```
+- **🧪 Unit Tests**: 24/24 passing tests covering all core functionality
+- **🔧 Integration Tests**: End-to-end testing with real PaperMC servers
+- **📝 YAML DSL**: Human-readable test scenarios for non-programmers
+- **🎮 Mineflayer Integration**: Real Minecraft client testing automation
+- **🐳 Docker Support**: Containerized development and testing environment
 
 ---
 
@@ -529,7 +239,7 @@ op <username>
 
 ### **Getting Help**
 - **GitHub Issues**: [Report bugs or request features](https://github.com/ronaldtse/papermc-plugin-dragon-egg/issues)
-- **Documentation**: Comprehensive guides and troubleshooting
+- **Documentation**: Comprehensive guides in `/docs` directory
 - **Community**: Connect with other server administrators
 
 ### **Contributing**
@@ -544,7 +254,7 @@ op <username>
 **License**: MIT License - Free for personal and commercial use
 
 **Author**: Augustus Tse and Octavius Tse
-**Version**: 1.0.0
+**Version**: 1.0.2
 **Minecraft Version**: 1.21.8+
 **Paper API**: 1.21.8-R0.1-SNAPSHOT
 
@@ -559,6 +269,149 @@ op <username>
 
 **Transform your server today with Dragon Egg Lightning!** ⚡
 
-[Download Latest Release](https://github.com/ronaldtse/papermc-plugin-dragon-egg/releases/latest) | [Installation Guide](#-quick-start-5-minutes) | [Support](https://github.com/ronaldtse/papermc-plugin-dragon-egg/issues)
+[Download Latest Release](https://github.com/ronaldtse/papermc-plugin-dragon-egg/releases/latest) | [Installation Guide](docs/user/installation.md) | [Support](https://github.com/ronaldtse/papermc-plugin-dragon-egg/issues)
 
 </div>
+
+---
+
+## 🆕 Recent Improvements (v1.0.2+)
+
+### **🔧 Enhanced Build System**
+- **DRY Principle**: `build.sh` contains all build logic, `start-server.sh` reuses it
+- **Debug Builds**: Automatic git commit injection for development builds
+- **Function Library**: `populate_server_plugins()` shared across scripts
+- **Clean Production**: pom.xml always has clean version numbers
+
+### **⚡ Lightning Feedback & Cooldown System**
+- **Target Feedback**: Lightning strikes now show what/who was hit
+  - "Lightning strike 1/3 hit Creeper!"
+  - "Lightning strike 2/3 hit Steve!"
+  - "Lightning strike 3/3 hit Zombie!"
+- **Smart Cooldown**:
+  - **Death**: Cooldown cleared automatically
+  - **Respawn**: Cooldown automatically restarts (prevents spam after death)
+  - **Logout/Login**: Cooldown persists (prevents cooldown abuse)
+
+### **🎮 Better User Experience**
+- **Clear Messages**: Players always know what lightning hit
+- **Fair Cooldowns**: No cheating death or logout to avoid cooldowns
+- **Consistent Feedback**: Real-time updates during ability use
+
+
+### **🎯 Intelligent Lightning Targeting**
+- **Initial Target**: Lightning starts with the closest target in view
+- **Smart Switching**: If target dies, lightning automatically shifts to next closest target
+- **Dynamic Feedback**:
+  - "Lightning strike 1/3 hit Creeper!"
+  - "Lightning shifts to Zombie!"
+  - "Lightning strike 2/3 hit Zombie!"
+  - "Lightning strike 3/3 hit Zombie!"
+- **Range & Line-of-Sight**: Maintains 50-block range and viewing cone requirements
+- **No Target Waste**: Ensures all 3 strikes are used effectively against valid targets
+
+
+### **🔨 Build System Commands**
+
+#### **Development Builds (Default)**
+```bash
+./build.sh                    # Debug build with git commit (DEFAULT)
+./build.sh --clean           # Clean debug build
+./build.sh --debug           # Explicit debug build
+```
+
+#### **Production Builds (Release)**
+```bash
+./build.sh --production      # Clean production build (no git commit)
+./build.sh --production --clean  # Clean production build
+```
+
+#### **Server Management**
+```bash
+./start-server.sh            # Uses debug build by default
+./start-server.sh --rebuild  # Rebuild Docker with fresh debug build
+./start-server.sh --clean    # Clean start with debug build
+```
+
+**Build Behavior:**
+- **Development**: Always creates debug builds with git commit suffix
+- **Production**: Creates clean builds without git commit for releases
+- **GitHub Workflows**: Test both debug and production builds
+- **Releases**: Only production builds are released
+
+## ⏱️ Complete Cooldown System Guide
+
+### **How the Cooldown System Works**
+
+The Dragon Egg Lightning plugin features a sophisticated cooldown system designed to prevent spam while providing fair gameplay mechanics.
+
+#### **Cooldown Trigger & Duration**
+- **Trigger**: Cooldown starts only when lightning ability is successfully used
+- **Duration**: 60 seconds from last successful use
+- **Independent**: Cooldown persists regardless of dragon egg possession
+
+#### **Death & Respawn Behavior**
+```bash
+# Scenario 1: Death during cooldown
+Player uses lightning → 60s cooldown starts
+Player dies → Cooldown cleared immediately
+Player respawns → Lightning ready to use (no cooldown)
+
+# Scenario 2: Death after cooldown expires
+Player uses lightning → 60s cooldown starts
+Cooldown expires → Lightning ready again
+Player dies → No effect (cooldown already expired)
+```
+
+#### **Dragon Egg Management**
+```bash
+# Scenario 1: Losing dragon egg
+Player uses lightning → 60s cooldown starts
+Player loses dragon egg → Cooldown continues running
+Player picks up dragon egg → Cooldown continues running
+# Cooldown expires naturally after 60 seconds
+
+# Scenario 2: Picking up dragon egg (no active cooldown)
+Player has no dragon egg → Lightning ready
+Player picks up dragon egg → Lightning ready (no cooldown starts)
+```
+
+#### **Session Persistence**
+```bash
+# Logout/Login Behavior
+Player uses lightning → 60s cooldown starts
+Player logs out → Cooldown saved
+Player logs back in → Cooldown continues from remaining time
+# Prevents cooldown bypass through logout/login
+```
+
+### **Practical Examples**
+
+#### **Fair Play Scenario**
+1. **Use Lightning**: `/ability 1` → 60s cooldown starts
+2. **Death**: Player dies → Cooldown cleared
+3. **Respawn**: Player respawns → Lightning ready immediately
+4. **Use Again**: Player can use lightning right away
+
+#### **Spam Prevention Scenario**
+1. **Use Lightning**: `/ability 1` → 60s cooldown starts  
+2. **Keep Dragon Egg**: Player keeps dragon egg in inventory
+3. **Lose Dragon Egg**: Player drops dragon egg → Cooldown continues
+4. **Pick Up Dragon Egg**: Player picks up dragon egg → Cooldown continues
+5. **Wait 60s**: Cooldown expires → Lightning ready again
+
+#### **Session Abuse Prevention**
+1. **Use Lightning**: `/ability 1` → 60s cooldown starts
+2. **Logout**: Player logs out to avoid cooldown
+3. **Login**: Player logs back in → Cooldown still active
+4. **Wait**: Must wait remaining cooldown time
+5. **Ready**: Lightning ready after full 60s from original use
+
+### **Anti-Exploit Features**
+
+- ✅ **Death clears cooldown**: Prevents death-based cooldown bypass
+- ✅ **Item independence**: Cooldown doesn't reset when dragon egg is lost/gained
+- ✅ **Session persistence**: Cooldown survives logout/login cycles  
+- ✅ **Time-based expiration**: Cooldown only expires after full 60 seconds
+- ✅ **Fair respawn**: No automatic cooldown restart after death
+
