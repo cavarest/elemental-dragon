@@ -4,12 +4,9 @@
 
 set -e
 
-# Load environment variables
+# Load environment variables (optional - only used for CONTAINER_NAME display)
 if [ -f .env ]; then
     source .env
-else
-    echo "❌ .env file not found!"
-    exit 1
 fi
 
 # Extract version from pom.xml using Maven (single source of truth)
