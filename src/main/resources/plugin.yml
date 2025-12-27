@@ -3,13 +3,13 @@ version: ${project.version}
 main: com.dragonegg.lightning.DragonEggLightningPlugin
 api-version: '1.21'
 description: Dragon Egg Lightning Ability Plugin
-author: Augustus
+author: Augustus Tse and Octavius Tse
 website: https://github.com/ronaldtse/papermc-plugin-dragon-egg
 
 commands:
   ability:
     description: Activate dragon egg ability
-    usage: /ability <number>
+    usage: /ability <number> | /ability version | /ability help
     permission: dragonegg.ability
     permission-message: You do not have permission to use this ability
 
