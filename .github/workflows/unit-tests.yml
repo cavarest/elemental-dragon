@@ -38,8 +38,10 @@ jobs:
     - name: Build with Maven
       run: mvn clean compile
 
-    - name: Run unit tests
-      run: mvn test
+    - name: Run all unit tests
+      run: |
+        echo "🧪 Running all unit tests with single Maven command..."
+        mvn test
 
     - name: Generate test report
       run: mvn surefire-report:report
@@ -55,13 +57,39 @@ jobs:
         fail_if_no_tests: true
         skip_publishing: false
 
-    - name: Build plugin JAR
-      run: mvn package -DskipTests
+    - name: Build plugin JAR using build.sh (debug build)
+      run: |
+        echo "🔨 Building plugin using build.sh (debug build with git commit)..."
+        ./build.sh
 
-    - name: Upload JAR artifact
+    - name: Verify debug build
+      run: |
+        echo "🔍 Verifying debug build artifacts..."
+        ls -la target/DragonEggLightning-*.jar
+        jar tf target/DragonEggLightning-*.jar | grep -E "(plugin\.yml|DragonEggLightning)" || echo "Debug JAR missing expected files"
+
+    - name: Build production JAR (release build)
+      run: |
+        echo "🏗️ Building production JAR using build.sh --production..."
+        ./build.sh --production
+    - name: Verify production build
+      run: |
+        echo "🔍 Verifying production build..."
+        JAR_FILE=$(find target -name "DragonEggLightning-*.jar" | head -1)
+        echo "Found production JAR: $JAR_FILE"
+        jar tf "$JAR_FILE" | grep plugin.yml
+
+    - name: Upload debug JAR artifact
       uses: actions/upload-artifact@v4
       with:
-        name: DragonEggLightning-Plugin-Java${{ matrix.java-version }}
+        name: DragonEggLightning-Debug-Java${{ matrix.java-version }}
+        path: target/DragonEggLightning-*.jar
+        retention-days: 30
+
+    - name: Upload production JAR artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: DragonEggLightning-Production-Java${{ matrix.java-version }}
         path: target/DragonEggLightning-*.jar
         retention-days: 30
 
