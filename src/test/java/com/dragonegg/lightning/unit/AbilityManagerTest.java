@@ -1,10 +1,22 @@
-package com.dragonegg.lightning.ability;
+package com.dragonegg.lightning.unit;
 
+import com.dragonegg.lightning.ability.AbilityManager;
+import com.dragonegg.lightning.ability.LightningAbility;
+import org.bukkit.Material;
+import org.bukkit.entity.Player;
+import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.mockito.Mockito;
+
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 /**
  * Comprehensive tests for AbilityManager cooldown behavior.
@@ -31,8 +43,8 @@ class AbilityManagerTest {
   void testCooldownIndependentOfItemPossession() {
     // This is the core requirement: cooldown should be based on usage, not item possession
 
-    // Create a mock player
-    var mockPlayer = createMockPlayer();
+    // Create a mock player with dragon egg
+    var mockPlayer = createMockPlayerWithDragonEgg();
 
     // Initially no cooldown - should be able to use ability
     assertTrue(abilityManager.canUseAbility(mockPlayer, lightningAbility),
@@ -48,14 +60,16 @@ class AbilityManagerTest {
 
   @Test
   void testDeathClearsCooldownImmediately() {
-    var mockPlayer = createMockPlayer();
+    var mockPlayer = createMockPlayerWithDragonEgg();
 
     // Start with cooldown
     abilityManager.setCooldown(mockPlayer, 60); // 60 seconds
     assertTrue(abilityManager.isOnCooldown(mockPlayer), "Should be on cooldown");
 
     // Simulate death event (clears cooldown)
-    abilityManager.onPlayerDeath(null); // This calls the death event handler
+    PlayerDeathEvent deathEvent = mock(PlayerDeathEvent.class);
+    when(deathEvent.getEntity()).thenReturn(mockPlayer);
+    abilityManager.onPlayerDeath(deathEvent);
 
     // Cooldown should be cleared
     assertFalse(abilityManager.isOnCooldown(mockPlayer), "Cooldown should be cleared on death");
@@ -65,14 +79,16 @@ class AbilityManagerTest {
 
   @Test
   void testCooldownPersistsAfterRespawn() {
-    var mockPlayer = createMockPlayer();
+    var mockPlayer = createMockPlayerWithDragonEgg();
 
     // Start with cooldown
     abilityManager.setCooldown(mockPlayer, 60); // 60 seconds
     assertTrue(abilityManager.isOnCooldown(mockPlayer), "Should be on cooldown");
 
     // Death clears cooldown
-    abilityManager.onPlayerDeath(null);
+    PlayerDeathEvent deathEvent = mock(PlayerDeathEvent.class);
+    when(deathEvent.getEntity()).thenReturn(mockPlayer);
+    abilityManager.onPlayerDeath(deathEvent);
 
     // Cooldown should remain cleared (death cleared it, respawn doesn't restart it)
     assertFalse(abilityManager.isOnCooldown(mockPlayer),
@@ -83,14 +99,16 @@ class AbilityManagerTest {
 
   @Test
   void testCooldownPersistenceAcrossLogout() {
-    var mockPlayer = createMockPlayer();
+    var mockPlayer = createMockPlayerWithDragonEgg();
 
     // Start with cooldown
     abilityManager.setCooldown(mockPlayer, 60); // 60 seconds
     assertTrue(abilityManager.isOnCooldown(mockPlayer), "Should be on cooldown");
 
     // Simulate logout/login (join event)
-    abilityManager.onPlayerJoin(null); // This checks cooldown persistence
+    PlayerJoinEvent joinEvent = mock(PlayerJoinEvent.class);
+    when(joinEvent.getPlayer()).thenReturn(mockPlayer);
+    abilityManager.onPlayerJoin(joinEvent);
 
     // Cooldown should still exist (persists across logout/login)
     assertTrue(abilityManager.isOnCooldown(mockPlayer),
@@ -99,7 +117,7 @@ class AbilityManagerTest {
 
   @Test
   void testCooldownExpiration() throws InterruptedException {
-    var mockPlayer = createMockPlayer();
+    var mockPlayer = createMockPlayerWithDragonEgg();
 
     // Set a short cooldown
     abilityManager.setCooldown(mockPlayer, 1); // 1 second
@@ -119,7 +137,7 @@ class AbilityManagerTest {
 
   @Test
   void testGetRemainingCooldown() {
-    var mockPlayer = createMockPlayer();
+    var mockPlayer = createMockPlayerWithDragonEgg();
 
     // No cooldown initially
     assertEquals(0, abilityManager.getRemainingCooldown(mockPlayer),
@@ -134,7 +152,7 @@ class AbilityManagerTest {
 
   @Test
   void testClearCooldown() {
-    var mockPlayer = createMockPlayer();
+    var mockPlayer = createMockPlayerWithDragonEgg();
 
     // Set cooldown
     abilityManager.setCooldown(mockPlayer, 60);
@@ -147,7 +165,7 @@ class AbilityManagerTest {
 
   @Test
   void testCanUseAbilityWithoutRequiredItem() {
-    var mockPlayer = createMockPlayer();
+    var mockPlayer = createMockPlayerWithoutDragonEgg();
 
     // Should not be able to use without required item (LightningAbility checks for dragon egg)
     assertFalse(abilityManager.canUseAbility(mockPlayer, lightningAbility),
@@ -156,10 +174,7 @@ class AbilityManagerTest {
 
   @Test
   void testCanUseAbilityWithRequiredItemAndNoCooldown() {
-    var mockPlayer = createMockPlayer();
-
-    // Give player a dragon egg (required item)
-    givePlayerDragonEgg(mockPlayer);
+    var mockPlayer = createMockPlayerWithDragonEgg();
 
     // Should be able to use with required item and no cooldown
     assertTrue(abilityManager.canUseAbility(mockPlayer, lightningAbility),
@@ -180,7 +195,7 @@ class AbilityManagerTest {
 
   @Test
   void testNullAbilityHandling() {
-    var mockPlayer = createMockPlayer();
+    var mockPlayer = createMockPlayerWithDragonEgg();
 
     assertFalse(abilityManager.canUseAbility(mockPlayer, null),
       "Should handle null ability gracefully");
@@ -188,21 +203,21 @@ class AbilityManagerTest {
 
   @Test
   void testUseAbilityFailsWhenCannotUse() {
-    var mockPlayer = createMockPlayer();
+    var mockPlayer = createMockPlayerWithoutDragonEgg();
 
     // Even if canUseAbility returns true, if execute fails, useAbility should return false
     boolean canUse = abilityManager.canUseAbility(mockPlayer, lightningAbility);
     assertFalse(canUse, "Should not be able to use without required item");
 
-    // Give the player the required item
-    givePlayerDragonEgg(mockPlayer);
+    // Switch to player with dragon egg
+    var mockPlayerWithEgg = createMockPlayerWithDragonEgg();
 
     // Now should be able to use, but execute might fail due to no valid target
-    canUse = abilityManager.canUseAbility(mockPlayer, lightningAbility);
+    canUse = abilityManager.canUseAbility(mockPlayerWithEgg, lightningAbility);
     assertTrue(canUse, "Should be able to use ability with required item and no cooldown");
 
     // The actual useAbility might fail due to no valid target, which is expected
-    boolean result = abilityManager.useAbility(mockPlayer, lightningAbility);
+    boolean result = abilityManager.useAbility(mockPlayerWithEgg, lightningAbility);
     // We don't assert on result because it depends on having a valid target in the world
     // The important part is that it doesn't throw an exception
   }
@@ -210,23 +225,40 @@ class AbilityManagerTest {
   // === HELPER METHODS ===
 
   /**
-   * Create a mock player for testing.
+   * Create a mock player with a dragon egg in offhand.
    */
-  private org.bukkit.entity.Player createMockPlayer() {
-    var mockPlayer = org.mockito.Mockito.mock(org.bukkit.entity.Player.class);
-    var mockUUID = java.util.UUID.randomUUID();
-    org.mockito.Mockito.when(mockPlayer.getUniqueId()).thenReturn(mockUUID);
+  private Player createMockPlayerWithDragonEgg() {
+    Player mockPlayer = mock(Player.class);
+    UUID mockUUID = UUID.randomUUID();
+    when(mockPlayer.getUniqueId()).thenReturn(mockUUID);
+
+    // Mock inventory with dragon egg in offhand
+    PlayerInventory mockInventory = mock(PlayerInventory.class);
+    ItemStack dragonEgg = mock(ItemStack.class);
+    when(dragonEgg.getType()).thenReturn(Material.DRAGON_EGG);
+    when(dragonEgg.isEmpty()).thenReturn(false);
+    when(mockInventory.getItemInOffHand()).thenReturn(dragonEgg);
+    when(mockPlayer.getInventory()).thenReturn(mockInventory);
+
     return mockPlayer;
   }
 
   /**
-   * Give a player a dragon egg in their offhand.
+   * Create a mock player without a dragon egg.
    */
-  private void givePlayerDragonEgg(org.bukkit.entity.Player player) {
-    var offhand = org.mockito.Mockito.mock(org.bukkit.inventory.ItemStack.class);
-    org.mockito.Mockito.when(offhand.getType()).thenReturn(org.bukkit.Material.DRAGON_EGG);
-    org.mockito.Mockito.when(offhand.isEmpty()).thenReturn(false);
-    org.mockito.Mockito.when(offhand.getType()).thenReturn(org.bukkit.Material.DRAGON_EGG);
-    org.mockito.Mockito.when(player.getInventory().getItemInOffHand()).thenReturn(offhand);
+  private Player createMockPlayerWithoutDragonEgg() {
+    Player mockPlayer = mock(Player.class);
+    UUID mockUUID = UUID.randomUUID();
+    when(mockPlayer.getUniqueId()).thenReturn(mockUUID);
+
+    // Mock inventory without dragon egg
+    PlayerInventory mockInventory = mock(PlayerInventory.class);
+    ItemStack emptyItem = mock(ItemStack.class);
+    when(emptyItem.getType()).thenReturn(Material.AIR);
+    when(emptyItem.isEmpty()).thenReturn(true);
+    when(mockInventory.getItemInOffHand()).thenReturn(emptyItem);
+    when(mockPlayer.getInventory()).thenReturn(mockInventory);
+
+    return mockPlayer;
   }
 }

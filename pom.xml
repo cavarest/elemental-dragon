@@ -98,6 +98,12 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.2</version>
+                <configuration>
+                    <excludes>
+                        <!-- Exclude pilaf integration tests - they require real server -->
+                        <exclude>**/pilaf/**</exclude>
+                    </excludes>
+                </configuration>
             </plugin>
         </plugins>
     </build>
