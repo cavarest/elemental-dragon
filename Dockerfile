@@ -1,26 +1,11 @@
 # Dockerfile for Dragon Egg Lightning Plugin
-# Version is sourced from pom.xml (single source of truth)
+# Note: The plugin JAR copy is placed at the end to maximize Docker cache reuse
 
 # PaperMC Server with pre-built plugin
 FROM marctv/minecraft-papermc-server:1.21.8
 
 # Install required tools for Ubuntu-based PaperMC image
 RUN apt-get update && apt-get install -y jq uuid-runtime && apt-get clean
-
-# Copy the pre-built plugin JAR to locations:
-# - /data/plugins/ for default use (may be shadowed by volume mount)
-# - /opt/minecraft/plugins/ as backup outside /data (won't be shadowed)
-RUN mkdir -p /data/plugins /opt/minecraft/plugins
-COPY target/DragonEggLightning-*.jar /data/plugins/DragonEggLightning.jar
-COPY target/DragonEggLightning-*.jar /opt/minecraft/plugins/DragonEggLightning.jar
-
-# Verify the plugin was copied successfully - FAIL BUILD IF NOT FOUND
-RUN if [ ! -f "/opt/minecraft/plugins/DragonEggLightning.jar" ]; then \
-        echo "❌ Plugin not found in /opt/minecraft/plugins/DragonEggLightning.jar"; \
-        ls -la /opt/minecraft/plugins/ || true; \
-        exit 1; \
-    fi && \
-    echo "✅ Plugin successfully copied to /opt/minecraft/plugins/DragonEggLightning.jar"
 
 # Copy the entrypoint script
 COPY entrypoint.sh /entrypoint.sh
@@ -43,6 +28,21 @@ ENV PAPERMC_FLAGS="--add-modules=jdk.unsupported \
 
 # Make entrypoint script executable
 RUN chmod +x /entrypoint.sh
+
+# Copy the pre-built plugin JAR to /data/plugins/ (where PaperMC loads plugins from)
+# AND to /opt/minecraft/plugins/ (for entrypoint.sh to copy during container startup)
+# This allows volume-mounted plugins to merge with base image plugins
+RUN mkdir -p /data/plugins /opt/minecraft/plugins
+COPY build/libs/dragon-egg-lightning-*.jar /data/plugins/DragonEggLightning.jar
+COPY build/libs/dragon-egg-lightning-*.jar /opt/minecraft/plugins/DragonEggLightning.jar
+
+# Verify the plugin was copied successfully - FAIL BUILD IF NOT FOUND
+RUN if [ ! -f "/data/plugins/DragonEggLightning.jar" ] || [ ! -f "/opt/minecraft/plugins/DragonEggLightning.jar" ]; then \
+        echo "❌ Plugin not found in both locations"; \
+        ls -la /data/plugins/ /opt/minecraft/plugins/ || true; \
+        exit 1; \
+    fi && \
+    echo "✅ Plugin successfully copied to both /data/plugins/ and /opt/minecraft/plugins/"
 
 # Set the entrypoint
 ENTRYPOINT ["/entrypoint.sh"]

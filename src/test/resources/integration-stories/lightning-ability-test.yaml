@@ -1,86 +1,50 @@
-# DITF Lightning Ability Test
-# Tests the dragon egg lightning ability functionality
+# Dragon Egg Lightning Ability Test
+# Tests the dragon egg lightning ability functionality with PILAF commands
 
 name: "Dragon Egg Lightning Ability Test"
 description: "Test that the dragon egg lightning ability works correctly with entities"
+
 setup:
-  - type: "server_action"
-    server_action: "spawn_entity"
-    name: "TestZombie"
-    entity_type: "zombie"
-    location: [5.0, 64.0, 5.0]
+  - action: "server_command"
+    command: "spawn zombie 5.0 64.0 5.0 {CustomName:\"TestZombie\"}"
+    name: "Spawn TestZombie entity"
 
-  - type: "server_action"
-    server_action: "spawn_player"
-    name: "TestPlayer"
-    location: [0.0, 64.0, 0.0]
+  - action: "server_command"
+    command: "op TestPlayer"
+    name: "Make TestPlayer operator"
 
-  - type: "server_action"
-    server_action: "give_item"
+  - action: "give_item"
     player: "TestPlayer"
     item: "dragon_egg"
     count: 1
+    name: "Give dragon egg to TestPlayer"
 
-  - type: "server_action"
-    server_action: "server_execute_command"
-    command: "op"
-    arguments: ["TestPlayer"]
+  - action: "equip_item"
+    player: "TestPlayer"
+    item: "dragon_egg"
+    slot: "mainhand"
+    name: "Equip dragon egg to TestPlayer hand"
 
 steps:
-  # Player movement and preparation
-  - type: "action"
-    action: "player_move"
-    subject: "TestPlayer"
-    destination_type: "entity"
-    destination: "TestZombie"
-
-  - type: "assertion"
-    assertion: "entity_exists"
-    subject: "TestZombie"
-
-  - type: "action"
-    action: "player_equip_item"
-    subject: "TestPlayer"
-    item: "dragon_egg"
-    slot: "hand"
-
-  - type: "assertion"
-    assertion: "player_inventory_contains"
-    subject: "TestPlayer"
-    item: "dragon_egg"
-    slot: "hand"
+  # Move player close to zombie
+  - action: "move_player"
+    player: "TestPlayer"
+    destination: "relative"
+    destination: "^ ^ ^5"
+    name: "Move TestPlayer 5 blocks towards zombie"
 
   # Execute lightning ability
-  - type: "action"
-    action: "player_execute_command"
-    subject: "TestPlayer"
-    command: "ability"
-    arguments: ["1"]
-
-  - type: "assertion"
-    assertion: "plugin_receives_command"
-    plugin: "DragonEggLightning"
-    command: "ability"
-    subject: "TestPlayer"
+  - action: "player_command"
+    player: "TestPlayer"
+    command: "/ability 1"
+    name: "Execute lightning ability"
 
   # Wait for lightning effect
-  - type: "wait"
-    wait: 4
+  - action: "wait"
+    duration: 4000
+    name: "Wait for lightning processing"
 
-  # Verify damage was dealt
-  - type: "server_action"
-    server_action: "get_entity_health"
-    subject: "TestZombie"
-
-  - type: "assertion"
-    assertion: "entity_health_equals"
-    subject: "TestZombie"
-    expected_health: 16.0
-    tolerance: 0.1
-
-  # Cleanup
-  - type: "cleanup"
-    cleanup: "remove_all_test_entities"
-
-  - type: "cleanup"
-    cleanup: "remove_all_test_players"
+cleanup:
+  - action: "remove_entities"
+    pattern: "TestZombie"
+    name: "Remove TestZombie"

@@ -1,0 +1,58 @@
+# Cooldown Test - Cooldown enforcement (spam guard)
+name: "Cooldown Test"
+description: "Test that cooldown blocks immediate reuse of ability"
+
+setup:
+  - action: "connect_player"
+    player: "pilaf_tester"
+    name: "Connect test player"
+
+  - action: "execute_rcon_command"
+    command: "op pilaf_tester"
+    name: "Make test player operator"
+
+  - action: "execute_rcon_command"
+    command: "item replace entity pilaf_tester weapon.offhand with dragon_egg 1"
+    name: "Give dragon egg to player offhand"
+
+steps:
+  # Set short cooldown for testing
+  - action: "execute_rcon_command"
+    command: "dragonlightning setcooldown pilaf_tester 5"
+    name: "Set cooldown to 5 seconds"
+
+  # Use ability to trigger cooldown
+  - action: "execute_player_command"
+    player: "pilaf_tester"
+    command: "/ability 1"
+    name: "Use ability to start cooldown"
+
+  - action: "wait"
+    duration: 1000
+    name: "Wait for ability execution"
+
+  # Try to use ability again (should be blocked)
+  - action: "execute_player_command"
+    player: "pilaf_tester"
+    command: "/ability 1"
+    name: "Attempt ability during cooldown"
+
+  # Wait for cooldown to expire
+  - action: "wait"
+    duration: 6000
+    name: "Wait for cooldown to expire (6 seconds)"
+
+  # Clear cooldown and verify ability works
+  - action: "execute_rcon_command"
+    command: "dragonlightning clearcooldown pilaf_tester"
+    name: "Clear cooldown and verify ability works"
+
+  - action: "execute_player_command"
+    player: "pilaf_tester"
+    command: "/ability 1"
+    name: "Use ability after cooldown clear"
+
+cleanup:
+  - action: "disconnect_player"
+    player: "pilaf_tester"
+    name: "Disconnect test player"

@@ -1,0 +1,67 @@
+# Plugin Commands Test - Version and admin commands
+name: "Plugin Commands Test"
+description: "Test plugin version and admin commands"
+
+setup:
+  - action: "connect_player"
+    player: "pilaf_tester"
+    name: "Connect test player"
+
+  - action: "execute_rcon_command"
+    command: "op pilaf_tester"
+    name: "Make test player operator"
+
+  - action: "execute_rcon_command"
+    command: "kill @e[type=zombie]"
+    name: "Clean up any existing zombies"
+
+steps:
+  # Test version command
+  - action: "execute_player_command"
+    player: "pilaf_tester"
+    command: "/ability version"
+    name: "Check plugin version"
+
+  # Test target in view
+  - action: "execute_rcon_command"
+    command: "execute at pilaf_tester run summon zombie ^ ^ ^8 {CustomName:'\"ViewTarget\"'}"
+    name: "Spawn zombie target in view"
+
+  - action: "wait"
+    duration: 500
+    name: "Wait for zombie to spawn"
+
+  - action: "get_entities"
+    player: "pilaf_tester"
+    name: "Get zombie state before ability"
+
+  # Clear cooldown and use ability on target
+  - action: "execute_rcon_command"
+    command: "dragonlightning clearcooldown pilaf_tester"
+    name: "Clear cooldown"
+
+  - action: "get_entities"
+    player: "pilaf_tester"
+    name: "Get entities before ability"
+
+  - action: "execute_player_command"
+    player: "pilaf_tester"
+    command: "/ability 1"
+    name: "Use ability on visible target"
+
+  - action: "wait"
+    duration: 2000
+    name: "Wait for lightning effect"
+
+  - action: "get_entities"
+    player: "pilaf_tester"
+    name: "Get zombie after ability"
+
+cleanup:
+  - action: "execute_rcon_command"
+    command: "kill @e[type=zombie]"
+    name: "Clean up zombies"
+
+  - action: "disconnect_player"
+    player: "pilaf_tester"
+    name: "Disconnect test player"

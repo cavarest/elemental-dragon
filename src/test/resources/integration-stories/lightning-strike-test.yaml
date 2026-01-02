@@ -1,0 +1,67 @@
+# Lightning Strike Test - Basic lightning ability usage with dragon egg equipped
+name: "Lightning Strike Test"
+description: "Test basic lightning ability usage with dragon egg equipped"
+
+setup:
+  - action: "connect_player"
+    player: "pilaf_tester"
+    name: "Connect test player"
+
+  - action: "execute_rcon_command"
+    command: "op pilaf_tester"
+    name: "Make test player operator"
+
+  - action: "execute_rcon_command"
+    command: "item replace entity pilaf_tester weapon.offhand with dragon_egg 1"
+    name: "Give dragon egg to player offhand"
+
+  - action: "execute_rcon_command"
+    command: "dragonlightning clearcooldown pilaf_tester"
+    name: "Clear any existing cooldown"
+
+  - action: "execute_rcon_command"
+    command: "kill @e[name=test_zombie]"
+    name: "Clean up any existing test entities"
+
+steps:
+  - action: "get_entities"
+    player: "pilaf_tester"
+    name: "Check entities before spawning"
+
+  - action: "execute_rcon_command"
+    command: "execute at pilaf_tester run summon zombie ^ ^ ^10 {CustomName:'\"TestZombie\"'}"
+    name: "Spawn zombie 10 blocks in front of player"
+
+  - action: "wait"
+    duration: 500
+    name: "Wait for entity to spawn"
+
+  - action: "get_entities"
+    player: "pilaf_tester"
+    name: "Check entities after spawning"
+
+  - action: "get_entities"
+    player: "pilaf_tester"
+    name: "Get entities before ability"
+
+  - action: "execute_player_command"
+    player: "pilaf_tester"
+    command: "/ability 1"
+    name: "Player uses lightning ability"
+
+  - action: "wait"
+    duration: 2000
+    name: "Wait for lightning effect"
+
+  - action: "get_entities"
+    player: "pilaf_tester"
+    name: "Get entities after ability"
+
+cleanup:
+  - action: "execute_rcon_command"
+    command: "kill @e[name=test_zombie]"
+    name: "Clean up test entities"
+
+  - action: "disconnect_player"
+    player: "pilaf_tester"
+    name: "Disconnect test player"

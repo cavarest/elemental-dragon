@@ -9,8 +9,8 @@ if [ -f .env ]; then
     source .env
 fi
 
-# Extract version from pom.xml using Maven (single source of truth)
-PLUGIN_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+# Extract version from gradle.properties using Gradle
+PLUGIN_VERSION=$(grep "^project.version=" gradle.properties | cut -d'=' -f2)
 
 echo "================================"
 echo "Building Dragon Egg Lightning Plugin"
@@ -40,14 +40,14 @@ if [ "$CLEAN" = true ]; then
     echo "🧹 Cleaning previous builds..."
     echo ""
 
-    # Clean Maven build
-    echo "Cleaning Maven build..."
-    mvn clean
+    # Clean Gradle build
+    echo "Cleaning Gradle build..."
+    gradle clean
 
-    # Remove target directory
-    if [ -d "target" ]; then
-        echo "Removing target directory..."
-        rm -rf target/
+    # Remove build directory
+    if [ -d "build" ]; then
+        echo "Removing build directory..."
+        rm -rf build/
     fi
 
     echo "✅ Clean complete!"
@@ -58,8 +58,8 @@ fi
 echo "🔧 Building plugin JAR..."
 echo ""
 
-echo "Running Maven clean and package (skipping tests)..."
-mvn clean package -DskipTests
+echo "Running Gradle clean and build (skipping tests)..."
+gradle clean build -x test
 
 # Handle debug build with git commit
 if [ "$DEBUG" = true ]; then
@@ -70,17 +70,18 @@ if [ "$DEBUG" = true ]; then
     echo "   Git commit: ${GIT_COMMIT}"
 
     # Create debug JAR with git commit suffix
-    if [ -f "target/DragonEggLightning-${PLUGIN_VERSION}.jar" ]; then
-        cp "target/DragonEggLightning-${PLUGIN_VERSION}.jar" "target/DragonEggLightning-${PLUGIN_VERSION}-${GIT_COMMIT}.jar"
-        echo "   ✅ Debug JAR created: DragonEggLightning-${PLUGIN_VERSION}-${GIT_COMMIT}.jar"
-        JAR_FILE="target/DragonEggLightning-${PLUGIN_VERSION}-${GIT_COMMIT}.jar"
+    JAR_FILE="build/libs/dragon-egg-lightning-${PLUGIN_VERSION}.jar"
+    if [ -f "$JAR_FILE" ]; then
+        cp "$JAR_FILE" "build/libs/dragon-egg-lightning-${PLUGIN_VERSION}-${GIT_COMMIT}.jar"
+        echo "   ✅ Debug JAR created: dragon-egg-lightning-${PLUGIN_VERSION}-${GIT_COMMIT}.jar"
+        DEBUG_JAR_FILE="build/libs/dragon-egg-lightning-${PLUGIN_VERSION}-${GIT_COMMIT}.jar"
     else
         echo "❌ Base JAR not found for debug build"
         exit 1
     fi
 else
     # Production build - use clean version
-    JAR_FILE=$(find target/ -name "DragonEggLightning-${PLUGIN_VERSION}.jar" | head -1)
+    JAR_FILE=$(find build/libs/ -name "dragon-egg-lightning-${PLUGIN_VERSION}.jar" | head -1)
 fi
 
 if [ -n "$JAR_FILE" ] && [ -f "$JAR_FILE" ]; then
@@ -95,7 +96,7 @@ if [ -n "$JAR_FILE" ] && [ -f "$JAR_FILE" ]; then
 else
     echo "✗ Failed to create plugin JAR"
     echo "Checking for alternative JAR files..."
-    ls -la target/ 2>/dev/null || echo "No target directory found"
+    ls -la build/libs/ 2>/dev/null || echo "No build/libs directory found"
     exit 1
 fi
 
@@ -113,25 +114,36 @@ echo "Server will be available on port 25565 when started."
 
 # Function to populate server-plugins directory (for use by start-server.sh)
 populate_server_plugins() {
-    echo "📦 Populating server-plugins/ with fresh debug JAR..."
-
-    # Clear server-plugins directory to ensure fresh plugins
-    rm -rf server-plugins/*
+    echo "📦 Populating server-plugins/ with debug JAR..."
 
     # Get git commit for debug build
     GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
     echo "   Git commit: ${GIT_COMMIT}"
 
-    # Build production JAR
-    mvn clean package -DskipTests -q
+    # Get the base JAR file path
+    BASE_JAR_FILE="build/libs/dragon-egg-lightning-${PLUGIN_VERSION}.jar"
 
-    # Create debug JAR with git commit suffix
-    cp target/DragonEggLightning-${PLUGIN_VERSION}.jar "target/DragonEggLightning-${PLUGIN_VERSION}-${GIT_COMMIT}.jar"
+    # Only build if JAR doesn't exist (avoid duplicate builds)
+    if [ ! -f "$BASE_JAR_FILE" ]; then
+        echo "   Building JAR (not found)..."
+        gradle jar -x test -q
+    else
+        echo "   Using existing JAR (run 'gradle clean' to force rebuild)"
+    fi
+
+    # Ensure server-plugins directory exists
+    mkdir -p server-plugins
+
+    # Create debug JAR with git commit suffix if not exists
+    DEBUG_JAR_FILE="build/libs/dragon-egg-lightning-${PLUGIN_VERSION}-${GIT_COMMIT}.jar"
+    if [ ! -f "$DEBUG_JAR_FILE" ]; then
+        cp "$BASE_JAR_FILE" "$DEBUG_JAR_FILE"
+    fi
 
     # Copy debug JAR to server-plugins directory for Docker mount
-    cp "target/DragonEggLightning-${PLUGIN_VERSION}-${GIT_COMMIT}.jar" server-plugins/DragonEggLightning.jar
+    cp "$DEBUG_JAR_FILE" server-plugins/DragonEggLightning.jar
 
-    echo "✅ Fresh debug JAR populated to server-plugins/ (version: ${PLUGIN_VERSION}-${GIT_COMMIT})"
+    echo "✅ Debug JAR populated to server-plugins/ (version: ${PLUGIN_VERSION}-${GIT_COMMIT})"
 }
 
 # Export function for use by other scripts

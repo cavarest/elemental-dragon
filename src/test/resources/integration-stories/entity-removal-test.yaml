@@ -1,0 +1,87 @@
+# Entity Removal Test - Lightning Strike Verification
+# Demonstrates: Spawn entity → Lightning → State comparison → Assertion
+
+name: "Entity Removal Test"
+description: "Spawn zombie in front of player, use lightning ability, verify zombie is removed via JSON state comparison"
+
+setup:
+  - action: "connect_player"
+    player: "pilaf_tester"
+    name: "Connect test player"
+
+  - action: "make_operator"
+    player: "pilaf_tester"
+    name: "Make test player operator"
+
+  - action: "execute_rcon_command"
+    command: "item replace entity pilaf_tester weapon.offhand with dragon_egg 1"
+    name: "Give dragon egg to player offhand"
+
+steps:
+  # Spawn zombie with custom name 5 blocks in front of player
+  - action: "execute_rcon_command"
+    command: "execute at pilaf_tester run summon zombie ~ ~5 ~ {CustomName:'\"TestZombie\"'}"
+    name: "Spawn zombie 5 blocks in front of player"
+    store_as: "spawn_result"
+
+  # Capture entity state BEFORE lightning
+  - action: "get_entities_in_view"
+    player: "pilaf_tester"
+    store_as: "entities_before"
+    name: "Capture entity state before lightning"
+
+  # Print initial state for verification
+  - action: "print_stored_state"
+    variable_name: "entities_before"
+    format: "json"
+    name: "Print initial entity state"
+
+  # Execute lightning ability
+  - action: "execute_player_command"
+    player: "pilaf_tester"
+    command: "/ability 1"
+    name: "Use lightning ability on target"
+
+  # Wait for lightning effect and entity processing
+  - action: "wait"
+    duration: 2000
+    name: "Wait for lightning processing"
+
+  # Capture entity state AFTER lightning
+  - action: "get_entities_in_view"
+    player: "pilaf_tester"
+    store_as: "entities_after"
+    name: "Capture entity state after lightning"
+
+  # Print final state for comparison
+  - action: "print_stored_state"
+    variable_name: "entities_after"
+    format: "json"
+    name: "Print final entity state"
+
+  # Compare states and show differences
+  - action: "compare_states"
+    state1: "entities_before"
+    state2: "entities_after"
+    store_as: "lightning_effect_comparison"
+    name: "Compare before/after states"
+
+  # Print comparison results
+  - action: "print_state_comparison"
+    variable_name: "lightning_effect_comparison"
+    name: "Show state comparison results"
+
+  # Assert that TestZombie is no longer present
+  - action: "execute_rcon_command"
+    command: "execute if entity @e[name=TestZombie]"
+    name: "Verify TestZombie is gone"
+    store_as: "zombie_check"
+
+  - action: "print_stored_state"
+    variable_name: "zombie_check"
+    name: "Print zombie existence check"
+
+cleanup:
+  - action: "disconnect_player"
+    player: "pilaf_tester"
+    name: "Disconnect test player"

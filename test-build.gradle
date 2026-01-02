@@ -1,0 +1,25 @@
+plugins {
+    id 'java-library'
+}
+
+group = 'org.cavarest'
+version = '1.0.2'
+description = 'Test build configuration'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+repositories {
+    mavenCentral()
+}
+
+// Minimal dependencies for testing
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.1'
+}
+
+test {
+    useJUnitPlatform()
+}
