@@ -1,10 +1,10 @@
 name: DragonEggLightning
 version: ${project.version}
-main: com.dragonegg.lightning.DragonEggLightningPlugin
+main: org.cavarest.dragonegglightning.DragonEggLightningPlugin
 api-version: '1.21'
 description: Dragon Egg Lightning Ability Plugin
 author: Augustus Tse and Octavius Tse
-website: https://github.com/ronaldtse/papermc-plugin-dragon-egg
+website: https://github.com/cavarest/papermc-plugin-dragon-egg
 
 commands:
   ability:
@@ -13,7 +13,18 @@ commands:
     permission: dragonegg.ability
     permission-message: You do not have permission to use this ability
 
+  dragonlightning:
+    description: Admin commands for DragonEgg Lightning plugin
+    usage: /dragonlightning <subcommand> [args]
+    permission: dragonlightning.admin
+    permission-message: You do not have permission to use admin commands
+    aliases: [dl, dlight]
+
 permissions:
   dragonegg.ability:
     description: Allows use of dragon egg abilities
     default: true
+
+  dragonlightning.admin:
+    description: Allows use of admin commands
+    default: op

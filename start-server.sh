@@ -12,8 +12,8 @@ else
     exit 1
 fi
 
-# Extract version from pom.xml using Maven (single source of truth)
-PLUGIN_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+# Extract version from gradle.properties using Gradle
+PLUGIN_VERSION=$(grep "^project.version=" gradle.properties | cut -d'=' -f2)
 export PLUGIN_VERSION
 export ADMIN_USERNAME
 
@@ -34,12 +34,12 @@ for arg in "$@"; do
             echo ""
             echo "Options:"
             echo "  -r, --rebuild    Rebuild Docker image and restart server"
-            echo "  -c, --clean      Clean build (Maven clean + fresh Docker image)"
+            echo "  -c, --clean      Clean build (Gradle clean + fresh Docker image)"
             echo "  -h, --help       Show this help message"
             echo ""
             echo "Examples:"
-            echo "  $0               # Start server normally"
-            echo "  $0 -r            # Rebuild and restart"
+            echo "  $0               # Start server normally (uses cached Docker layers)"
+            echo "  $0 -r            # Rebuild Docker image and restart"
             echo "  $0 -c            # Clean build and start"
             echo "  $0 -r -c         # Clean rebuild and restart"
             exit 0
@@ -55,24 +55,64 @@ echo "================================"
 CONTAINER_NAME=${CONTAINER_NAME:-papermc-dragonegg}
 echo "🔍 Checking if server is already running..."
 
+# Check for our container
 if docker ps --format "table {{.Names}}" | grep -q "^${CONTAINER_NAME}$"; then
     echo "⚠️  Server is currently running! Stopping it first..."
-    docker-compose down
+    docker-compose down --remove-orphans
     echo "✅ Server stopped successfully!"
     echo ""
-
-    # Wait a moment for cleanup
     sleep 2
 else
     echo "✅ No running server found, proceeding to start..."
     echo ""
 fi
 
-# Build the JAR file first (always needed for Docker)
-echo "🔧 Building plugin JAR..."
-if ! mvn clean package -DskipTests; then
-    echo "✗ Failed to build plugin JAR"
-    exit 1
+# Also check for and stop any other containers using our ports
+echo "🔍 Checking for containers using ports 25565/25575..."
+PORT_CONTAINERS=$(docker ps --format "{{.Names}}" | grep -E "papermc|minecraft|dragon" || true)
+if [ -n "$PORT_CONTAINERS" ]; then
+    echo "⚠️  Found other containers using our ports, stopping them..."
+    for container in $PORT_CONTAINERS; do
+        echo "   Stopping $container..."
+        docker stop "$container" 2>/dev/null || true
+        docker rm "$container" 2>/dev/null || true
+    done
+    echo "✅ Other containers stopped!"
+    echo ""
+    sleep 2
+fi
+
+# Build the JAR file only if it doesn't exist or if source code has changed
+JAR_FILE="build/libs/dragon-egg-lightning-${PLUGIN_VERSION}.jar"
+if [ ! -f "$JAR_FILE" ]; then
+    echo "🔧 Building plugin JAR..."
+    if ! gradle clean jar -x test; then
+        echo "✗ Failed to build plugin JAR"
+        exit 1
+    fi
+else
+    echo "🔧 Checking if JAR needs rebuilding due to source changes..."
+
+    # Check if any source files are newer than the JAR
+    SOURCE_NEWER=false
+    for src_dir in src/main/java src/main/resources; do
+        if [ -d "$src_dir" ]; then
+            if [ "$(find "$src_dir" -type f -newer "$JAR_FILE" 2>/dev/null | wc -l)" -gt 0 ]; then
+                SOURCE_NEWER=true
+                break
+            fi
+        fi
+    done
+
+    if [ "$SOURCE_NEWER" = true ]; then
+        echo "🔧 Source code changed, rebuilding plugin JAR..."
+        if ! gradle clean jar -x test; then
+            echo "✗ Failed to rebuild plugin JAR"
+            exit 1
+        fi
+    else
+        echo "🔧 Using existing plugin JAR (no source changes detected)"
+    fi
 fi
 
 echo "Plugin version loaded: ${PLUGIN_VERSION}"
@@ -122,45 +162,20 @@ echo ""
 echo "Using PLUGIN_VERSION: ${PLUGIN_VERSION}"
 echo "Using ADMIN_USERNAME: ${ADMIN_USERNAME}"
 
-# Check if plugin JAR exists and force cache cleanup
-JAR_FILE=$(find target/ -name "DragonEggLightning-${PLUGIN_VERSION}.jar" | head -1)
-if [ -n "$JAR_FILE" ]; then
+# Check if plugin JAR exists
+JAR_FILE="build/libs/dragon-egg-lightning-${PLUGIN_VERSION}.jar"
+if [ -n "$JAR_FILE" ] && [ -f "$JAR_FILE" ]; then
     echo "✓ Plugin JAR found: $JAR_FILE"
-
-    # CRITICAL: Force remove old Docker images to ensure fresh build with latest JAR
-    echo "🧹 Cleaning Docker cache to ensure latest JAR is used..."
-    docker rmi dragon-egg-lightning:latest 2>/dev/null || true
-    docker image prune -f
-
-    # Double-check the JAR file is fresh
     JAR_MODIFIED=$(stat -f %m "$JAR_FILE" 2>/dev/null || stat -c %Y "$JAR_FILE" 2>/dev/null)
     echo "📅 JAR file last modified: $(date -r $JAR_MODIFIED '+%Y-%m-%d %H:%M:%S' 2>/dev/null || date -d @$JAR_MODIFIED '+%Y-%m-%d %H:%M:%S')"
 else
-    echo "✗ Plugin JAR not found: DragonEggLightning-${PLUGIN_VERSION}.jar"
-    exit 1
-fi
-
-# Build using docker-compose with environment variables (always rebuild)
-if ! docker-compose build --no-cache; then
-    echo "✗ Failed to build Docker image"
+    echo "✗ Plugin JAR not found: $JAR_FILE"
     exit 1
 fi
 
 echo "✅ Docker image built successfully with plugin version ${PLUGIN_VERSION}!"
 
-
-# Source build.sh to get the populate_server_plugins function
-source build.sh
-
-# Populate server-plugins using build.sh logic (DRY principle)
-populate_server_plugins
-
-
-echo "✅ Fresh debug JAR populated to server-plugins/ (version: ${PLUGIN_VERSION}-${GIT_COMMIT})"
-
-
 echo ""
-
 echo "✓ Server will be configured with settings from .env file"
 echo "✓ Plugin version: ${PLUGIN_VERSION}"
 echo "✓ Admin username: ${ADMIN_USERNAME}"
@@ -168,7 +183,7 @@ echo ""
 
 # Start Docker container with docker-compose
 echo "Starting Docker container..."
-docker-compose up -d
+docker-compose up -d --remove-orphans
 
 echo ""
 echo "================================"
@@ -185,12 +200,67 @@ echo "  Stop server:    ./stop-server.sh"
 echo "  Rebuild:        ./start-server.sh -r"
 echo "  Clean rebuild:  ./start-server.sh -c"
 echo ""
-echo "Waiting for server to start (this may take a minute)..."
-sleep 10
 
-# Show initial logs
-docker logs ${CONTAINER_NAME:-papermc-dragonegg} --tail 30
+# Wait for server to be ready with proper detection
+echo "Waiting for server to start..."
+echo "(This may take 30-60 seconds on first run)"
+echo ""
+
+MAX_WAIT=120
+WAIT_COUNT=0
+SERVER_READY=false
+
+while [ $WAIT_COUNT -lt $MAX_WAIT ]; do
+    # Check if container is running
+    if ! docker ps --format "{{.Names}}" | grep -q "^${CONTAINER_NAME}$"; then
+        echo "✗ Container stopped unexpectedly!"
+        echo "Container logs:"
+        docker logs ${CONTAINER_NAME:-papermc-dragonegg} --tail 50
+        exit 1
+    fi
+
+    # Check logs for server ready indicators
+    LOGS=$(docker logs ${CONTAINER_NAME:-papermc-dragonegg} 2>&1)
+
+    if echo "$LOGS" | grep -qE "Done \([0-9.]+s\)!"; then
+        SERVER_READY=true
+        break
+    elif echo "$LOGS" | grep -qE "ThreadedAnvilChunkStorage.*Loading"; then
+        # Server is loading chunks, getting close
+        echo "   Server is loading world data..."
+    elif echo "$LOGS" | grep -qE "DragonEggLightning.*enabled"; then
+        # Plugin loaded
+        echo "   Plugin loaded!"
+    fi
+
+    sleep 2
+    WAIT_COUNT=$((WAIT_COUNT + 2))
+    echo -ne "   Still starting... ${WAIT_COUNT}s elapsed\r"
+done
 
 echo ""
-echo "✅ Server should be starting up. Check logs above for any issues."
-echo "   Plugin will load automatically once the server is ready."
+
+if [ "$SERVER_READY" = true ]; then
+    echo "✅ Server is ready for manual testing!"
+else
+    echo "⚠️  Server may still be starting, checking logs..."
+fi
+
+echo ""
+echo "Recent server logs:"
+echo "==================="
+docker logs ${CONTAINER_NAME:-papermc-dragonegg} --tail 20
+echo "==================="
+echo ""
+
+if [ "$SERVER_READY" = true ]; then
+    echo "✅ Server is ready! You can now connect with your Minecraft client."
+    echo ""
+    echo "Connection details:"
+    echo "  Address: localhost (or your server IP)"
+    echo "  Port: 25565"
+    echo "  Version: 1.21.x (PaperMC)"
+else
+    echo "⚠️  Server might still be loading. Check logs above for status."
+    echo "   If you see 'Done' in the logs, the server is ready."
+fi

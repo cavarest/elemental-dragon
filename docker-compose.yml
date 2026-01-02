@@ -16,10 +16,9 @@ services:
       - MAX_PLAYERS=${MAX_PLAYERS:-10}
       - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
     volumes:
-      # Persist world data
+      # Persist all server data (including any custom worlds players may create)
       - ./server-data:/data:rw
-      # Mount fresh plugins directory (separate from world data)
-      - ./server-plugins:/opt/minecraft/plugins:rw
+      # Note: Plugins are baked into the Docker image, no need for separate volume mount
     stdin_open: true
     tty: true
     networks:

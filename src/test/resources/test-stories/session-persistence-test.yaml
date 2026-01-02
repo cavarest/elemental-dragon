@@ -1,0 +1,149 @@
+# DragonEggLightning Session Persistence Test Story
+# This YAML story tests that cooldown persists across logout/login sessions
+
+story:
+  name: "Session Persistence Test"
+  description: "Test that cooldown survives logout/login to prevent abuse"
+
+setup:
+  server:
+    type: "PAPER"
+    version: "1.21.8"
+    online_mode: false
+
+  players:
+    - name: "SessionTester"
+      op: true
+      position: [0, 64, 0]
+      items:
+        - "dragon_egg 3"
+        - "diamond_sword 1"
+
+steps:
+  - name: "Start Server"
+    action: "start_server"
+    timeout: 300
+
+  - name: "Verify Plugin Loaded"
+    action: "check_plugin"
+    plugin: "DragonEggLightning"
+
+  # Test 1: Initial state
+  - name: "Verify Initial Lightning Ready"
+    action: "execute_command"
+    command: "ability status"
+    player: "SessionTester"
+    expected_response_contains: "ready"
+
+  # Test 2: Use lightning and verify cooldown starts
+  - name: "Spawn Test Target"
+    action: "spawn_entity"
+    entity_type: "zombie"
+    name: "SessionTestZombie"
+    player: "SessionTester"
+
+  - name: "Use Lightning Ability"
+    action: "execute_command"
+    command: "ability lightning SessionTestZombie"
+    player: "SessionTester"
+    expected_response_contains: "lightning"
+
+  - name: "Wait for Lightning Strike"
+    action: "wait"
+    duration: 3
+
+  - name: "Verify Cooldown Started"
+    action: "execute_command"
+    command: "ability status"
+    player: "SessionTester"
+    expected_response_contains: "cooldown"
+
+  # Test 3: Logout and login simulation
+  - name: "Simulate Logout"
+    action: "execute_command"
+    command: "logout"
+    player: "SessionTester"
+
+  - name: "Wait for Logout"
+    action: "wait"
+    duration: 2
+
+  - name: "Simulate Login"
+    action: "execute_command"
+    command: "login"
+    player: "SessionTester"
+
+  - name: "Wait for Login"
+    action: "wait"
+    duration: 2
+
+  # Test 4: Verify cooldown persists after login
+  - name: "Verify Cooldown Persists After Login"
+    action: "execute_command"
+    command: "ability status"
+    player: "SessionTester"
+    expected_response_contains: "cooldown"
+
+  # Test 5: Wait for cooldown to expire naturally
+  - name: "Wait for Cooldown to Expire"
+    action: "wait"
+    duration: 65  # Wait 65 seconds (cooldown is 60 seconds)
+
+  - name: "Verify Lightning Ready After Cooldown Expires"
+    action: "execute_command"
+    command: "ability status"
+    player: "SessionTester"
+    expected_response_contains: "ready"
+
+  # Test 6: Use lightning again to start new cooldown
+  - name: "Use Lightning After Cooldown Expires"
+    action: "execute_command"
+    command: "ability lightning SessionTestZombie"
+    player: "SessionTester"
+    expected_response_contains: "lightning"
+
+  - name: "Verify New Cooldown Started"
+    action: "execute_command"
+    command: "ability status"
+    player: "SessionTester"
+    expected_response_contains: "cooldown"
+
+  # Test 7: Logout/login again to verify persistence
+  - name: "Simulate Second Logout"
+    action: "execute_command"
+    command: "logout"
+    player: "SessionTester"
+
+  - name: "Wait for Second Logout"
+    action: "wait"
+    duration: 2
+
+  - name: "Simulate Second Login"
+    action: "execute_command"
+    command: "login"
+    player: "SessionTester"
+
+  - name: "Wait for Second Login"
+    action: "wait"
+    duration: 2
+
+  # Test 8: Verify cooldown still active after second login
+  - name: "Verify Cooldown Persists After Second Login"
+    action: "execute_command"
+    command: "ability status"
+    player: "SessionTester"
+    expected_response_contains: "cooldown"
+
+cleanup:
+  action: "stop_server"
+
+expected_results:
+  plugin_loads: true
+  initial_cooldown_ready: true
+  cooldown_starts_on_use: true
+  cooldown_persists_after_logout: true
+  cooldown_persists_after_login: true
+  cooldown_expires_naturally: true
+  new_cooldown_starts: true
+  cooldown_persists_after_second_logout: true
+  cooldown_persists_after_second_login: true

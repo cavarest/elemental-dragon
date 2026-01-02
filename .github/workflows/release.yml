@@ -17,7 +17,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         fetch-depth: 0
 
@@ -27,10 +27,10 @@ jobs:
         java-version: '21'
         distribution: 'temurin'
 
-    - name: Get version from pom.xml
+    - name: Get version from gradle.properties
       id: get_version
       run: |
-        VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+        VERSION=$(grep "^project.version=" gradle.properties | cut -d'=' -f2)
         echo "version=$VERSION" >> $GITHUB_OUTPUT
         echo "tag=v$VERSION" >> $GITHUB_OUTPUT
         echo "Detected version: $VERSION"
@@ -60,16 +60,16 @@ jobs:
         git push origin "$TAG"
         echo "Tag $TAG created and pushed successfully"
 
-    - name: Build plugin using build.sh (production build)
+    - name: Build plugin using Gradle (production build)
       run: |
-        echo "🏗️ Building production plugin using build.sh --production..."
-        ./build.sh --production
+        echo "🏗️ Building production plugin using Gradle..."
+        gradle clean jar -x test
         echo "Plugin built successfully"
 
     - name: Verify plugin.yml structure
       run: |
         echo "🔍 Verifying plugin.yml is correctly packaged..."
-        JAR_FILE=$(find target -name "DragonEggLightning-*.jar" | head -1)
+        JAR_FILE=$(find build/libs -name "dragon-egg-lightning-*.jar" | head -1)
         echo "Found JAR: $JAR_FILE"
         jar tf "$JAR_FILE" | grep plugin.yml
         echo "✅ Plugin.yml structure verified (no duplicate files)"
@@ -123,19 +123,15 @@ jobs:
 
           ## 📊 Build Information
           - **Plugin Version**: {{ steps.version.outputs.version }}
-          - **JAR File**: $(basename "$(find target -name "DragonEggLightning-*.jar" | head -1)")
-          - **File Size**: $(du -h "$(find target -name "DragonEggLightning-*.jar" | head -1)" | cut -f1)
+          - **JAR File**: $(basename "$(find build/libs -name "dragon-egg-lightning-*.jar" | head -1)")
+          - **File Size**: $(du -h "$(find build/libs -name "dragon-egg-lightning-*.jar" | head -1)" | cut -f1)
           - **Build Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
           - **Git Commit**: `${{ github.sha }}`
           - **Paper Version**: 1.21.8
           - **Java Version**: 21+
-          - **Build System**: Updated GitHub workflows with build.sh integration
-
-          ---
-          **Report issues**: [GitHub Issues](https://github.com/${{ github.repository }}/issues)
-          **Full documentation**: [README.md](https://github.com/${{ github.repository }}/blob/main/README.md)
+          - **Build System**: Gradle
         files: |
-          target/DragonEggLightning-*.jar
+          build/libs/dragon-egg-lightning-*.jar
         draft: false
         prerelease: false
         generate_release_notes: true
@@ -146,7 +142,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: plugin-jar-${{ steps.version.outputs.version }}
-        path: target/DragonEggLightning-*.jar
+        path: build/libs/dragon-egg-lightning-*.jar
         retention-days: 90
 
     - name: Verify Release Creation
@@ -166,7 +162,7 @@ jobs:
           echo "🔗 Release URL: https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.tag }}"
           echo ""
           echo "📥 Direct Download Link:"
-          JAR_FILE=$(find target -name "DragonEggLightning-*.jar" | head -1 | xargs basename)
+          JAR_FILE=$(find build/libs -name "dragon-egg-lightning-*.jar" | head -1 | xargs basename)
           echo "  https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/$JAR_FILE"
         else
           echo "❌ Failed to create release"

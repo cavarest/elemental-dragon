@@ -1,0 +1,69 @@
+plugins {
+    id 'java-library'
+}
+
+group = 'org.cavarest'
+version = '1.0.2'
+description = 'Dragon Egg Lightning Ability Plugin'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        name = 'PaperMC'
+        url = uri('https://repo.papermc.io/repository/maven-public/')
+    }
+}
+
+// Dependency management
+ext {
+    junitVersion = '5.10.1'
+    mockitoVersion = '5.17.0'
+    snakeyamlVersion = '2.0'
+    paperVersion = '1.21.11-R0.1-SNAPSHOT' // Latest Paper API version
+}
+
+dependencies {
+    // Paper API for Minecraft server interaction
+    implementation "io.papermc.paper:paper-api:${paperVersion}"
+
+    // PILAF Framework - TEMPORARILY DISABLED
+    // implementation project(':lib:pilaf')
+
+    // Testing dependencies
+    testImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
+    testImplementation "org.junit.platform:junit-platform-runner"
+
+    // Mocking dependencies
+    testImplementation "org.mockito:mockito-core:${mockitoVersion}"
+
+    // YAML for test stories
+    testImplementation "org.yaml:snakeyaml:${snakeyamlVersion}"
+}
+
+// Test configuration
+test {
+    useJUnitPlatform()
+    testLogging {
+        events "passed", "skipped", "failed"
+    }
+}
+
+// JAR task configuration for Paper plugins
+tasks.jar {
+    manifest {
+        attributes["paperweight-mappings-namespace"] = "mojang"
+    }
+}
+
+// Replace ${project.version} in plugin.yml with the actual version
+processResources {
+    filesMatching('plugin.yml') {
+        expand('project': [version: project.version])
+    }
+}

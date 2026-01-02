@@ -1,0 +1,141 @@
+# DragonEggLightning Cooldown Behavior Test Story
+# This YAML story tests the new intelligent cooldown system
+
+story:
+  name: "Cooldown Behavior Test"
+  description: "Test that cooldown behaves correctly - death clears, item-independent, session-persistent"
+
+setup:
+  server:
+    type: "PAPER"
+    version: "1.21.8"
+    online_mode: false
+
+  players:
+    - name: "CooldownTester"
+      op: true
+      position: [0, 64, 0]
+      items:
+        - "dragon_egg 3"
+        - "diamond_sword 1"
+
+steps:
+  - name: "Start Server"
+    action: "start_server"
+    timeout: 300
+
+  - name: "Verify Plugin Loaded"
+    action: "check_plugin"
+    plugin: "DragonEggLightning"
+
+  # Test 1: Initial cooldown state
+  - name: "Verify Initial Lightning Ready"
+    action: "execute_command"
+    command: "ability status"
+    player: "CooldownTester"
+    expected_response_contains: "ready"
+
+  # Test 2: Use lightning and verify cooldown starts
+  - name: "Spawn Test Target"
+    action: "spawn_entity"
+    entity_type: "zombie"
+    name: "CooldownTestZombie"
+    player: "CooldownTester"
+
+  - name: "Use Lightning Ability"
+    action: "execute_command"
+    command: "ability lightning CooldownTestZombie"
+    player: "CooldownTester"
+    expected_response_contains: "lightning"
+
+  - name: "Wait for Lightning Strike"
+    action: "wait"
+    duration: 3
+
+  - name: "Verify Cooldown Started"
+    action: "execute_command"
+    command: "ability status"
+    player: "CooldownTester"
+    expected_response_contains: "cooldown"
+
+  # Test 3: Test item independence - lose dragon egg, cooldown continues
+  - name: "Drop Dragon Egg"
+    action: "execute_command"
+    command: "drop dragon_egg"
+    player: "CooldownTester"
+
+  - name: "Verify Cooldown Persists Without Dragon Egg"
+    action: "execute_command"
+    command: "ability status"
+    player: "CooldownTester"
+    expected_response_contains: "cooldown"
+
+  - name: "Pick Up Dragon Egg Again"
+    action: "execute_command"
+    command: "pickup dragon_egg"
+    player: "CooldownTester"
+
+  - name: "Verify Cooldown Still Active After Picking Up"
+    action: "execute_command"
+    command: "ability status"
+    player: "CooldownTester"
+    expected_response_contains: "cooldown"
+
+  # Test 4: Test death clears cooldown
+  - name: "Kill Player (Simulate Death)"
+    action: "execute_command"
+    command: "kill @p"
+    player: "CooldownTester"
+
+  - name: "Respawn Player"
+    action: "execute_command"
+    command: "respawn"
+    player: "CooldownTester"
+
+  - name: "Verify Cooldown Cleared After Death"
+    action: "execute_command"
+    command: "ability status"
+    player: "CooldownTester"
+    expected_response_contains: "ready"
+
+  # Test 5: Use lightning again and test cooldown persistence
+  - name: "Use Lightning After Respawn"
+    action: "execute_command"
+    command: "ability lightning CooldownTestZombie"
+    player: "CooldownTester"
+    expected_response_contains: "lightning"
+
+  - name: "Verify Cooldown Active Again"
+    action: "execute_command"
+    command: "ability status"
+    player: "CooldownTester"
+    expected_response_contains: "cooldown"
+
+  - name: "Kill Player Again"
+    action: "execute_command"
+    command: "kill @p"
+    player: "CooldownTester"
+
+  - name: "Respawn Player Again"
+    action: "execute_command"
+    command: "respawn"
+    player: "CooldownTester"
+
+  - name: "Verify Lightning Ready Again After Second Death"
+    action: "execute_command"
+    command: "ability status"
+    player: "CooldownTester"
+    expected_response_contains: "ready"
+
+cleanup:
+  action: "stop_server"
+
+expected_results:
+  plugin_loads: true
+  initial_cooldown_ready: true
+  cooldown_starts_on_use: true
+  cooldown_persists_without_dragon_egg: true
+  death_clears_cooldown: true
+  respawn_lets_use_ability: true
+  cooldown_restarts_on_new_use: true
+  death_clears_cooldown_again: true

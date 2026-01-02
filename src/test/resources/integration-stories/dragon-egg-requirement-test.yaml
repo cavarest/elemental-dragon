@@ -1,0 +1,75 @@
+# Dragon Egg Requirement Test - Ability requires dragon egg in offhand
+name: "Dragon Egg Requirement Test"
+description: "Test that ability requires dragon egg in offhand"
+
+setup:
+  - action: "connect_player"
+    player: "pilaf_tester"
+    name: "Connect test player"
+
+  - action: "make_operator"
+    player: "pilaf_tester"
+    name: "Make test player operator"
+
+  - action: "execute_rcon_command"
+    command: "item replace entity pilaf_tester weapon.offhand with dragon_egg 1"
+    name: "Initially give dragon egg to player offhand"
+
+steps:
+  # Remove dragon egg from player
+  - action: "remove_item"
+    player: "pilaf_tester"
+    item: "dragon_egg"
+    count: 1
+    name: "Remove dragon egg from player"
+
+  - action: "wait"
+    duration: 500
+    name: "Wait for clear operation"
+
+  # Check player inventory after clear
+  - action: "get_player_inventory"
+    player: "pilaf_tester"
+    store_as: "inventory_after_clear"
+    name: "Check player inventory after clear"
+
+  # Print inventory state
+  - action: "print_stored_state"
+    variable_name: "inventory_after_clear"
+    name: "Print inventory after dragon egg removal"
+
+  # Clear cooldown using new command
+  - action: "clear_cooldown"
+    player: "pilaf_tester"
+    name: "Clear cooldown"
+
+  # Try to use ability without dragon egg
+  - action: "execute_player_command"
+    player: "pilaf_tester"
+    command: "/ability 1"
+    name: "Attempt ability without dragon egg"
+
+  # Restore dragon egg
+  - action: "execute_rcon_command"
+    command: "item replace entity pilaf_tester weapon.offhand with dragon_egg 1"
+    name: "Restore dragon egg to offhand"
+
+  - action: "wait"
+    duration: 500
+    name: "Wait for item replace"
+
+  # Check inventory after restore
+  - action: "get_player_inventory"
+    player: "pilaf_tester"
+    store_as: "inventory_after_restore"
+    name: "Check inventory after restore"
+
+  # Print restored inventory state
+  - action: "print_stored_state"
+    variable_name: "inventory_after_restore"
+    name: "Print inventory after dragon egg restoration"
+
+cleanup:
+  - action: "disconnect_player"
+    player: "pilaf_tester"
+    name: "Disconnect test player"

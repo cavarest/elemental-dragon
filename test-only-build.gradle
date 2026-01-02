@@ -1,0 +1,45 @@
+plugins {
+    id 'java-library'
+}
+
+group = 'org.cavarest'
+version = '1.0.2'
+description = 'Dragon Egg Lightning Ability Plugin - Test Only'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+repositories {
+    mavenCentral()
+}
+
+// Dependency management - TEST ONLY
+ext {
+    junitVersion = '5.10.1'
+    mockitoVersion = '5.17.0'
+    snakeyamlVersion = '2.0'
+}
+
+dependencies {
+    // Testing dependencies ONLY - no Paper API or PILAF for basic test verification
+    testImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${junitVersion}"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
+
+    // Mocking dependencies
+    testImplementation "org.mockito:mockito-core:${mockitoVersion}"
+
+    // YAML for test stories
+    testImplementation "org.yaml:snakeyaml:${snakeyamlVersion}"
+}
+
+// Test configuration
+test {
+    useJUnitPlatform()
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"
+    }
+}

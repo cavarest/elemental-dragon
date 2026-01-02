@@ -9,9 +9,9 @@
 
 **Transform your server with the ultimate Dragon Egg lightning ability!**
 
-[![Download Latest Release](https://img.shields.io/badge/Download-Latest%20Release-ff6b6b?style=for-the-badge&logo=github)](https://github.com/ronaldtse/papermc-plugin-dragon-egg/releases/latest)
-[![GitHub Stars](https://img.shields.io/github/stars/ronaldtse/papermc-plugin-dragon-egg?style=social)](https://github.com/ronaldtse/papermc-plugin-dragon-egg)
-[![GitHub Forks](https://img.shields.io/github/forks/ronaldtse/papermc-plugin-dragon-egg?style=social)](https://github.com/ronaldtse/papermc-plugin-dragon-egg/fork)
+[![Download Latest Release](https://img.shields.io/badge/Download-Latest%20Release-ff6b6b?style=for-the-badge&logo=github)](https://github.com/cavarest/papermc-plugin-dragon-egg/releases/latest)
+[![GitHub Stars](https://img.shields.io/github/stars/cavarest/papermc-plugin-dragon-egg?style=social)](https://github.com/cavarest/papermc-plugin-dragon-egg)
+[![GitHub Forks](https://img.shields.io/github/forks/cavarest/papermc-plugin-dragon-egg/fork?style=social)](https://github.com/cavarest/papermc-plugin-dragon-egg/fork)
 
 </div>
 
@@ -49,7 +49,7 @@ This repository has been organized into logical documentation categories:
 - **[Installation Guide](docs/user/installation.md)** - Step-by-step installation instructions
 
 ### 🔧 [Administrator Documentation](docs/admin/)
-- **[Testing Guide](docs/admin/testing.md)** - Real-world testing procedures
+- **[Testing Guide](docs/admin/testing.md)** - Testing procedures
 - **[Docker Architecture](docs/admin/docker.md)** - Container setup and deployment
 - **[CI/CD Guide](docs/admin/cicd.md)** - Continuous integration and deployment
 
@@ -114,14 +114,14 @@ This repository has been organized into logical documentation categories:
 **Required Software:**
 - **Docker Desktop** - [Download](https://www.docker.com/products/docker-desktop/)
 - **Java 21+** - [OpenJDK](https://adoptium.net/) or Oracle JDK
-- **Maven 3.6+** - [Maven](https://maven.apache.org/download.cgi)
+- **Gradle** - [Gradle](https://gradle.org/install/) (or use included gradlew wrapper)
 - **Git** - [Git](https://git-scm.com/downloads)
 
 **Quick Start for Developers:**
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/ronaldtse/papermc-plugin-dragon-egg.git
+git clone https://github.com/cavarest/papermc-plugin-dragon-egg.git
 cd papermc-plugin-dragon-egg
 
 # 2. Build plugin JAR
@@ -153,8 +153,7 @@ cd papermc-plugin-dragon-egg
 
 # Testing
 ./test-plugin.sh             # Run all tests
-mvn test                     # Run unit tests
-mvn test -Dtest=*Yaml*       # Run YAML tests
+gradle test                  # Run unit tests
 ```
 
 ---
@@ -227,10 +226,8 @@ op <username>
 
 This plugin features a comprehensive testing framework including:
 
-- **🧪 Unit Tests**: 24/24 passing tests covering all core functionality
+- **🧪 Unit Tests**: Tests covering all core functionality using JUnit and Mockito
 - **🔧 Integration Tests**: End-to-end testing with real PaperMC servers
-- **📝 YAML DSL**: Human-readable test scenarios for non-programmers
-- **🎮 Mineflayer Integration**: Real Minecraft client testing automation
 - **🐳 Docker Support**: Containerized development and testing environment
 
 ---
@@ -238,7 +235,7 @@ This plugin features a comprehensive testing framework including:
 ## 📞 Support & Community
 
 ### **Getting Help**
-- **GitHub Issues**: [Report bugs or request features](https://github.com/ronaldtse/papermc-plugin-dragon-egg/issues)
+- **GitHub Issues**: [Report bugs or request features](https://github.com/cavarest/papermc-plugin-dragon-egg/issues)
 - **Documentation**: Comprehensive guides in `/docs` directory
 - **Community**: Connect with other server administrators
 
@@ -253,7 +250,7 @@ This plugin features a comprehensive testing framework including:
 
 **License**: MIT License - Free for personal and commercial use
 
-**Author**: Augustus Tse and Octavius Tse
+**Author**: Cavarest Organization
 **Version**: 1.0.2
 **Minecraft Version**: 1.21.8+
 **Paper API**: 1.21.8-R0.1-SNAPSHOT
@@ -264,12 +261,12 @@ This plugin features a comprehensive testing framework including:
 
 **⭐ Star this project if you love Dragon Egg Lightning!** ⭐
 
-[![GitHub Stars](https://img.shields.io/github/stars/ronaldtse/papermc-plugin-dragon-egg?style=social)](https://github.com/ronaldtse/papermc-plugin-dragon-egg)
-[![GitHub Forks](https://img.shields.io/github/forks/ronaldtse/papermc-plugin-dragon-egg?style=social)](https://github.com/ronaldtse/papermc-plugin-dragon-egg/fork)
+[![GitHub Stars](https://img.shields.io/github/stars/cavarest/papermc-plugin-dragon-egg?style=social)](https://github.com/cavarest/papermc-plugin-dragon-egg)
+[![GitHub Forks](https://img.shields.io/github/forks/cavarest/papermc-plugin-dragon-egg/fork?style=social)](https://github.com/cavarest/papermc-plugin-dragon-egg/fork)
 
 **Transform your server today with Dragon Egg Lightning!** ⚡
 
-[Download Latest Release](https://github.com/ronaldtse/papermc-plugin-dragon-egg/releases/latest) | [Installation Guide](docs/user/installation.md) | [Support](https://github.com/ronaldtse/papermc-plugin-dragon-egg/issues)
+[Download Latest Release](https://github.com/cavarest/papermc-plugin-dragon-egg/releases/latest) | [Installation Guide](docs/user/installation.md) | [Support](https://github.com/cavarest/papermc-plugin-dragon-egg/issues)
 
 </div>
 
@@ -278,10 +275,10 @@ This plugin features a comprehensive testing framework including:
 ## 🆕 Recent Improvements (v1.0.2+)
 
 ### **🔧 Enhanced Build System**
+- **Gradle Migration**: Migrated from Maven to Gradle for modern Java builds
 - **DRY Principle**: `build.sh` contains all build logic, `start-server.sh` reuses it
 - **Debug Builds**: Automatic git commit injection for development builds
 - **Function Library**: `populate_server_plugins()` shared across scripts
-- **Clean Production**: pom.xml always has clean version numbers
 
 ### **⚡ Lightning Feedback & Cooldown System**
 - **Target Feedback**: Lightning strikes now show what/who was hit
@@ -394,7 +391,7 @@ Player logs back in → Cooldown continues from remaining time
 4. **Use Again**: Player can use lightning right away
 
 #### **Spam Prevention Scenario**
-1. **Use Lightning**: `/ability 1` → 60s cooldown starts  
+1. **Use Lightning**: `/ability 1` → 60s cooldown starts
 2. **Keep Dragon Egg**: Player keeps dragon egg in inventory
 3. **Lose Dragon Egg**: Player drops dragon egg → Cooldown continues
 4. **Pick Up Dragon Egg**: Player picks up dragon egg → Cooldown continues
@@ -411,7 +408,11 @@ Player logs back in → Cooldown continues from remaining time
 
 - ✅ **Death clears cooldown**: Prevents death-based cooldown bypass
 - ✅ **Item independence**: Cooldown doesn't reset when dragon egg is lost/gained
-- ✅ **Session persistence**: Cooldown survives logout/login cycles  
+- ✅ **Session persistence**: Cooldown survives logout/login cycles
 - ✅ **Time-based expiration**: Cooldown only expires after full 60 seconds
 - ✅ **Fair respawn**: No automatic cooldown restart after death
+
+## Copyright & License
+
+This plugin is licensed under the MIT License.
 

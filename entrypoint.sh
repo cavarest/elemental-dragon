@@ -58,25 +58,36 @@ mkdir -p /data/plugins
 echo "📂 Checking plugins directory..."
 ls -la /data/plugins/
 
-# ALWAYS copy fresh plugins from /opt/minecraft/plugins/ to /data/plugins/
+echo "📂 Checking /opt/minecraft/plugins/ directory..."
+ls -la /opt/minecraft/plugins/
+
+# Copy fresh plugins from /opt/minecraft/plugins/ to /data/plugins/
+# This merges base image plugins with volume-mounted plugins
 echo "🔄 Copying fresh plugins from /opt/minecraft/plugins/ to /data/plugins/..."
-if [ -d "/opt/minecraft/plugins/" ] && [ "$(ls -A /opt/minecraft/plugins/)" ]; then
-    echo "✅ Found fresh plugins in /opt/minecraft/plugins/"
 
-    # Copy ALL plugin JAR files, overwriting existing ones
-    cp -f /opt/minecraft/plugins/*.jar /data/plugins/ 2>/dev/null || true
-
-    # Copy any other plugin files (config files, etc.)
-    cp -rf /opt/minecraft/plugins/* /data/plugins/ 2>/dev/null || true
-
-    echo "✅ Fresh plugins copied to /data/plugins/ (overwritten old ones)"
-
-    # Show what was copied
-    echo "📋 Fresh plugins in /data/plugins/:"
-    ls -la /data/plugins/
+# Check if the specific plugin file exists
+if [ -f "/opt/minecraft/plugins/DragonEggLightning.jar" ]; then
+    echo "✅ Found DragonEggLightning.jar in /opt/minecraft/plugins/"
+    cp -f /opt/minecraft/plugins/DragonEggLightning.jar /data/plugins/
+    echo "✅ Plugin copied to /data/plugins/"
 else
-    echo "⚠️  No plugins found in /opt/minecraft/plugins/"
+    echo "⚠️  DragonEggLightning.jar NOT found in /opt/minecraft/plugins/"
+    # List all files to debug
+    echo "   Contents of /opt/minecraft/plugins/:"
+    ls -la /opt/minecraft/plugins/ || true
 fi
+
+# Also copy any other JAR files
+if [ -n "$(ls /opt/minecraft/plugins/*.jar 2>/dev/null)" ]; then
+    echo "🔄 Copying all JAR files from /opt/minecraft/plugins/ to /data/plugins/..."
+    cp -f /opt/minecraft/plugins/*.jar /data/plugins/ 2>/dev/null || true
+    echo "✅ All JAR files copied"
+fi
+
+echo "📋 Plugins in /data/plugins/:"
+ls -la /data/plugins/
+
+echo "✅ Plugin directory ready."
 
 # Ensure ops.json exists and is valid
 if [ ! -f /data/ops.json ]; then
