@@ -2,8 +2,8 @@ services:
   minecraft:
     build:
       context: .
-    image: dragon-egg-lightning:latest
-    container_name: ${CONTAINER_NAME:-papermc-dragonegg}
+    image: elemental-dragon:latest
+    container_name: ${CONTAINER_NAME:-papermc-elementaldragon}
     restart: unless-stopped
     ports:
       - "25565:25565"

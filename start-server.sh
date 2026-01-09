@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Start Paper Minecraft server with Dragon Egg Lightning plugin
+# Start Paper Minecraft server with Elemental Dragon plugin
 
 set -e
 
@@ -52,7 +52,7 @@ echo "Starting Paper MC Server"
 echo "================================"
 
 # Check if server is already running and stop it
-CONTAINER_NAME=${CONTAINER_NAME:-papermc-dragonegg}
+CONTAINER_NAME=${CONTAINER_NAME:-papermc-elementaldragon}
 echo "🔍 Checking if server is already running..."
 
 # Check for our container
@@ -69,7 +69,7 @@ fi
 
 # Also check for and stop any other containers using our ports
 echo "🔍 Checking for containers using ports 25565/25575..."
-PORT_CONTAINERS=$(docker ps --format "{{.Names}}" | grep -E "papermc|minecraft|dragon" || true)
+PORT_CONTAINERS=$(docker ps --format "{{.Names}}" | grep -E "papermc|minecraft|elemental|dragon" || true)
 if [ -n "$PORT_CONTAINERS" ]; then
     echo "⚠️  Found other containers using our ports, stopping them..."
     for container in $PORT_CONTAINERS; do
@@ -83,7 +83,7 @@ if [ -n "$PORT_CONTAINERS" ]; then
 fi
 
 # Build the JAR file only if it doesn't exist or if source code has changed
-JAR_FILE="build/libs/dragon-egg-lightning-${PLUGIN_VERSION}.jar"
+JAR_FILE="build/libs/elemental-dragon-${PLUGIN_VERSION}.jar"
 if [ ! -f "$JAR_FILE" ]; then
     echo "🔧 Building plugin JAR..."
     if ! gradle clean jar -x test; then
@@ -135,12 +135,12 @@ if [ "$RESET" = true ]; then
     # Stop and remove container (already stopped above, but ensure cleanup)
     echo "Stopping and removing container..."
     docker-compose down 2>/dev/null || true
-    docker stop ${CONTAINER_NAME:-papermc-dragonegg} 2>/dev/null || true
-    docker rm ${CONTAINER_NAME:-papermc-dragonegg} 2>/dev/null || true
+    docker stop ${CONTAINER_NAME:-papermc-elementaldragon} 2>/dev/null || true
+    docker rm ${CONTAINER_NAME:-papermc-elementaldragon} 2>/dev/null || true
 
     # Remove Docker image to force rebuild
     echo "Removing Docker image..."
-    docker rmi dragon-egg-lightning:latest 2>/dev/null || true
+    docker rmi elemental-dragon:latest 2>/dev/null || true
 
     # Remove all volumes
     echo "Removing all Docker volumes..."
@@ -163,7 +163,7 @@ echo "Using PLUGIN_VERSION: ${PLUGIN_VERSION}"
 echo "Using ADMIN_USERNAME: ${ADMIN_USERNAME}"
 
 # Check if plugin JAR exists
-JAR_FILE="build/libs/dragon-egg-lightning-${PLUGIN_VERSION}.jar"
+JAR_FILE="build/libs/elemental-dragon-${PLUGIN_VERSION}.jar"
 if [ -n "$JAR_FILE" ] && [ -f "$JAR_FILE" ]; then
     echo "✓ Plugin JAR found: $JAR_FILE"
     JAR_MODIFIED=$(stat -f %m "$JAR_FILE" 2>/dev/null || stat -c %Y "$JAR_FILE" 2>/dev/null)
@@ -194,12 +194,13 @@ echo "Server will be available on port 25565"
 echo "RCON will be available on port 25575"
 echo ""
 echo "Useful commands:"
-echo "  View logs:      docker logs -f ${CONTAINER_NAME:-papermc-dragonegg}"
-echo "  Server console: docker attach ${CONTAINER_NAME:-papermc-dragonegg}"
+echo "  View logs:      docker logs -f ${CONTAINER_NAME:-papermc-elementaldragon}"
+echo "  Server console: docker attach ${CONTAINER_NAME:-papermc-elementaldragon}"
 echo "  Stop server:    ./stop-server.sh"
 echo "  Rebuild:        ./start-server.sh -r"
 echo "  Clean rebuild:  ./start-server.sh -c"
 echo ""
+
 
 # Wait for server to be ready with proper detection
 echo "Waiting for server to start..."
@@ -215,12 +216,12 @@ while [ $WAIT_COUNT -lt $MAX_WAIT ]; do
     if ! docker ps --format "{{.Names}}" | grep -q "^${CONTAINER_NAME}$"; then
         echo "✗ Container stopped unexpectedly!"
         echo "Container logs:"
-        docker logs ${CONTAINER_NAME:-papermc-dragonegg} --tail 50
+        docker logs ${CONTAINER_NAME:-papermc-elementaldragon} --tail 50
         exit 1
     fi
 
     # Check logs for server ready indicators
-    LOGS=$(docker logs ${CONTAINER_NAME:-papermc-dragonegg} 2>&1)
+    LOGS=$(docker logs ${CONTAINER_NAME:-papermc-elementaldragon} 2>&1)
 
     if echo "$LOGS" | grep -qE "Done \([0-9.]+s\)!"; then
         SERVER_READY=true
@@ -228,7 +229,7 @@ while [ $WAIT_COUNT -lt $MAX_WAIT ]; do
     elif echo "$LOGS" | grep -qE "ThreadedAnvilChunkStorage.*Loading"; then
         # Server is loading chunks, getting close
         echo "   Server is loading world data..."
-    elif echo "$LOGS" | grep -qE "DragonEggLightning.*enabled"; then
+    elif echo "$LOGS" | grep -qE "ElementalDragon.*enabled"; then
         # Plugin loaded
         echo "   Plugin loaded!"
     fi
@@ -240,6 +241,7 @@ done
 
 echo ""
 
+
 if [ "$SERVER_READY" = true ]; then
     echo "✅ Server is ready for manual testing!"
 else
@@ -249,9 +251,10 @@ fi
 echo ""
 echo "Recent server logs:"
 echo "==================="
-docker logs ${CONTAINER_NAME:-papermc-dragonegg} --tail 20
+docker logs ${CONTAINER_NAME:-papermc-elementaldragon} --tail 20
 echo "==================="
 echo ""
+
 
 if [ "$SERVER_READY" = true ]; then
     echo "✅ Server is ready! You can now connect with your Minecraft client."

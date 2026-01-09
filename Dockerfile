@@ -1,4 +1,4 @@
-# Dockerfile for Dragon Egg Lightning Plugin
+# Dockerfile for Elemental Dragon Plugin
 # Note: The plugin JAR copy is placed at the end to maximize Docker cache reuse
 
 # PaperMC Server with pre-built plugin
@@ -33,11 +33,11 @@ RUN chmod +x /entrypoint.sh
 # AND to /opt/minecraft/plugins/ (for entrypoint.sh to copy during container startup)
 # This allows volume-mounted plugins to merge with base image plugins
 RUN mkdir -p /data/plugins /opt/minecraft/plugins
-COPY build/libs/dragon-egg-lightning-*.jar /data/plugins/DragonEggLightning.jar
-COPY build/libs/dragon-egg-lightning-*.jar /opt/minecraft/plugins/DragonEggLightning.jar
+COPY build/libs/elemental-dragon-*.jar /data/plugins/ElementalDragon.jar
+COPY build/libs/elemental-dragon-*.jar /opt/minecraft/plugins/ElementalDragon.jar
 
 # Verify the plugin was copied successfully - FAIL BUILD IF NOT FOUND
-RUN if [ ! -f "/data/plugins/DragonEggLightning.jar" ] || [ ! -f "/opt/minecraft/plugins/DragonEggLightning.jar" ]; then \
+RUN if [ ! -f "/data/plugins/ElementalDragon.jar" ] || [ ! -f "/opt/minecraft/plugins/ElementalDragon.jar" ]; then \
         echo "❌ Plugin not found in both locations"; \
         ls -la /data/plugins/ /opt/minecraft/plugins/ || true; \
         exit 1; \

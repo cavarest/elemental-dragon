@@ -1,30 +1,106 @@
-name: DragonEggLightning
+name: ElementalDragon
 version: ${project.version}
-main: org.cavarest.dragonegglightning.DragonEggLightningPlugin
+main: org.cavarest.elementaldragon.ElementalDragon
 api-version: '1.21'
-description: Dragon Egg Lightning Ability Plugin
+description: Elemental Dragon Plugin - Lightning ability and elemental fragments
 author: Augustus Tse and Octavius Tse
 website: https://github.com/cavarest/papermc-plugin-dragon-egg
 
 commands:
-  ability:
-    description: Activate dragon egg ability
-    usage: /ability <number> | /ability version | /ability help
-    permission: dragonegg.ability
+  lightning:
+    description: Activate lightning ability
+    usage: /lightning <number> | /lightning version | /lightning help
+    permission: elementaldragon.lightning
     permission-message: You do not have permission to use this ability
 
-  dragonlightning:
-    description: Admin commands for DragonEgg Lightning plugin
-    usage: /dragonlightning <subcommand> [args]
-    permission: dragonlightning.admin
+  elementaldragon:
+    description: Main admin command for Elemental Dragon plugin
+    usage: /elementaldragon <subcommand> [args]
+    permission: elementaldragon.admin
     permission-message: You do not have permission to use admin commands
-    aliases: [dl, dlight]
+    aliases:
+      - ed
+
+  fire:
+    description: Burning Fragment command - alias for fragment burning
+    usage: /fire <1|2|equip|status|help>
+    permission: elementaldragon.fragment.burning
+    permission-message: You do not have permission to use fire abilities!
+
+  agile:
+    description: Agility Fragment command - alias for fragment agility
+    usage: /agile <1|2|equip|status|help>
+    permission: elementaldragon.fragment.agility
+    permission-message: You do not have permission to use agility abilities!
+
+  immortal:
+    description: Immortal Fragment command - Immortal Fragment abilities
+    usage: /immortal <1|2|equip|status|help>
+    permission: elementaldragon.fragment.immortal
+    permission-message: You do not have permission to use immortal abilities!
+
+  corrupt:
+    description: Corrupted Core command - alias for fragment corrupted
+    usage: /corrupt <1|2|equip|status|help>
+    permission: elementaldragon.fragment.corrupted
+    permission-message: You do not have permission to use corrupted abilities!
+
+  craft:
+    description: Crafting command for Heavy Core and fragments
+    usage: |
+      /craft heavy_core - View Heavy Core recipe (OP only)
+      /craft burning - View Burning Fragment recipe
+      /craft agility - View Agility Fragment recipe
+      /craft immortal - View Immortal Fragment recipe
+      /craft corrupted - View Corrupted Core recipe
+      /craft help - Show crafting help
+    permission: elementaldragon.craft
+    permission-message: You do not have permission to use crafting commands!
+
+  chronicle:
+    description: Chronicle of the Fallen Dragons lore system
+    usage: |
+      /chronicle - Open the chronicle book
+      /chronicle status - Show discovery progress
+      /chronicle page <1-7> - Jump to specific page
+      /chronicle get - Get chronicle book item
+      /chronicle help - Show help
+    permission: elementaldragon.chronicle
+    permission-message: You do not have permission to access the chronicle!
 
 permissions:
-  dragonegg.ability:
-    description: Allows use of dragon egg abilities
+  elementaldragon.lightning:
+    description: Allows use of lightning ability
     default: true
 
-  dragonlightning.admin:
+  elementaldragon.admin:
     description: Allows use of admin commands
     default: op
+
+  elementaldragon.craft:
+    description: Allows use of crafting commands
+    default: true
+
+  elementaldragon.chronicle:
+    description: Access Chronicle of the Fallen Dragons
+    default: true
+
+  elementaldragon.chronicle.get:
+    description: Get physical chronicle book item
+    default: op
+
+  elementaldragon.fragment.burning:
+    description: Use Burning Fragment abilities
+    default: true
+
+  elementaldragon.fragment.agility:
+    description: Use Agility Fragment abilities
+    default: true
+
+  elementaldragon.fragment.immortal:
+    description: Use Immortal Fragment abilities
+    default: true
+
+  elementaldragon.fragment.corrupted:
+    description: Use Corrupted Core abilities
+    default: true

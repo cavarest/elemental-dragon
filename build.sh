@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Build script for Dragon Egg Lightning plugin
+# Build script for Elemental Dragon plugin
 
 set -e
 
@@ -13,7 +13,7 @@ fi
 PLUGIN_VERSION=$(grep "^project.version=" gradle.properties | cut -d'=' -f2)
 
 echo "================================"
-echo "Building Dragon Egg Lightning Plugin"
+echo "Building Elemental Dragon Plugin"
 echo "================================"
 
 # Parse arguments
@@ -70,18 +70,18 @@ if [ "$DEBUG" = true ]; then
     echo "   Git commit: ${GIT_COMMIT}"
 
     # Create debug JAR with git commit suffix
-    JAR_FILE="build/libs/dragon-egg-lightning-${PLUGIN_VERSION}.jar"
+    JAR_FILE="build/libs/elemental-dragon-${PLUGIN_VERSION}.jar"
     if [ -f "$JAR_FILE" ]; then
-        cp "$JAR_FILE" "build/libs/dragon-egg-lightning-${PLUGIN_VERSION}-${GIT_COMMIT}.jar"
-        echo "   ✅ Debug JAR created: dragon-egg-lightning-${PLUGIN_VERSION}-${GIT_COMMIT}.jar"
-        DEBUG_JAR_FILE="build/libs/dragon-egg-lightning-${PLUGIN_VERSION}-${GIT_COMMIT}.jar"
+        cp "$JAR_FILE" "build/libs/elemental-dragon-${PLUGIN_VERSION}-${GIT_COMMIT}.jar"
+        echo "   ✅ Debug JAR created: elemental-dragon-${PLUGIN_VERSION}-${GIT_COMMIT}.jar"
+        DEBUG_JAR_FILE="build/libs/elemental-dragon-${PLUGIN_VERSION}-${GIT_COMMIT}.jar"
     else
         echo "❌ Base JAR not found for debug build"
         exit 1
     fi
 else
     # Production build - use clean version
-    JAR_FILE=$(find build/libs/ -name "dragon-egg-lightning-${PLUGIN_VERSION}.jar" | head -1)
+    JAR_FILE=$(find build/libs/ -name "elemental-dragon-${PLUGIN_VERSION}.jar" | head -1)
 fi
 
 if [ -n "$JAR_FILE" ] && [ -f "$JAR_FILE" ]; then
@@ -108,7 +108,7 @@ echo ""
 echo "Next steps:"
 echo "  1. Start server: ./start-server.sh (will auto-build Docker image if needed)"
 echo "  2. Stop server: ./stop-server.sh"
-echo "  3. View logs: docker logs -f ${CONTAINER_NAME:-papermc-dragonegg}"
+echo "  3. View logs: docker logs -f ${CONTAINER_NAME:-papermc-elementaldragon}"
 echo ""
 echo "Server will be available on port 25565 when started."
 
@@ -121,7 +121,7 @@ populate_server_plugins() {
     echo "   Git commit: ${GIT_COMMIT}"
 
     # Get the base JAR file path
-    BASE_JAR_FILE="build/libs/dragon-egg-lightning-${PLUGIN_VERSION}.jar"
+    BASE_JAR_FILE="build/libs/elemental-dragon-${PLUGIN_VERSION}.jar"
 
     # Only build if JAR doesn't exist (avoid duplicate builds)
     if [ ! -f "$BASE_JAR_FILE" ]; then
@@ -135,13 +135,13 @@ populate_server_plugins() {
     mkdir -p server-plugins
 
     # Create debug JAR with git commit suffix if not exists
-    DEBUG_JAR_FILE="build/libs/dragon-egg-lightning-${PLUGIN_VERSION}-${GIT_COMMIT}.jar"
+    DEBUG_JAR_FILE="build/libs/elemental-dragon-${PLUGIN_VERSION}-${GIT_COMMIT}.jar"
     if [ ! -f "$DEBUG_JAR_FILE" ]; then
         cp "$BASE_JAR_FILE" "$DEBUG_JAR_FILE"
     fi
 
     # Copy debug JAR to server-plugins directory for Docker mount
-    cp "$DEBUG_JAR_FILE" server-plugins/DragonEggLightning.jar
+    cp "$DEBUG_JAR_FILE" server-plugins/ElementalDragon.jar
 
     echo "✅ Debug JAR populated to server-plugins/ (version: ${PLUGIN_VERSION}-${GIT_COMMIT})"
 }

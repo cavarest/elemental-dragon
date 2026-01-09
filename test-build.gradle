@@ -3,7 +3,7 @@ plugins {
 }
 
 group = 'org.cavarest'
-version = '1.0.2'
+version = '1.1.0'
 description = 'Test build configuration'
 
 java {

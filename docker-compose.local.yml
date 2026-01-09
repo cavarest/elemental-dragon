@@ -1,0 +1,52 @@
+# Docker Compose for local PILAF integration testing
+# Run with: docker compose -f docker-compose.local.yml up -d
+# Then run PILAF tests from your local machine
+
+services:
+  minecraft:
+    build:
+      context: .
+    container_name: minecraft-server
+    ports:
+      - "25565:25565"  # Minecraft game port
+      - "25575:25575"  # RCON port (for PILAF commands)
+    environment:
+      - EULA=TRUE
+      - ONLINE_MODE=false
+      - MEMORYSIZE=2G
+      - MAX_PLAYERS=10
+    volumes:
+      - ./server-plugins:/opt/minecraft/plugins:rw
+    networks:
+      - pilaf-network
+    healthcheck:
+      test: ["CMD-SHELL", "echo list | nc -w 2 localhost 25575 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 90s
+
+  mineflayer:
+    build:
+      context: ./mineflayer-bridge
+    container_name: mineflayer-bridge
+    ports:
+      - "3000:3000"  # HTTP API for PILAF MineflayerClient
+    environment:
+      - PORT=3000
+      - MC_HOST=minecraft
+      - MC_PORT=25565
+    depends_on:
+      - minecraft
+    networks:
+      - pilaf-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+networks:
+  pilaf-network:
+    driver: bridge
