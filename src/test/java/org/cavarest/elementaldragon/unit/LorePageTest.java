@@ -9,13 +9,14 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Tests for LorePage - chronicle page definitions and unlock conditions.
+ * Updated for expanded 19-page Chronicle Book.
  */
 class LorePageTest {
 
   @Test
-  @DisplayName("LorePage enum has exactly 7 pages")
+  @DisplayName("LorePage enum has exactly 19 pages")
   void testLorePageCount() {
-    assertEquals(7, LorePage.values().length, "Should have 7 lore pages");
+    assertEquals(19, LorePage.values().length, "Should have 19 lore pages");
   }
 
   @Test
@@ -23,7 +24,7 @@ class LorePageTest {
   void testLorePageNumbersValid() {
     for (LorePage page : LorePage.values()) {
       assertTrue(page.getPageNumber() >= 1, "Page number should be >= 1");
-      assertTrue(page.getPageNumber() <= 7, "Page number should be <= 7");
+      assertTrue(page.getPageNumber() <= 19, "Page number should be <= 19");
     }
   }
 
@@ -67,7 +68,7 @@ class LorePageTest {
   @Test
   @DisplayName("IGNIS page has ABILITY_USE trigger for BURNING fragment")
   void testIgnisTrigger() {
-    LorePage ignis = LorePage.IGNIS;
+    LorePage ignis = LorePage.IGNIS_1;
     assertEquals(UnlockTrigger.ABILITY_USE, ignis.getTrigger());
     assertEquals(FragmentType.BURNING, ignis.getFragmentType());
     assertEquals(5, ignis.getRequiredCount());
@@ -76,7 +77,7 @@ class LorePageTest {
   @Test
   @DisplayName("ZEPHYR page has ABILITY_USE trigger for AGILITY fragment")
   void testZephyrTrigger() {
-    LorePage zephyr = LorePage.ZEPHYR;
+    LorePage zephyr = LorePage.ZEPHYR_1;
     assertEquals(UnlockTrigger.ABILITY_USE, zephyr.getTrigger());
     assertEquals(FragmentType.AGILITY, zephyr.getFragmentType());
     assertEquals(5, zephyr.getRequiredCount());
@@ -85,7 +86,7 @@ class LorePageTest {
   @Test
   @DisplayName("TERRA page has ABILITY_USE trigger for IMMORTAL fragment")
   void testTerraTrigger() {
-    LorePage terra = LorePage.TERRA;
+    LorePage terra = LorePage.TERRA_1;
     assertEquals(UnlockTrigger.ABILITY_USE, terra.getTrigger());
     assertEquals(FragmentType.IMMORTAL, terra.getFragmentType());
     assertEquals(3, terra.getRequiredCount());
@@ -94,7 +95,7 @@ class LorePageTest {
   @Test
   @DisplayName("UMBRA page has ABILITY_USE trigger for CORRUPTED fragment")
   void testUmbraTrigger() {
-    LorePage umbra = LorePage.UMBRA;
+    LorePage umbra = LorePage.UMBRA_1;
     assertEquals(UnlockTrigger.ABILITY_USE, umbra.getTrigger());
     assertEquals(FragmentType.CORRUPTED, umbra.getFragmentType());
     assertEquals(3, umbra.getRequiredCount());
@@ -103,7 +104,7 @@ class LorePageTest {
   @Test
   @DisplayName("THE_FALL page has EQUIP_ALL_FRAGMENTS trigger")
   void testTheFallTrigger() {
-    LorePage theFall = LorePage.THE_FALL;
+    LorePage theFall = LorePage.THE_FALL_1;
     assertEquals(UnlockTrigger.EQUIP_ALL_FRAGMENTS, theFall.getTrigger());
     assertNull(theFall.getFragmentType());
     assertEquals(0, theFall.getRequiredCount());
@@ -112,7 +113,7 @@ class LorePageTest {
   @Test
   @DisplayName("RECOVERY page has MASTER_ALL_ABILITIES trigger")
   void testRecoveryTrigger() {
-    LorePage recovery = LorePage.RECOVERY;
+    LorePage recovery = LorePage.RECOVERY_1;
     assertEquals(UnlockTrigger.MASTER_ALL_ABILITIES, recovery.getTrigger());
     assertNull(recovery.getFragmentType());
     assertEquals(0, recovery.getRequiredCount());
@@ -122,19 +123,24 @@ class LorePageTest {
   @DisplayName("fromPageNumber returns correct page for valid numbers")
   void testFromPageNumberValid() {
     assertEquals(LorePage.INTRODUCTION, LorePage.fromPageNumber(1));
-    assertEquals(LorePage.IGNIS, LorePage.fromPageNumber(2));
-    assertEquals(LorePage.ZEPHYR, LorePage.fromPageNumber(3));
-    assertEquals(LorePage.TERRA, LorePage.fromPageNumber(4));
-    assertEquals(LorePage.UMBRA, LorePage.fromPageNumber(5));
-    assertEquals(LorePage.THE_FALL, LorePage.fromPageNumber(6));
-    assertEquals(LorePage.RECOVERY, LorePage.fromPageNumber(7));
+    assertEquals(LorePage.IGNIS_1, LorePage.fromPageNumber(2));
+    assertEquals(LorePage.IGNIS_2, LorePage.fromPageNumber(3));
+    assertEquals(LorePage.IGNIS_3, LorePage.fromPageNumber(4));
+    assertEquals(LorePage.ZEPHYR_1, LorePage.fromPageNumber(5));
+    assertEquals(LorePage.ZEPHYR_2, LorePage.fromPageNumber(6));
+    assertEquals(LorePage.ZEPHYR_3, LorePage.fromPageNumber(7));
+    assertEquals(LorePage.TERRA_1, LorePage.fromPageNumber(8));
+    assertEquals(LorePage.UMBRA_1, LorePage.fromPageNumber(11));
+    assertEquals(LorePage.THE_FALL_1, LorePage.fromPageNumber(14));
+    assertEquals(LorePage.RECOVERY_1, LorePage.fromPageNumber(17));
+    assertEquals(LorePage.RECOVERY_3, LorePage.fromPageNumber(19));
   }
 
   @Test
   @DisplayName("fromPageNumber returns null for invalid numbers")
   void testFromPageNumberInvalid() {
     assertNull(LorePage.fromPageNumber(0));
-    assertNull(LorePage.fromPageNumber(8));
+    assertNull(LorePage.fromPageNumber(20));
     assertNull(LorePage.fromPageNumber(-1));
     assertNull(LorePage.fromPageNumber(100));
   }
@@ -154,25 +160,14 @@ class LorePageTest {
   @Test
   @DisplayName("LorePage content mentions dragon names")
   void testLorePageContentMentionsDragons() {
-    // IGNIS is the Fire Dragon
-    assertTrue(LorePage.IGNIS.getContent().toLowerCase().contains("dragon") ||
-               LorePage.IGNIS.getContent().toLowerCase().contains("fire"),
-      "IGNIS page should mention dragon or fire");
-    
-    // ZEPHYR is the Wind Dragon
-    assertTrue(LorePage.ZEPHYR.getContent().toLowerCase().contains("dragon") ||
-               LorePage.ZEPHYR.getContent().toLowerCase().contains("wind"),
-      "ZEPHYR page should mention dragon or wind");
-    
-    // TERRA is the Earth Dragon
-    assertTrue(LorePage.TERRA.getContent().toLowerCase().contains("dragon") ||
-               LorePage.TERRA.getContent().toLowerCase().contains("earth"),
-      "TERRA page should mention dragon or earth");
-    
-    // UMBRA is the Void Dragon
-    assertTrue(LorePage.UMBRA.getContent().toLowerCase().contains("dragon") ||
-               LorePage.UMBRA.getContent().toLowerCase().contains("void"),
-      "UMBRA page should mention dragon or void");
+    assertTrue(LorePage.IGNIS_1.getContent().toLowerCase().contains("ignis"),
+      "IGNIS page should mention IGNIS");
+    assertTrue(LorePage.ZEPHYR_1.getContent().toLowerCase().contains("zephyr"),
+      "ZEPHYR page should mention ZEPHYR");
+    assertTrue(LorePage.TERRA_1.getContent().toLowerCase().contains("terra"),
+      "TERRA page should mention TERRA");
+    assertTrue(LorePage.UMBRA_1.getContent().toLowerCase().contains("umbra"),
+      "UMBRA page should mention UMBRA");
   }
 
   @Test
@@ -184,19 +179,78 @@ class LorePageTest {
   }
 
   @Test
-  @DisplayName("THE_FALL page content mentions fragments")
-  void testTheFallMentionsFragments() {
-    String content = LorePage.THE_FALL.getContent();
-    assertTrue(content.toLowerCase().contains("fragment"),
-      "THE_FALL page should mention fragments");
+  @DisplayName("THE_FALL pages content mentions dragons or fragments")
+  void testTheFallMentionsRelevantContent() {
+    String content1 = LorePage.THE_FALL_1.getContent();
+    String content2 = LorePage.THE_FALL_2.getContent();
+    String content3 = LorePage.THE_FALL_3.getContent();
+    
+    assertTrue(content1.toLowerCase().contains("dragon") || 
+               content1.toLowerCase().contains("element"),
+      "THE_FALL_1 should mention dragons or elements");
+    assertTrue(content2.toLowerCase().contains("dragon") || 
+               content2.toLowerCase().contains("sacrifice"),
+      "THE_FALL_2 should mention dragons or sacrifice");
+    assertTrue(content3.toLowerCase().contains("fragment") || 
+               content3.toLowerCase().contains("essence"),
+      "THE_FALL_3 should mention fragments or essence");
   }
 
   @Test
-  @DisplayName("RECOVERY page content mentions mastery")
-  void testRecoveryMentionsMastery() {
-    String content = LorePage.RECOVERY.getContent();
-    assertTrue(content.toLowerCase().contains("master") ||
-               content.toLowerCase().contains("ability"),
-      "RECOVERY page should mention mastery or ability");
+  @DisplayName("RECOVERY pages content mentions mastery or abilities")
+  void testRecoveryMentionsRelevantContent() {
+    String content1 = LorePage.RECOVERY_1.getContent();
+    String content2 = LorePage.RECOVERY_2.getContent();
+    String content3 = LorePage.RECOVERY_3.getContent();
+    
+    assertTrue(content1.toLowerCase().contains("worthy") ||
+               content1.toLowerCase().contains("fragment"),
+      "RECOVERY_1 should mention worthy or fragments");
+    assertTrue(content2.toLowerCase().contains("master") || 
+               content2.toLowerCase().contains("channel"),
+      "RECOVERY_2 should mention mastery or channeling");
+    assertTrue(content3.toLowerCase().contains("dragon") || 
+               content3.toLowerCase().contains("legacy"),
+      "RECOVERY_3 should mention dragons or legacy");
+  }
+  
+  @Test
+  @DisplayName("Multi-page chapters have progressive unlock requirements")
+  void testProgressiveUnlockRequirements() {
+    assertEquals(5, LorePage.IGNIS_1.getRequiredCount());
+    assertEquals(10, LorePage.IGNIS_2.getRequiredCount());
+    assertEquals(20, LorePage.IGNIS_3.getRequiredCount());
+    
+    assertEquals(5, LorePage.ZEPHYR_1.getRequiredCount());
+    assertEquals(10, LorePage.ZEPHYR_2.getRequiredCount());
+    assertEquals(20, LorePage.ZEPHYR_3.getRequiredCount());
+    
+    assertEquals(3, LorePage.TERRA_1.getRequiredCount());
+    assertEquals(10, LorePage.TERRA_2.getRequiredCount());
+    assertEquals(20, LorePage.TERRA_3.getRequiredCount());
+    
+    assertEquals(3, LorePage.UMBRA_1.getRequiredCount());
+    assertEquals(10, LorePage.UMBRA_2.getRequiredCount());
+    assertEquals(20, LorePage.UMBRA_3.getRequiredCount());
+  }
+  
+  @Test
+  @DisplayName("Fall chapter has different unlock requirements per page")
+  void testFallChapterUnlockRequirements() {
+    assertEquals(0, LorePage.THE_FALL_1.getRequiredCount());
+    assertEquals(10, LorePage.THE_FALL_2.getRequiredCount());
+    assertEquals(25, LorePage.THE_FALL_3.getRequiredCount());
+  }
+  
+  @Test
+  @DisplayName("Recovery chapter has progressive mastery requirements")
+  void testRecoveryChapterRequirements() {
+    assertEquals(0, LorePage.RECOVERY_1.getRequiredCount());
+    assertEquals(25, LorePage.RECOVERY_2.getRequiredCount());
+    assertEquals(50, LorePage.RECOVERY_3.getRequiredCount());
+    
+    assertEquals(UnlockTrigger.MASTER_ALL_ABILITIES, LorePage.RECOVERY_1.getTrigger());
+    assertEquals(UnlockTrigger.MASTER_ALL_ABILITIES, LorePage.RECOVERY_2.getTrigger());
+    assertEquals(UnlockTrigger.MASTER_ALL_ABILITIES, LorePage.RECOVERY_3.getTrigger());
   }
 }
