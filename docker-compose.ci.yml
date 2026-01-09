@@ -1,0 +1,71 @@
+# Docker Compose for CI/CD integration tests
+# Services: minecraft server, mineflayer-bridge, pilaf test runner
+
+services:
+  minecraft:
+    build:
+      context: .
+    container_name: minecraft-server
+    ports:
+      - "25565:25565"
+      - "25575:25575"
+    environment:
+      - EULA=TRUE
+      - ONLINE_MODE=false
+      - MEMORYSIZE=2G
+      - MAX_PLAYERS=10
+    networks:
+      - pilaf-network
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo 'list' | nc -w 3 localhost 25575 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+
+  mineflayer:
+    build:
+      context: ./lib/pilaf/mineflayer-bridge
+    container_name: mineflayer-bridge
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - MC_HOST=minecraft
+      - MC_PORT=25565
+    depends_on:
+      minecraft:
+        condition: service_healthy
+    networks:
+      - pilaf-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  pilaf-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.tests
+    container_name: pilaf-tests
+    environment:
+      - RCON_HOST=minecraft
+      - RCON_PORT=25575
+      - RCON_PASSWORD=dragon123
+      - MINEFLAYER_HOST=mineflayer
+      - MINEFLAYER_PORT=3000
+    depends_on:
+      minecraft:
+        condition: service_healthy
+      mineflayer:
+        condition: service_healthy
+    networks:
+      - pilaf-network
+    volumes:
+      - ./target/pilaf-reports:/app/reports:rw
+
+networks:
+  pilaf-network:
+    driver: bridge

@@ -3,7 +3,7 @@
 
 story:
   name: "Plugin Version Validation"
-  description: "Test that the DragonEggLightning plugin loads with correct version 1.0.2"
+  description: "Test that the DragonEggLightning plugin loads with correct version 1.1.0"
 
 setup:
   server:
@@ -36,7 +36,7 @@ steps:
     action: "execute_command"
     command: "ability version"
     player: "TestPlayer"
-    expected_response_contains: "1.0.2"
+    expected_response_contains: "1.1.0"
 
   - name: "Verify Command Registration"
     action: "check_command"

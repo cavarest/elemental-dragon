@@ -44,7 +44,7 @@ check_jq() {
 }
 
 echo "================================"
-echo "Dragon Egg Lightning Plugin Server"
+echo "Elemental Dragon Plugin Server"
 echo "Initializing..."
 echo "================================"
 
@@ -66,12 +66,12 @@ ls -la /opt/minecraft/plugins/
 echo "🔄 Copying fresh plugins from /opt/minecraft/plugins/ to /data/plugins/..."
 
 # Check if the specific plugin file exists
-if [ -f "/opt/minecraft/plugins/DragonEggLightning.jar" ]; then
-    echo "✅ Found DragonEggLightning.jar in /opt/minecraft/plugins/"
-    cp -f /opt/minecraft/plugins/DragonEggLightning.jar /data/plugins/
+if [ -f "/opt/minecraft/plugins/ElementalDragon.jar" ]; then
+    echo "✅ Found ElementalDragon.jar in /opt/minecraft/plugins/"
+    cp -f /opt/minecraft/plugins/ElementalDragon.jar /data/plugins/
     echo "✅ Plugin copied to /data/plugins/"
 else
-    echo "⚠️  DragonEggLightning.jar NOT found in /opt/minecraft/plugins/"
+    echo "⚠️  ElementalDragon.jar NOT found in /opt/minecraft/plugins/"
     # List all files to debug
     echo "   Contents of /opt/minecraft/plugins/:"
     ls -la /opt/minecraft/plugins/ || true
@@ -136,7 +136,7 @@ if [ ! -f /data/server.properties ]; then
     echo "Creating server.properties..."
 
     cat > /data/server.properties << EOF
-server-name=${SERVER_NAME:-Dragon Egg Lightning Server}
+server-name=${SERVER_NAME:-Elemental Dragon Server}
 gamemode=survival
 difficulty=normal
 max-players=10
@@ -144,7 +144,7 @@ online-mode=false
 white-list=false
 pvp=true
 spawn-protection=16
-motd=${MOTD:-Dragon Egg Lightning Plugin Server}
+motd=${MOTD:-Elemental Dragon Plugin Server}
 view-distance=10
 simulation-distance=10
 enable-command-block=false
@@ -162,18 +162,18 @@ MEMORY=${MEMORYSIZE:-2G}
 echo "✅ Memory allocation: $MEMORY"
 
 # Final plugin check
-echo "🔍 Final check for Dragon Egg Lightning plugin..."
+echo "🔍 Final check for Elemental Dragon plugin..."
 PLUGIN_FOUND=false
 
-if [ -f /data/plugins/DragonEggLightning.jar ]; then
-    echo "✅ Dragon Egg Lightning plugin found: DragonEggLightning.jar"
-    echo "   Size: $(du -h /data/plugins/DragonEggLightning.jar | cut -f1)"
-    echo "   Last modified: $(stat -f "%Sm" /data/plugins/DragonEggLightning.jar 2>/dev/null || stat -c "%y" /data/plugins/DragonEggLightning.jar)"
+if [ -f /data/plugins/ElementalDragon.jar ]; then
+    echo "✅ Elemental Dragon plugin found: ElementalDragon.jar"
+    echo "   Size: $(du -h /data/plugins/ElementalDragon.jar | cut -f1)"
+    echo "   Last modified: $(stat -f "%Sm" /data/plugins/ElementalDragon.jar 2>/dev/null || stat -c "%y" /data/plugins/ElementalDragon.jar)"
     PLUGIN_FOUND=true
 fi
 
 if [ "$PLUGIN_FOUND" = false ]; then
-    echo "❌ Dragon Egg Lightning plugin NOT FOUND!"
+    echo "❌ Elemental Dragon plugin NOT FOUND!"
     echo "Available files in /data/plugins/:"
     ls -la /data/plugins/
     echo "❌ Server cannot start without plugin!"

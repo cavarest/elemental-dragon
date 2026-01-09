@@ -62,9 +62,9 @@ jobs:
     - name: Verify debug build
       run: |
         echo "🔍 Verifying debug build artifacts..."
-        ls -la build/libs/dragon-egg-lightning-*.jar
+        ls -la build/libs/elemental-dragon-*.jar
         echo "Checking JAR contents:"
-        jar tf build/libs/dragon-egg-lightning-*.jar | head -20 || echo "Could not list JAR contents"
+        jar tf build/libs/elemental-dragon-*.jar | head -20 || echo "Could not list JAR contents"
 
     - name: Build production JAR (release build)
       run: |
@@ -73,22 +73,22 @@ jobs:
     - name: Verify production build
       run: |
         echo "🔍 Verifying production build..."
-        JAR_FILE=$(find build/libs -name "dragon-egg-lightning-*.jar" | head -1)
+        JAR_FILE=$(find build/libs -name "elemental-dragon-*.jar" | head -1)
         echo "Found production JAR: $JAR_FILE"
         jar tf "$JAR_FILE" | grep plugin.yml
 
     - name: Upload debug JAR artifact
       uses: actions/upload-artifact@v4
       with:
-        name: DragonEggLightning-Debug-Java${{ matrix.java-version }}
-        path: build/libs/dragon-egg-lightning-*.jar
+        name: ElementalDragon-Debug-Java${{ matrix.java-version }}
+        path: build/libs/elemental-dragon-*.jar
         retention-days: 30
 
     - name: Upload production JAR artifact
       uses: actions/upload-artifact@v4
       with:
-        name: DragonEggLightning-Production-Java${{ matrix.java-version }}
-        path: build/libs/dragon-egg-lightning-*.jar
+        name: ElementalDragon-Production-Java${{ matrix.java-version }}
+        path: build/libs/elemental-dragon-*.jar
         retention-days: 30
 
     - name: Upload test results

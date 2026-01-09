@@ -3,8 +3,8 @@ plugins {
 }
 
 group = 'org.cavarest'
-version = '1.0.2'
-description = 'Dragon Egg Lightning Ability Plugin'
+version = '1.1.0'
+description = 'Elemental Dragon Plugin - Lightning ability and secret powers'
 
 java {
     sourceCompatibility = JavaVersion.VERSION_21
@@ -24,7 +24,7 @@ ext {
     junitVersion = '5.10.1'
     mockitoVersion = '5.17.0'
     snakeyamlVersion = '2.0'
-    paperVersion = '1.21.11-R0.1-SNAPSHOT' // Latest Paper API version
+    paperVersion = '1.21.11-R0.1-SNAPSHOT' // Paper API version compatible with Java 17+
 }
 
 dependencies {
