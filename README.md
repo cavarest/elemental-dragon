@@ -122,6 +122,25 @@ Players can use these commands to manage and activate their fragments.
 /chronicle <cmd>   # Access lore and achievements
 ```
 
+**Enhanced `/craft` Command Features**:
+
+The `/craft` command dynamically generates recipe displays from the actual crafting system (single source of truth):
+
+```bash
+# View all available recipes
+/craft heavy_core          # Show Heavy Core crafting recipe
+/craft fire                # Show Burning Fragment recipe
+/craft agile               # Show Agility Fragment recipe
+/craft immortal            # Show Immortal Fragment recipe
+/craft corrupt             # Show Corrupted Core recipe
+```
+
+**Architecture Benefits**:
+- ✅ **Auto-generated displays**: Recipe text generated from actual `CraftingManager` recipes
+- ✅ **Always accurate**: Single source ensures displays match reality
+- ✅ **DRY principle**: Zero duplicate recipe definitions
+- ✅ **Easy maintenance**: Recipe changes only need one update location
+
 ### **👑 Operator Commands**
 
 Operators have access to administrative functions for managing fragments, cooldowns, and player abilities.
@@ -180,6 +199,10 @@ Operators have access to administrative functions for managing fragments, cooldo
 /ed setglobalcooldown fire 1 10           # Fire ability 1: 10s default
 /ed setglobalcooldown agile 2 60          # Agile ability 2: 60s default
 
+# Disable cooldowns (clears all active cooldowns)
+/ed setglobalcooldown fire 1 0            # Disables fire ability 1 cooldown
+/ed setglobalcooldown lightning 1 0       # Disables lightning cooldown
+
 # View all global cooldown settings
 /ed getglobalcooldown
 ```
@@ -189,6 +212,35 @@ Operators have access to administrative functions for managing fragments, cooldo
 2. Operators can override defaults with `/ed setglobalcooldown`
 3. When players use abilities, the global cooldown is applied
 4. Individual player cooldowns can be managed with `/ed setcooldown`
+
+**Cooldown Adjustment Mechanics**:
+
+When you change a global cooldown, the system intelligently adjusts active player cooldowns using the **MIN formula**: `min(current_remaining, new_max)`
+
+- **Increasing cooldown**: Players with time remaining get capped at new maximum (fair to all)
+  - Example: Player has 30s left, you set 20s → Player gets 20s (capped fairly)
+  - Example: Player has 10s left, you set 20s → Player keeps 10s (no penalty)
+
+- **Decreasing cooldown**: Uses same MIN formula for consistency
+  - Example: Player has 60s left, you set 30s → Player gets 30s (capped)
+  - Example: Player has 20s left, you set 30s → Player keeps 20s
+
+- **Disabling cooldown (0 seconds)**: **Clears ALL active cooldowns** for that ability
+  - Example: `/ed setglobalcooldown fire 1 0` → All players can use fire ability 1 immediately
+  - Useful for: Events, testing, emergency cooldown resets
+
+**Real-World Examples**:
+```bash
+# Speed up cooldowns during server event
+/ed setglobalcooldown fire 1 10          # Faster fire attacks for everyone
+
+# Restore normal cooldowns after event (players capped fairly)
+/ed setglobalcooldown fire 1 40          # Players with < 40s keep their time
+
+# Emergency cooldown clear for server issues
+/ed setglobalcooldown lightning 1 0      # Instant clear for all players
+/ed setglobalcooldown lightning 1 60     # Re-enable with normal cooldown
+```
 
 #### **Player References**
 All commands support these player selectors:
@@ -308,6 +360,28 @@ Each fragment ability has a carefully balanced default cooldown:
 - ✅ **Independent of items**: Dropping fragment doesn't reset cooldown
 - ✅ **Global configuration**: Operators can override defaults
 
+#### **Cooldown Adjustment Behavior**
+
+When operators modify global cooldowns, the plugin intelligently manages active player cooldowns to ensure fairness:
+
+**The MIN Formula**: `min(current_remaining, new_max)`
+
+This ensures fair cooldown management:
+- **Shorter new cooldown**: Players are capped at the new maximum (prevents unfair advantage)
+- **Longer new cooldown**: Players keep their current cooldown (no retroactive penalty)
+- **Disabled (0 seconds)**: All active cooldowns for that ability are immediately cleared
+
+**Example Scenarios**:
+
+| Scenario | Player's Current | New Global | Result | Reason |
+|----------|-----------------|------------|--------|--------|
+| Speed up cooldowns | 60s remaining | 30s | **30s** | Capped to new max (fair) |
+| Slow down cooldowns | 20s remaining | 60s | **20s** | Keep current (no penalty) |
+| Disable cooldowns | 45s remaining | 0s | **0s** | Cleared immediately |
+| Re-enable after disable | 0s (cleared) | 60s | **0s** | Can use immediately |
+
+This design prevents abuse while maintaining fairness for players already on cooldown.
+
 ### **Operator Cooldown Control**
 
 Operators can customize cooldowns server-wide or per-player:
@@ -395,28 +469,50 @@ cd papermc-plugin-dragon-egg
 
 ## 🏗️ Architecture Highlights
 
-### **Phase 6: True Object-Oriented Design**
+### **Phase 6: True Object-Oriented Design + Post-Completion Fixes**
 
-The Elemental Dragon plugin demonstrates professional software architecture:
+The Elemental Dragon plugin demonstrates professional software architecture with continuous improvements:
 
 #### **Single Source of Truth Pattern**
 - ✅ Fragment classes own ALL their metadata
 - ✅ Commands query Fragment dynamically (zero duplication)
 - ✅ Items query Fragment for visual properties
 - ✅ Auto-generated help, tab completion, status displays
+- ✅ **NEW**: Crafting recipes auto-generate displays (DRY `/craft` command)
 
 #### **Code Quality Metrics**
 - **62% code reduction** through architectural improvements (673 lines eliminated)
-- **Zero duplication** across commands and items
+- **Zero duplication** across commands, items, and recipes
 - **Compiler-enforced** completeness via interfaces
-- **100% test coverage** for core functionality (197 tests)
+- **206 tests passing** with comprehensive coverage
+- **Intelligent cooldown management** with MIN formula and clear-on-disable
 
 #### **Design Patterns Applied**
-1. **Single Source of Truth**: Fragments own their data
+1. **Single Source of Truth**: Fragments own their data, CraftingManager owns recipes
 2. **Template Method**: AbstractFragment provides structure
 3. **Dependency Injection**: Commands inject Fragment instances
 4. **Strategy Pattern**: Interchangeable Fragment implementations
 5. **Command Pattern**: Subcommand registry for admin functions
+6. **Introspection Pattern**: Runtime recipe querying for `/craft` command
+
+#### **Recent Improvements (Phase 6 Post-Completion)**
+
+**DRY `/craft` Command**:
+- Before: Recipes hardcoded in 2 places (CraftingManager + CraftCommand)
+- After: Single source of truth with runtime introspection via `RecipeData` class
+- Impact: Recipe changes now require updating only 1 location
+
+**Intelligent Cooldown Adjustment**:
+- Formula: `min(current_remaining, new_max)` ensures fairness
+- Prevents unfair advantages when cooldowns decrease
+- No retroactive penalties when cooldowns increase
+- Clear-on-disable: Setting cooldown to 0 clears all active player cooldowns
+
+**Lightning Global Cooldown Support**:
+- Lightning ability now respects global cooldown settings
+- `/ed setglobalcooldown lightning 1 <seconds>` works correctly
+- Integration with `AbilityManager` for unified cooldown system
+- Consistent behavior across all element types
 
 ---
 
@@ -504,7 +600,7 @@ tail -f logs/latest.log | grep -i elementaldragon
 ## 📈 Architecture & Testing
 
 ### **Testing Framework**
-- **🧪 197 Unit Tests**: Complete coverage with JUnit and Mockito
+- **🧪 206 Unit Tests**: Complete coverage with JUnit and Mockito
 - **🔧 Integration Tests**: End-to-end YAML-driven scenarios
 - **🐳 Docker Support**: Containerized development environment
 - **✅ CI/CD**: Automated testing on every commit
