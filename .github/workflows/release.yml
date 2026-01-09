@@ -69,7 +69,7 @@ jobs:
     - name: Verify plugin.yml structure
       run: |
         echo "🔍 Verifying plugin.yml is correctly packaged..."
-        JAR_FILE=$(find build/libs -name "dragon-egg-lightning-*.jar" | head -1)
+        JAR_FILE=$(find build/libs -name "elemental-dragon-*.jar" | head -1)
         echo "Found JAR: $JAR_FILE"
         jar tf "$JAR_FILE" | grep plugin.yml
         echo "✅ Plugin.yml structure verified (no duplicate files)"
@@ -93,7 +93,7 @@ jobs:
         tag_name: ${{ steps.get_version.outputs.tag }}
         name: Dragon Egg Lightning Plugin v${{ steps.get_version.outputs.version }}
         body: |
-          🎉 **Dragon Egg Lightning Plugin v{{ steps.version.outputs.version }} Released!**
+          🎉 **Dragon Egg Lightning Plugin v${{ steps.get_version.outputs.version }} Released!**
 
           ${{ steps.changelog.outputs.changelog }}
 
@@ -122,16 +122,16 @@ jobs:
           - **Cooldown Management**: Death clears, item-independent, session-persistent
 
           ## 📊 Build Information
-          - **Plugin Version**: {{ steps.version.outputs.version }}
-          - **JAR File**: $(basename "$(find build/libs -name "dragon-egg-lightning-*.jar" | head -1)")
-          - **File Size**: $(du -h "$(find build/libs -name "dragon-egg-lightning-*.jar" | head -1)" | cut -f1)
+          - **Plugin Version**: ${{ steps.get_version.outputs.version }}
+          - **JAR File**: $(basename "$(find build/libs -name "elemental-dragon-*.jar" | head -1)")
+          - **File Size**: $(du -h "$(find build/libs -name "elemental-dragon-*.jar" | head -1)" | cut -f1)
           - **Build Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
           - **Git Commit**: `${{ github.sha }}`
           - **Paper Version**: 1.21.8
           - **Java Version**: 21+
           - **Build System**: Gradle
         files: |
-          build/libs/dragon-egg-lightning-*.jar
+          build/libs/elemental-dragon-*.jar
         draft: false
         prerelease: false
         generate_release_notes: true
@@ -142,7 +142,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: plugin-jar-${{ steps.version.outputs.version }}
-        path: build/libs/dragon-egg-lightning-*.jar
+        path: build/libs/elemental-dragon-*.jar
         retention-days: 90
 
     - name: Verify Release Creation
@@ -162,7 +162,7 @@ jobs:
           echo "🔗 Release URL: https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.tag }}"
           echo ""
           echo "📥 Direct Download Link:"
-          JAR_FILE=$(find build/libs -name "dragon-egg-lightning-*.jar" | head -1 | xargs basename)
+          JAR_FILE=$(find build/libs -name "elemental-dragon-*.jar" | head -1 | xargs basename)
           echo "  https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/$JAR_FILE"
         else
           echo "❌ Failed to create release"
