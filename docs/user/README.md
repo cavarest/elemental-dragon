@@ -1,564 +1,528 @@
-# ⚡ Minecraft Dragon Egg Lightning Plugin
+# ⚡ Elemental Dragon Plugin
 
 <div align="center">
 
 ![Dragon Egg Lightning Banner](https://img.shields.io/badge/Minecraft-Paper%201.21.8-blue?logo=minecraft&style=for-the-badge)
 ![Java](https://img.shields.io/badge/Java-21+-ED8B00?logo=openjdk&logoColor=white&style=for-the-badge)
-![Version](https://img.shields.io/badge/Version-1.0.0-green?style=for-the-badge)
+![Version](https://img.shields.io/badge/Version-1.1.0-green?style=for-the-badge)
 ![Build](https://img.shields.io/badge/Build-Passing-brightgreen?style=for-the-badge)
 
-**Transform your server with the ultimate Dragon Egg lightning ability!**
+**Master the elements with dragon-powered abilities!**
 
-[![Download Latest Release](https://img.shields.io/badge/Download-Latest%20Release-ff6b6b?style=for-the-badge&logo=github)](https://github.com/ronaldtse/papermc-plugin-dragon-egg/releases/latest)
-[![GitHub Stars](https://img.shields.io/github/stars/ronaldtse/papermc-plugin-dragon-egg?style=social)](https://github.com/ronaldtse/papermc-plugin-dragon-egg)
-[![GitHub Forks](https://img.shields.io/github/forks/ronaldtse/papermc-plugin-dragon-egg?style=social)](https://github.com/ronaldtse/papermc-plugin-dragon-egg/fork)
+[![Download Latest Release](https://img.shields.io/badge/Download-Latest%20Release-ff6b6b?style=for-the-badge&logo=github)](https://github.com/cavarest/papermc-plugin-dragon-egg/releases/latest)
+[![GitHub Stars](https://img.shields.io/github/stars/cavarest/papermc-plugin-dragon-egg?style=social)](https://github.com/cavarest/papermc-plugin-dragon-egg)
 
 </div>
 
-## 🌟 Why Choose Dragon Egg Lightning?
+## What is Elemental Dragon?
 
-### **For Players**
-- 🎯 **Strategic Gameplay** - Requires skill and timing to master
-- ⚡ **Epic Lightning Effects** - 3 sequential purple lightning strikes with thunder sounds
-- 🎮 **Intuitive Controls** - Simple `/ability 1` command with Dragon Egg in offhand
-- 🏆 **Balanced Combat** - 6.0 hearts total damage (2.0 per strike) with strategic cooldown
-- 🛡️ **Armor-Bypassing** - Lightning damage ignores all armor and protection enchantments
-- 📊 **Real-Time Feedback** - HUD displays cooldown status and ability readiness
+Elemental Dragon is a PaperMC plugin that transforms your Minecraft server with **dragon-powered abilities**. Use dragon eggs and elemental fragments to unleash devastating attacks, move at supernatural speeds, or cheat death itself!
 
-### **For Server Administrators**
-- ✅ **Instantly Boost Server Engagement** - Give players a unique, exciting ability
-- ✅ **Easy 5-Minute Installation** - Drop-in plugin with zero configuration needed
-- ✅ **Zero Performance Impact** - Optimized for Paper 1.21.8 with minimal resource usage
-- ✅ **Anti-Spam Protection** - Built-in 60-second cooldown prevents abuse
-- ✅ **Complete Player Experience** - Includes HUD, sound effects, and visual feedback
+### Core Features
+
+#### ⚡ Dragon Egg Lightning Ability
+- Hold a **Dragon Egg in your offhand**
+- Execute `/lightning 1` to summon **3 sequential lightning strikes**
+- Each strike deals **2 hearts of armor-bypassing damage**
+- **60-second cooldown** prevents spam
+
+#### 🔥💨🛡️👁️ Elemental Fragments
+Four unique fragments, each with **2 powerful abilities**:
+
+| Fragment | Emoji | Ability 1 | Ability 2 |
+|----------|-------|-----------|-----------|
+| **Burning** | 🔥 | Dragon's Wrath (25s) | Infernal Dominion (40s) |
+| **Agility** | 💨 | Draconic Surge (45s) | Wing Burst (2min) |
+| **Immortal** | 🛡️ | Draconic Reflex (2min) | Essence Rebirth (8min) |
+| **Corrupted** | 👁️ | Dread Gaze (3min) | Life Devourer (2min) |
+
+#### 📊 Real-Time HUD
+- See cooldown status for **all abilities at once**
+- Visual progress bars for remaining cooldowns
+- "Ready" indicators when abilities are available
 
 ---
 
-## 🚀 Quick Start (5 Minutes)
+## Quick Start (5 Minutes)
 
-### **Step 1: Download & Install**
+### For Players
+
+```bash
+# 1. Get a Dragon Egg (for lightning ability)
+give @p minecraft:dragon_egg
+
+# 2. Move to offhand (press F key)
+
+# 3. Cast lightning!
+/lightning 1
+
+# 4. Get a fragment (ask admin or craft it)
+# See /craft command for recipes
+```
+
+### For Server Admins
+
 ```bash
 # Download the latest JAR from releases
 # Place in your Paper server's plugins directory
-cp DragonEggLightning-1.0.0.jar /path/to/your/paper-server/plugins/
+cp ElementalDragon-1.1.0.jar /path/to/your/paper-server/plugins/
 
 # Restart your Paper 1.21.8+ server
 java -Xms2G -Xmx2G -jar paper-1.21.8-latest.jar nogui
 ```
 
-### **Step 2: Verify Installation**
-```bash
-# Check server console for:
-[INFO] DragonEggLightning enabled
+---
 
-# In-game test:
-/plugins
-# Should show: DragonEggLightning ✓
+## Fragment System
+
+### Obtaining Fragments
+
+Fragments are **crafted** using special recipes. All require a **vanilla Heavy Core** (found in Ancient City chests) as the center ingredient.
+
+#### Crafting Limits
+Each player is limited in how many they can craft:
+- **Burning Fragment**: 2 max
+- **Agility Fragment**: 2 max
+- **Immortal Fragment**: 2 max
+- **Corrupted Core**: 1 max
+
+#### Crafting Recipes
+
+**Burning Fragment** (2 max)
+```
+N S N   (N = Netherite Upgrade, S = Bolt Armor Trim)
+I H I   (I = Netherite Ingot, H = Heavy Core)
+N R N   (N = Netherite Upgrade, R = Rib Armor Trim)
 ```
 
-### **Step 3: Start Using Lightning!**
+**Agility Fragment** (2 max)
+```
+B F A   (B = Breeze Rod, F = Flow Armor Trim, A = Ancient Debris)
+D H D   (D = Diamond Block, H = Heavy Core)
+A F B
+```
+
+**Immortal Fragment** (2 max)
+```
+T A T   (T = Totem of Undying, A = Ancient Debris)
+D H D   (D = Diamond Block, H = Heavy Core)
+T A T
+```
+
+**Corrupted Core** (1 max)
+```
+R H K   (R = Wither Rose, H = Heavy Core, K = Wither Skull)
+N S N   (N = Netherite Block, S = Nether Star)
+K H R
+```
+
+### Craft Broadcasts
+
+When you craft a fragment, all players see a themed message:
+- 🔥 Burning: "The flames of the ancient dragon acknowledge {player} has forged the Burning Fragment!"
+- 💨 Agility: "The winds of the ancient dragon acknowledge {player} has forged the Agility Fragment!"
+- 🛡️ Immortal: "The earth of the ancient dragon acknowledges {player} has forged the Immortal Fragment!"
+- 👁️ Corrupted: "The void of the ancient dragon acknowledges {player} has forged the Corrupted Core!"
+
+### Equipping Fragments
+
+**Method 1: Right-Click**
+- Hold fragment in main hand
+- Right-click to equip to offhand
+
+**Method 2: Command**
+```
+/fire equip      # Equip Burning Fragment
+/agile equip     # Equip Agility Fragment
+/immortal equip  # Equip Immortal Fragment
+/corrupt equip   # Equip Corrupted Core
+```
+
+**Method 3: Operator Auto-Give**
+```
+/equip fire      # Give and equip Burning Fragment
+/equip agile     # Give and equip Agility Fragment
+```
+
+### Using Abilities
+
+Each fragment has 2 abilities:
+
+**Burning Fragment (🔥)**
+```
+/fire 1   # Dragon's Wrath - Fireball with explosion AOE (25s cooldown)
+/fire 2   # Infernal Dominion - Ring of fire, damages nearby enemies (40s cooldown)
+```
+
+**Agility Fragment (💨)**
+```
+/agile 1   # Draconic Surge - Dash 20 blocks in 1.5s, negate fall damage (45s cooldown)
+/agile 2   # Wing Burst - Push enemies 20 blocks away, slow falling (2min cooldown)
+```
+
+**Immortal Fragment (🛡️)**
+```
+/immortal 1   # Draconic Reflex - 20% chance to dodge damage (2min cooldown)
+/immortal 2   # Essence Rebirth - Second life if killed (8min cooldown)
+```
+
+**Corrupted Core (👁️)**
+```
+/corrupt 1   # Dread Gaze - Complete freeze on next hit (3min cooldown)
+/corrupt 2   # Life Devourer - 50% life steal for 20s (2min cooldown)
+```
+
+### HUD Display
+
+When equipped, your HUD shows:
+- Ability name and cooldown status for BOTH abilities simultaneously
+- Visual progress bar showing cooldown remaining
+- "Ready" indicator when cooldown is complete
+
+### Withdrawing Abilities
+
 ```bash
-# Give yourself a Dragon Egg
+/withdrawability
+```
+
+Removes abilities but keeps the fragment item in your inventory.
+
+---
+
+## Fragment Restrictions
+
+### Container Storage
+Fragments **cannot** be placed in containers (chests, furnaces, etc.). Attempting to do so shows:
+```
+Elemental Dragon fragments cannot be stored in containers.
+```
+
+### Item Loss
+If you **drop** a fragment, abilities are automatically withdrawn.
+
+### Fireproof
+Fragments have special enchantment making them glow and fireproof.
+
+---
+
+## Complete Command Reference
+
+### Player Commands
+
+| Command | Description |
+|---------|-------------|
+| `/lightning 1` | Summon 3 lightning strikes (requires Dragon Egg in offhand) |
+| `/fire 1` / `/fire 2` | Use Burning Fragment abilities |
+| `/agile 1` / `/agile 2` | Use Agility Fragment abilities |
+| `/immortal 1` / `/immortal 2` | Use Immortal Fragment abilities |
+| `/corrupt 1` / `/corrupt 2` | Use Corrupted Core abilities |
+| `/<type> equip` | Equip fragment to offhand |
+| `/<type> status` | View fragment status and cooldowns |
+| `/<type> help` | View ability information |
+| `/craft <type>` | View crafting recipe |
+| `/chronicle` | Open the Chronicle of the Fallen Dragons lore book |
+| `/withdrawability` | Remove equipped abilities (keep item) |
+
+### Admin Commands
+
+| Command | Description |
+|---------|-------------|
+| `/ed give <player> equipment <type>` | Give a fragment to a player |
+| `/ed give <player> ingredients <type>` | Give crafting materials |
+| `/ed setcooldown <player> <type> <ability> <seconds>` | Set cooldown |
+| `/ed clearcooldown <player> [type]` | Clear cooldowns |
+| `/ed getcooldown <player>` | View cooldowns |
+| `/ed info player <player>` | View player status |
+
+---
+
+## Crafted Count System
+
+Each player's crafted fragments are tracked:
+- Persistent across sessions
+- Enforces craft limits (2 for most, 1 for Corrupted)
+- Prevents duplicate crafting
+
+View your crafted count with `/craft <type>`.
+
+---
+
+## Cooldown System
+
+### How It Works
+- Each ability has its own cooldown
+- Cooldowns persist across logout/login
+- Cooldowns are cleared on death
+- Setting cooldown to 0 clears all active cooldowns for that ability
+
+### Default Cooldowns
+| Ability | Cooldown |
+|---------|----------|
+| Lightning | 60s |
+| Fire 1 (Dragon's Wrath) | 25s |
+| Fire 2 (Infernal Dominion) | 40s |
+| Agility 1 (Draconic Surge) | 45s |
+| Agility 2 (Wing Burst) | 120s (2min) |
+| Immortal 1 (Draconic Reflex) | 120s (2min) |
+| Immortal 2 (Essence Rebirth) | 480s (8min) |
+| Corrupt 1 (Dread Gaze) | 180s (3min) |
+| Corrupt 2 (Life Devourer) | 120s (2min) |
+
+---
+
+## Chronicle of the Fallen Dragons
+
+Unlock lore as you use abilities:
+- **Introduction**: Available immediately
+- **IGNIS**: Unlock after using Fire abilities
+- **ZEPHYR**: Unlock after using Agility abilities
+- **TERRA**: Unlock after using Immortal abilities
+- **UMBRA**: Unlock after using Corrupted abilities
+- **RECOVERY**: Unlock after mastering all abilities
+- **THE FALL**: Unlock after collecting all fragments
+
+---
+
+## Passive Bonuses
+
+| Fragment | Passive Effect |
+|----------|---------------|
+| Burning Fragment | None |
+| Agility Fragment | None |
+| Immortal Fragment | None |
+| Corrupted Core | Night Vision, Invisible to creepers |
+
+---
+
+## Lightning Ability Usage
+
+### Setup
+1. **Get a Dragon Egg**:
+   ```
+   /give @p minecraft:dragon_egg
+   ```
+
+2. **Equip to Offhand**:
+   - Pick up the Dragon Egg
+   - Press `F` key to move it to your offhand (left hand)
+   - You should see it in your inventory slot 9 (hotbar far right)
+
+3. **Verify Offhand** (optional):
+   ```
+   /get item @s
+   ```
+
+### Activation
+```bash
+/lightning 1
+```
+
+### What Happens
+1. The plugin checks you have a Dragon Egg in your offhand
+2. Finds the closest hostile mob within 50 blocks (ray-tracing)
+3. Summons **3 sequential lightning strikes** (0.5 seconds apart)
+4. Each strike deals **2 hearts of damage** (4 HP)
+5. Damage **ignores all armor and protection enchantments**
+6. You'll see purple lightning and hear thunder
+7. 60-second cooldown begins
+
+### Tips
+- Move to get clear line-of-sight on targets
+- Works on any living entity (mobs, players, animals)
+- Armor-bypassing means it works equally well against heavily armored targets
+- 6.0 hearts total damage can eliminate most hostile mobs
+
+---
+
+## Fragment Usage
+
+### Obtaining Your First Fragment
+
+#### Method 1: Ask an Admin
+```
+/ed give @p equipment fire      # Give Burning Fragment
+/ed give @p equipment agile     # Give Agility Fragment
+/ed give @p equipment immortal  # Give Immortal Fragment
+/ed give @p equipment corrupt   # Give Corrupted Core
+```
+
+#### Method 2: Craft It
+1. Find a **Heavy Core** in an Ancient City chest (vanilla Minecraft item)
+2. Gather all other materials
+3. Use a crafting table with the recipe
+4. A themed message broadcasts to all players!
+
+#### Method 3: Get Crafting Materials
+```
+/ed give @p ingredients fire      # Get Fire Fragment materials
+/ed give @p ingredients agile     # Get Agility Fragment materials
+/ed give @p ingredients immortal  # Get Immortal Fragment materials
+/ed give @p ingredients corrupt   # Get Corrupted Core materials
+```
+
+### Equipping
+
+#### Right-Click Method
+1. Hold the fragment in your main hand
+2. Right-click
+3. Fragment moves to offhand
+4. You hear activation sound and see particles
+
+#### Command Method
+```
+/fire equip      # Equip Burning Fragment
+/agile equip     # Equip Agility Fragment
+/immortal equip  # Equip Immortal Fragment
+/corrupt equip   # Equip Corrupted Core
+```
+
+#### Operator Auto-Give
+```
+/equip fire      # Give AND equip Burning Fragment
+```
+
+### Using Abilities
+
+Once equipped, use abilities with:
+```
+/<type> 1   # First ability
+/<type> 2   # Second ability
+```
+
+**Examples**:
+```
+/fire 1           # Fireball attack!
+/agile 2          # Wing burst to knock back enemies
+/immortal 1       # Activate damage dodge chance
+/corrupt 2        # Life steal mode!
+```
+
+### Checking Status
+
+View your cooldowns and fragment status:
+```
+/fire status      # See Fire Fragment cooldowns
+/agile status     # See Agility Fragment cooldowns
+/immortal status  # See Immortal Fragment cooldowns
+/corrupt status   # See Corrupted Core cooldowns
+```
+
+### Unequipping (Keep the Item)
+
+Want to unequip but keep the fragment for later?
+```
+/withdrawability
+```
+
+Your abilities are removed, but the fragment stays in your inventory.
+
+---
+
+## Verification & Testing
+
+### Test Lightning Ability
+```bash
+# 1. Give yourself a Dragon Egg
 /give @p minecraft:dragon_egg
 
-# Move to offhand (press F key)
-/ability 1
+# 2. Move to offhand (F key)
+# Verify by checking your offhand slot
 
-# Watch the magic happen! ⚡
+# 3. Find a mob (spawn one for testing)
+/summon minecraft:zombie ~ ~ ~
+
+# 4. Cast lightning
+/lightning 1
+
+# 5. Check cooldown
+/ed getcooldown @s
 ```
 
----
-
-## ⚡ What Makes This Plugin Special?
-
-### **🔮 Unique Dragon Egg Mechanic**
-- **Offhand Requirement**: Players must strategically place Dragon Egg in offhand
-- **Line-of-Sight Targeting**: Smart ray-tracing finds the closest entity in player's view
-- **Range Limitations**: Balanced 50-block targeting range prevents long-distance abuse
-
-### **🌩️ Epic Lightning Experience**
-- **3 Sequential Strikes**: Each strike hits with 0.5-second intervals
-- **Purple Visual Effects**: Stunning particle effects and lightning bolts
-- **Thunder Audio**: Immersive sound effects with each lightning strike
-- **Armor-Bypassing Damage**: Lightning ignores all armor, protection enchantments, and resistance effects
-- **Damage Balancing**: 2.0 hearts per strike (total 6.0 hearts if all connect)
-
-### **⏱️ Smart Cooldown System**
-- **60-Second Cooldown**: Prevents spam and maintains balance
-- **HUD Display**: Real-time countdown in action bar
-- **Cooldown Tracking**: Individual cooldowns per player
-- **Anti-Abuse Protection**: Smart validation prevents exploitation
-
----
-
-## 📋 Complete Feature List
-
-### **Core Lightning Ability**
-- 🎯 **Smart Targeting**: Ray-tracing finds closest living entity in player's view
-- ⚡ **Triple Strike**: 3 sequential lightning bolts with perfect timing
-- 🎨 **Purple Effects**: Custom particle effects and lightning visualization
-- 🔊 **Audio Experience**: Thunder sounds and impact audio
-- 💥 **Armor-Bypassing Damage**: 2.0 hearts per strike (4 HP) - ignores all protection
-- 🛡️ **Consistent Damage**: Same damage regardless of target's armor or enchantments
-
-### **Player Interface**
-- 📊 **HUD Display**: Real-time cooldown status in action bar
-- ⏰ **Countdown Timer**: Shows remaining cooldown in seconds
-- ✅ **Ready Indicator**: "⚡ Lightning ready" when ability is available
-- 💬 **Progress Messages**: "Lightning strike 1/3!" during casting
-
-### **Safety & Validation**
-- 🛡️ **Item Validation**: Fails if Dragon Egg not in offhand
-- 🎯 **Target Validation**: Requires line-of-sight to living entities
-- ⚖️ **Cooldown Enforcement**: Prevents spam and maintains balance
-- 🛑 **Smart Cancellation**: Stops if player switches items during casting
-
----
-
-## 🎮 Player Usage Guide
-
-### **Getting Started**
-1. **Obtain Dragon Egg**: `/give @p minecraft:dragon_egg`
-2. **Equip Offhand**: Press `F` key to move Dragon Egg to offhand
-3. **Find Target**: Look at nearest entity within 50 blocks
-4. **Cast Ability**: Execute `/ability 1`
-5. **Watch Effects**: Enjoy 3 sequential lightning strikes!
-
-### **Advanced Tips**
-- **Range Mastery**: Learn the 50-block range for optimal targeting
-- **Timing Strategy**: Use cooldown wisely - plan your next lightning strike
-- **Positioning**: Move to get clear line-of-sight on targets
-- **Armor-Bypassing**: Lightning damage works equally well against heavily armored targets
-- **Survival Mode**: 6.0 hearts total damage can eliminate most mobs instantly
-
----
-
-## 🏗️ Technical Excellence
-
-### **Performance Optimized**
-- **Efficient Ray Tracing**: Optimized entity detection within 50-block range
-- **Smart Particle System**: Limited effects to prevent client lag
-- **Minimal Resource Usage**: Designed for Paper 1.21.8 optimization
-- **Memory Efficient**: No memory leaks or performance degradation
-
-### **Code Quality**
-- **Test-Driven Development**: 24/24 unit tests passing
-- **Clean Architecture**: Modular design with clear separation of concerns
-- **Future-Proof**: Extensible ability system for adding new powers
-- **Production Ready**: Comprehensive error handling and edge case management
-
----
-
-## 🔧 Server Configuration
-
-### **Recommended Settings**
-```properties
-# server.properties
-gamemode=survival
-difficulty=normal
-view-distance=10
-simulation-distance=10
-max-players=20
-```
-
-### **JVM Arguments for Best Performance**
+### Test Fragment Ability
 ```bash
-java -Xms4G -Xmx4G -XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis=200 -jar paper-1.21.8-latest.jar
+# 1. Get a fragment
+/ed give @p equipment fire
+
+# 2. Equip it
+/fire equip
+
+# 3. Use an ability
+/fire 1
+
+# 4. Check status
+/fire status
+
+# 5. Check HUD (should show cooldown)
 ```
 
-### **Monitoring Commands**
+### Admin Verification Commands
 ```bash
-# Check plugin status
-/plugins
-
-# Monitor server performance
-/tps  # Should remain ~20
-/mem  # Check memory usage
-
-# Test lightning ability
-/ability 1
+/ed info player @s          # Your status
+/ed info player PlayerName  # Another player's status
+/ed getcooldown @s          # Your cooldowns
 ```
 
----
+### Server Logs
+Check server logs for ability usage:
+```bash
+docker logs -f papermc-elementaldragon
+```
 
-## 🎯 Perfect For These Server Types
-
-### **🎮 PvP Servers**
-- Add exciting combat mechanics with consistent damage
-- Reward skilled players with powerful abilities
-- Create balanced risk-reward gameplay
-
-### **🏰 RPG Servers**
-- Enhance roleplay with magical dragon powers
-- Create quest rewards involving Dragon Egg abilities
-- Add epic boss battle mechanics
-
-### **🏝️ Survival Servers**
-- Give players special abilities for survival challenges
-- Create unique mob hunting experiences
-- Add strategic depth to PvE gameplay
-
-### **🎉 Mini-Game Servers**
-- Design lightning-based mini-games
-- Create competitive events with abilities
-- Add unique game modes and challenges
+Look for messages like:
+- "Lightning strike 1/3!"
+- "Dragon's Wrath activated!"
+- "Dread Gaze has expired."
 
 ---
 
-## 🛠️ Development & Installation
+## System Requirements
 
-### **System Requirements**
 - **Minecraft**: Java Edition 1.21.8+
 - **Server Software**: Paper 1.21.8-R0.1+
 - **Java**: Version 21 or higher
 - **Memory**: Minimum 2GB RAM recommended
 
-### **Installation for Players**
-1. **Server Admin**: Install JAR in plugins directory
-2. **Player**: Obtain Dragon Egg via `/give @p minecraft:dragon_egg`
-3. **Equip**: Press `F` to move Dragon Egg to offhand
-4. **Use**: Execute `/ability 1` command
-5. **Enjoy**: Experience epic lightning strikes!
+---
 
-### **Developer Setup**
+## Development
 
-#### **System Prerequisites**
-
-**Required Software:**
-- **Docker Desktop** - [Download for macOS/Windows/Linux](https://www.docker.com/products/docker-desktop/)
-- **Java 21+** - [OpenJDK](https://adoptium.net/) or Oracle JDK
-- **Maven 3.6+** - Install via Homebrew (`brew install maven`) or [official download](https://maven.apache.org/download.cgi)
-- **Git** - [Download](https://git-scm.com/downloads)
-
-**macOS Installation (Recommended):**
+### Build Commands
 ```bash
-# Install Homebrew (if not already installed)
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-# Install prerequisites
-brew install openjdk@21 maven git
-
-# Install Docker Desktop from https://www.docker.com/products/docker-desktop/
+./build.sh              # Standard build
+./build.sh --clean      # Clean build
+./build.sh --production # Production build
 ```
 
-#### **Quick Start for Developers**
-
+### Server Management
 ```bash
-# 1. Clone repository
-git clone https://github.com/ronaldtse/papermc-plugin-dragon-egg.git
-cd papermc-plugin-dragon-egg
-
-# 2. Configure environment (optional - defaults are set)
-# Edit .env file to customize server settings if needed
-# Most developers can skip this step
-
-# 3. Build plugin JAR
-./build.sh
-
-# 4. Start server with plugin
-./start-server.sh
-
-# 5. Connect and test
-# Server: localhost:25565
-# Username: posiflow
-# RCON: localhost:25575 (password: dragon123)
-
-# 6. Stop server
-./stop-server.sh
+./start-server.sh       # Start server
+./start-server.sh --rebuild  # Rebuild Docker image
+./stop-server.sh        # Stop server
 ```
 
-#### **Development Commands**
-
-**Build Commands:**
+### Testing
 ```bash
-# Standard build
-./build.sh
-
-# Clean build (removes previous builds)
-./build.sh --clean
-# or
-./build.sh -c
-```
-
-**Server Management:**
-```bash
-# Start server normally
-./start-server.sh
-
-# Start with Docker image rebuild
-./start-server.sh --rebuild
-# or
-./start-server.sh -r
-
-# Clean build and start (removes all data)
-./start-server.sh --clean
-# or
-./start-server.sh -c
-
-# Combined clean rebuild
-./start-server.sh --rebuild --clean
-# or
-./start-server.sh -r -c
-
-# Show help
-./start-server.sh --help
-```
-
-**Development Workflow:**
-```bash
-# Make code changes
-# Edit Java files in src/main/java/
-
-# Build and test
-./build.sh --clean
-
-# Start fresh server for testing
-./start-server.sh --clean
-
-# Monitor server logs
-docker logs -f papermc-dragonegg
-
-# When done
-./stop-server.sh
-```
-
-#### **Configuration Files**
-
-**`.env` File (Optional Customization):**
-```bash
-# Server Configuration
-MEMORYSIZE=2G
-EULA=TRUE
-TYPE=PAPER
-VERSION=1.21.8
-MAX_PLAYERS=10
-RCON_PORT=25575
-RCON_PASSWORD=dragon123
-
-# Plugin Configuration
-PLUGIN_VERSION=1.0.0
-ADMIN_USERNAME=posiflow
-
-# Server Properties
-SERVER_NAME="Dragon Egg Lightning Server"
-MOTD="Dragon Egg Lightning Plugin Server"
-```
-
-#### **Development Tips**
-
-**Testing the Plugin:**
-```bash
-# Give yourself a Dragon Egg
-/give @p minecraft:dragon_egg
-
-# Move to offhand (press F key)
-/ability 1
-
-# Check plugin status
-/plugins
-
-# View server performance
-/tps
-/mem
-```
-
-**Debugging:**
-```bash
-# View live server logs
-docker logs -f papermc-dragonegg
-
-# View recent logs
-docker logs papermc-dragonegg --tail 50
-
-# Connect to server console
-docker attach papermc-dragonegg
-
-# Exit console without stopping server
-# Press Ctrl+C then Ctrl+P then Ctrl+Q
-```
-
-**Common Development Tasks:**
-```bash
-# Make small code changes and test
-# 1. Edit Java files
-# 2. Build: ./build.sh
-# 3. Restart server: ./start-server.sh -r
-
-# Major changes requiring clean environment
-# 1. Edit Java files
-# 2. Clean build: ./build.sh --clean
-# 3. Clean server: ./start-server.sh --clean
-
-# Test plugin loading
-# Check server logs for: [DragonEggLightning] DragonEggLightning plugin enabled!
-```
-
-#### **Troubleshooting Development Issues**
-
-**Build Errors:**
-```bash
-# Clean Maven cache and rebuild
-./build.sh --clean
-
-# Check Java version (must be 21+)
-java -version
-
-# Verify Maven installation
-mvn --version
-```
-
-**Docker Issues:**
-```bash
-# Restart Docker Desktop
-# Check Docker is running: docker ps
-
-# Force rebuild everything
-./start-server.sh --clean
-
-# Remove all Docker resources
-docker system prune -a
-```
-
-**Server Connection Issues:**
-```bash
-# Check if container is running
-docker ps
-
-# Check ports are not in use
-lsof -i :25565
-lsof -i :25575
-
-# View container logs
-docker logs papermc-dragonegg
+./gradlew test          # Run all tests (214 tests)
+./gradlew test --continuous  # Watch mode
 ```
 
 ---
 
-## 🐛 Troubleshooting
+## Support
 
-### **Common Issues & Solutions**
-
-#### **Plugin Not Loading**
-```bash
-# Check Java version (must be 21+)
-java -version
-
-# Verify JAR location
-ls plugins/DragonEggLightning*.jar
-
-# Check server logs
-tail -f logs/latest.log | grep -i dragon
-```
-
-#### **Command Not Working**
-```bash
-# Make player operator
-op <username>
-
-# Verify plugin loaded
-/plugins
-
-# Check command registration
-/help ability
-```
-
-#### **No Lightning Effects**
-```bash
-# Check graphics settings
-# Video Settings → Particles → All
-
-# Monitor server performance
-/tps
-
-# Verify target validation
-# Must have Dragon Egg in offhand and valid target
-```
-
-#### **Lightning Damage Seems Low**
-- **Note**: Lightning now deals 2.0 hearts per strike (6.0 hearts total)
-- **Armor-Bypassing**: Damage ignores all armor and enchantments
-- **Consistent**: Same damage against any target, regardless of protection
+- **GitHub Issues**: [Report bugs or request features](https://github.com/cavarest/papermc-plugin-dragon-egg/issues)
+- **Documentation**: See `/chronicle` in-game for lore and guides
 
 ---
 
-## 📈 Why This Plugin Will Transform Your Server
-
-### **🎯 Player Engagement**
-- **Unique Ability**: Dragon Egg lightning is unlike any other plugin
-- **Skill-Based**: Requires player positioning and timing
-- **Satisfying Effects**: Epic lightning and thunder create memorable moments
-- **Strategic Depth**: Cooldown management adds tactical complexity
-
-### **📊 Server Benefits**
-- **Low Maintenance**: Zero configuration required after installation
-- **Performance**: Optimized for Paper 1.21.8 with minimal impact
-- **Stability**: Thoroughly tested with comprehensive error handling
-- **Scalability**: Works efficiently with multiple players
-
-### **🌟 Competitive Advantage**
-- **Unique Selling Point**: Lightning abilities set your server apart
-- **Player Retention**: Exciting mechanics keep players engaged
-- **Viral Potential**: Epic lightning effects encourage sharing
-- **Content Creation**: Perfect for streamers and content creators
-
----
-
-## 🎉 Ready to Lightning Your Server?
-
-### **Download Now**
-[![Download Latest Release](https://img.shields.io/badge/Download-Now%20🚀-ff6b6b?style=for-the-badge&logo=github)](https://github.com/ronaldtse/papermc-plugin-dragon-egg/releases/latest)
-
-### **Installation Time: 5 Minutes**
-1. Download the JAR file
-2. Place in your Paper server's plugins directory
-3. Restart your server
-4. Start casting lightning!
-
-### **Test It Today**
-```bash
-# Connect to your server
-# Give yourself: /give @p minecraft:dragon_egg
-# Move to offhand: Press F
-# Cast lightning: /ability 1
-# Experience the magic! ⚡
-```
-
----
-
-## 📞 Support & Community
-
-### **Getting Help**
-- **GitHub Issues**: [Report bugs or request features](https://github.com/ronaldtse/papermc-plugin-dragon-egg/issues)
-- **Documentation**: Comprehensive guides and troubleshooting
-- **Community**: Connect with other server administrators
-
-### **Contributing**
-- **Bug Reports**: Help us improve by reporting issues
-- **Feature Requests**: Suggest new abilities or improvements
-- **Code Contributions**: Submit pull requests to enhance the plugin
-
----
-
-## 📄 License & Credits
-
-**License**: MIT License - Free for personal and commercial use
-
+**Version**: 1.1.0
 **Author**: Augustus Tse and Octavius Tse
-**Version**: 1.0.0
-**Minecraft Version**: 1.21.8+
-**Paper API**: 1.21.8-R0.1-SNAPSHOT
-
----
+**License**: MIT
 
 <div align="center">
 
-**⭐ Star this project if you love Dragon Egg Lightning!** ⭐
+**Master the elements. Conquer the dragon within.** 🐉
 
-[![GitHub Stars](https://img.shields.io/github/stars/ronaldtse/papermc-plugin-dragon-egg?style=social)](https://github.com/ronaldtse/papermc-plugin-dragon-egg)
-[![GitHub Forks](https://img.shields.io/github/forks/ronaldtse/papermc-plugin-dragon-egg?style=social)](https://github.com/ronaldtse/papermc-plugin-dragon-egg/fork)
-
-**Transform your server today with Dragon Egg Lightning!** ⚡
-
-[Download Latest Release](https://github.com/ronaldtse/papermc-plugin-dragon-egg/releases/latest) | [Installation Guide](#-quick-start-5-minutes) | [Support](https://github.com/ronaldtse/papermc-plugin-dragon-egg/issues)
+[Download Latest Release](https://github.com/cavarest/papermc-plugin-dragon-egg/releases/latest) | [Quick Start](#quick-start-5-minutes)
 
 </div>
