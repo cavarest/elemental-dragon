@@ -13,11 +13,15 @@ import org.cavarest.elementaldragon.fragment.AbilityDefinition;
 import org.cavarest.elementaldragon.fragment.Fragment;
 import org.cavarest.elementaldragon.fragment.FragmentManager;
 import org.cavarest.elementaldragon.fragment.FragmentType;
+import org.cavarest.elementaldragon.hud.PlayerPreferenceManager;
+import org.cavarest.elementaldragon.hud.ProgressBarRenderer.VariantType;
 import org.cavarest.elementaldragon.item.ElementalItems;
 import org.cavarest.elementaldragon.lore.ChronicleManager;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Abstract base class for all fragment commands using Single Source of Truth pattern.
@@ -38,6 +42,7 @@ public abstract class AbstractFragmentCommand implements CommandExecutor, TabCom
   protected final ElementalDragon plugin;
   protected final FragmentManager fragmentManager;
   protected final ChronicleManager chronicleManager;
+  protected final PlayerPreferenceManager playerPreferenceManager;
   protected final Fragment fragment; // Single Source of Truth!
 
   /**
@@ -51,6 +56,7 @@ public abstract class AbstractFragmentCommand implements CommandExecutor, TabCom
     this.plugin = plugin;
     this.fragmentManager = fragmentManager;
     this.chronicleManager = plugin.getChronicleManager();
+    this.playerPreferenceManager = plugin.getPlayerPreferenceManager();
     this.fragment = fragment;
   }
 
@@ -102,6 +108,8 @@ public abstract class AbstractFragmentCommand implements CommandExecutor, TabCom
         return handleEquip(player);
       case "status":
         return handleStatus(player);
+      case "setcountdownsym":
+        return handleSetCountdownSym(player, args);
       case "help":
       default:
         // Check for ability aliases (query fragment)
@@ -306,6 +314,83 @@ public abstract class AbstractFragmentCommand implements CommandExecutor, TabCom
   }
 
   /**
+   * Handle setting the countdown symbol preference for this player.
+   *
+   * @param player The player
+   * @param args Command arguments
+   * @return true if successful
+   */
+  protected final boolean handleSetCountdownSym(Player player, String[] args) {
+    // Auto-generate list of available variant types (exclude CUSTOM)
+    String availableStyles = Arrays.stream(VariantType.values())
+        .filter(type -> type != VariantType.CUSTOM)
+        .map(Enum::name)
+        .collect(Collectors.joining(", "));
+
+    if (args.length < 2) {
+      player.sendMessage(
+        Component.text("Usage: /" + fragment.getCommandName() + " setcountdownsym <style> [width]", NamedTextColor.YELLOW)
+      );
+      player.sendMessage(
+        Component.text("Styles: " + availableStyles, NamedTextColor.GRAY)
+      );
+      player.sendMessage(
+        Component.text("Width: 1-10 (optional, defaults to 1 for most styles)", NamedTextColor.GRAY)
+      );
+      return true;
+    }
+
+    // Parse variant type
+    VariantType variantType;
+    try {
+      variantType = VariantType.valueOf(args[1].toUpperCase());
+      if (variantType == VariantType.CUSTOM) {
+        throw new IllegalArgumentException("CUSTOM variant type is not allowed");
+      }
+    } catch (IllegalArgumentException e) {
+      player.sendMessage(
+        Component.text("Invalid style: " + args[1], NamedTextColor.RED)
+      );
+      player.sendMessage(
+        Component.text("Valid styles: " + availableStyles, NamedTextColor.GRAY)
+      );
+      return true;
+    }
+
+    // Parse width parameter (optional)
+    int width = 1;
+    if (args.length >= 3) {
+      try {
+        width = Integer.parseInt(args[2]);
+        if (width < 1 || width > 10) {
+          player.sendMessage(
+            Component.text("Width must be between 1 and 10!", NamedTextColor.RED)
+          );
+          return true;
+        }
+      } catch (NumberFormatException e) {
+        player.sendMessage(
+          Component.text("Invalid width: " + args[2], NamedTextColor.RED)
+        );
+        return true;
+      }
+    }
+
+    // Set the preference
+    playerPreferenceManager.setPreference(player, variantType, width);
+
+    player.sendMessage(
+      Component.text("✓ Your countdown style has been set to " + variantType.name() +
+        (width > 1 ? " (width: " + width + ")" : ""), NamedTextColor.GREEN)
+    );
+    player.sendMessage(
+      Component.text("This preference will persist across server restarts.", NamedTextColor.GRAY)
+    );
+
+    return true;
+  }
+
+  /**
    * Show help message - 100% auto-generated from fragment metadata.
    *
    * @param player The player
@@ -338,6 +423,10 @@ public abstract class AbstractFragmentCommand implements CommandExecutor, TabCom
         .append(Component.text(" - Show fragment status", NamedTextColor.GRAY))
     );
     player.sendMessage(
+      Component.text("/" + fragment.getCommandName() + " setcountdownsym", NamedTextColor.YELLOW)
+        .append(Component.text(" - Set your countdown style", NamedTextColor.GRAY))
+    );
+    player.sendMessage(
       Component.text("/" + fragment.getCommandName() + " help", NamedTextColor.YELLOW)
         .append(Component.text(" - Show this help", NamedTextColor.GRAY))
     );
@@ -354,7 +443,7 @@ public abstract class AbstractFragmentCommand implements CommandExecutor, TabCom
 
     if (args.length == 1) {
       completions.addAll(List.of(
-        "1", "2", "equip", "status", "help"
+        "1", "2", "equip", "status", "setcountdownsym", "help"
       ));
 
       // Auto-generate aliases from fragment
@@ -364,6 +453,15 @@ public abstract class AbstractFragmentCommand implements CommandExecutor, TabCom
 
       String partial = args[0].toLowerCase();
       completions.removeIf(comp -> !comp.toLowerCase().startsWith(partial));
+    } else if (args.length == 2 && args[0].equalsIgnoreCase("setcountdownsym")) {
+      // Tab complete for style names - auto-generated from VariantType enum
+      Arrays.stream(VariantType.values())
+          .filter(type -> type != VariantType.CUSTOM)
+          .map(Enum::name)
+          .forEach(completions::add);
+
+      String partial = args[1].toUpperCase();
+      completions.removeIf(comp -> !comp.startsWith(partial));
     }
 
     return completions;
