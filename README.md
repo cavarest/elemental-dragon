@@ -458,12 +458,142 @@ cd papermc-plugin-dragon-egg
 
 # 4. Connect and test
 # Server: localhost:25565
-# Username: posiflow
+# Username: posiflow (automatically configured as operator)
 # RCON: localhost:25575 (password: dragon123)
 
 # 5. Stop server
 ./stop-server.sh
 ```
+
+### **Docker Development Setup**
+
+This project uses Docker for development and testing. The setup includes:
+
+**Base Image**: `itzg/minecraft-server:java21` - Official PaperMC server with Java 21
+
+**Key Docker Features**:
+- **Offline-mode operator setup**: Automatic UUID generation for offline players
+- **Plugin hot-reloading**: JAR copied to `/image/plugins/` for easy updates
+- **Persisted server data**: `server-data/` volume for world and config files
+- **RCON access**: Enabled on port 25575 for remote administration
+
+**Offline-Mode Operator Configuration**:
+
+The server runs in **offline mode** (`ONLINE_MODE=false`) for development. In offline mode, Minecraft clients generate UUIDs differently than online mode:
+
+- **Online mode**: UUIDs fetched from Mojang's authentication servers
+- **Offline mode**: UUIDs generated from MD5 hash of `"OfflinePlayer:username"`
+
+**How OPS Setup Works**:
+
+1. **Environment Variable** (`OFFLINE_OPS`): Comma-separated list of usernames who should be operators
+   ```bash
+   # In .env file or docker-compose.yml
+   OFFLINE_OPS=posiflow,player2,admin3
+   ```
+
+2. **Entrypoint Script** (`entrypoint.sh`): Runs BEFORE the main `/start` script
+   - Reads `OFFLINE_OPS` environment variable
+   - Generates correct offline-mode UUIDs for each username
+   - Creates `/data/ops.json` with proper format
+
+3. **UUID Generation Algorithm**:
+   ```bash
+   # Matches Minecraft's offline-mode UUID (version 3)
+   hash = MD5("OfflinePlayer:username")
+   UUID = version3_format(hash)  # xxxxxxxx-xxxx-3xxx-yxxx-xxxxxxxxxxxx
+   ```
+
+4. **Skip mc-image-helper**: Setting `EXISTING_OPS_FILE=SKIP` prevents the base image from overwriting ops.json
+
+**Example for "posiflow"**:
+```bash
+# Generated UUID: 763be461-6d24-3e4b-9e74-6ead0315f2bf
+# Format: 763be461-6d24-3e4b-9e74-6ead0315f2bf
+#              ^^^^^^^^ ^^^^ ^    ^^^^ ^^^^^^^^^^^^
+#              part1    part2 part3 part4 part5
+#                            ↑
+#                            "3" = version 3 UUID (replaces first char)
+```
+
+**Docker Configuration Files**:
+
+- **Dockerfile**: Builds image with plugin JAR and entrypoint script
+- **docker-compose.yml**: Configures environment variables and volumes
+- **entrypoint.sh**: Generates offline-mode UUIDs and creates ops.json
+- **.env**: Local development configuration (OFFLINE_OPS, memory, etc.)
+
+**Adding More Operators**:
+
+```bash
+# Option 1: Edit .env file
+OFFLINE_OPS=posiflow,player2,admin3
+
+# Option 2: Set in docker-compose.yml
+environment:
+  - OFFLINE_OPS=${OFFLINE_OPS:-posiflow,player2,admin3}
+
+# Option 3: Pass via command line
+OFFLINE_OPS="newplayer" docker-compose up
+```
+
+**Common Docker Commands**:
+
+```bash
+# Start server (rebuild image)
+./start-server.sh --rebuild
+
+# Start server (use cached image - faster)
+./start-server.sh
+
+# View server logs
+docker logs -f papermc-elementaldragon
+
+# Stop server
+./stop-server.sh
+
+# Access server console (interactive)
+docker attach papermc-elementaldragon
+# Press Ctrl+P, Ctrl+Q to detach without stopping
+
+# Execute commands inside container
+docker exec -it papermc-elementaldragon rcon-cli
+> op list
+> list
+```
+
+**Troubleshooting OPS Issues**:
+
+If you cannot login as operator:
+
+1. **Check entrypoint logs**:
+   ```bash
+   docker logs papermc-elementaldragon | grep "Elemental Dragon Offline Ops"
+   ```
+
+2. **Verify ops.json was created**:
+   ```bash
+   docker exec papermc-elementaldragon cat /data/ops.json
+   ```
+
+3. **Check your username matches OFFLINE_OPS exactly**:
+   ```bash
+   # Case-sensitive! "Posiflow" != "posiflow"
+   ```
+
+4. **Verify offline-mode UUID generation**:
+   ```bash
+   # Test UUID generation locally
+   echo -n "OfflinePlayer:posiflow" | md5sum
+   # Should match: 763be461-6d24-3e4b-9e74-6ead0315f2bf
+   ```
+
+**Why This Approach?**
+
+- ✅ **Reproducible**: Same UUID every time for the same username
+- ✅ **Offline-friendly**: No internet connection required
+- ✅ **Development-ready**: Works with any username without Mojang API
+- ✅ **Container-native**: All setup done in entrypoint, no manual steps
 
 ---
 
