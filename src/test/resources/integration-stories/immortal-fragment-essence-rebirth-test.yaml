@@ -1,0 +1,110 @@
+# Immortal Fragment - Essence Rebirth Ability Test
+# Tests the Immortal Fragment's Ability 2: Essence Rebirth (second life)
+# Original Specification: Grants a temporary second chance at life - instead of dying, player is healed to full health
+# Duration: 180 seconds (3 minutes)
+# Cooldown: 300 seconds (5 minutes)
+
+name: "Immortal Fragment - Essence Rebirth Test"
+description: "Test that Essence Rebirth grants a second chance at life when player would die"
+
+setup:
+  - action: "connect_player"
+    player: "fragment_tester"
+    name: "Connect test player"
+
+  - action: "make_operator"
+    player: "fragment_tester"
+    name: "Make test player operator"
+
+  # Give Immortal Fragment to player
+  - action: "execute_rcon_command"
+    command: "fragment give fragment_tester immortal"
+    name: "Give Immortal Fragment to player"
+
+  - action: "wait"
+    duration: 1000
+    name: "Wait for fragment to be given"
+
+  # Equip the fragment
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/fragment equip immortal"
+    name: "Equip Immortal Fragment"
+
+  - action: "wait"
+    duration: 1000
+    name: "Wait for fragment to be equipped"
+
+steps:
+  # Use Essence Rebirth ability (Ability 2)
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/immortal 2"
+    name: "Execute Essence Rebirth ability"
+
+  # Wait for ability to activate
+  - action: "wait"
+    duration: 1000
+    name: "Wait for second life activation"
+
+  # Get player health before lethal damage
+  - action: "get_player_health"
+    player: "fragment_tester"
+    store_as: "health_before_death"
+    name: "Store player health before lethal damage"
+
+  # Deal lethal damage to player (should trigger second life)
+  - action: "execute_rcon_command"
+    command: "effect give fragment_tester instant_damage 1 50"
+    name: "Deal lethal damage to player"
+
+  # Wait for second life trigger
+  - action: "wait"
+    duration: 2000
+    name: "Wait for second life processing"
+
+  # Check that player is still alive
+  - assertion: "player_alive"
+    player: "fragment_tester"
+    condition: "EQUALS"
+    value: true
+    name: "Verify player survived (second life triggered)"
+
+  # Get player health after second life
+  - action: "get_player_health"
+    player: "fragment_tester"
+    store_as: "health_after_rebirth"
+    name: "Get player health after rebirth"
+
+  # Verify health is high (should be fully healed)
+  - assertion: "variable_value"
+    variable: "health_after_rebirth"
+    condition: "GREATER_THAN"
+    value: 15.0
+    name: "Verify player was healed after rebirth"
+
+  # Try to use ability again (should be on cooldown)
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/immortal 2"
+    name: "Attempt to use ability during cooldown"
+
+  - action: "wait"
+    duration: 500
+    name: "Wait for cooldown message"
+
+cleanup:
+  # Heal player
+  - action: "execute_rcon_command"
+    command: "effect give fragment_tester instant_health 1 10"
+    name: "Heal player"
+
+  # Unequip fragment
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/fragment unequip"
+    name: "Unequip fragment"
+
+  - action: "disconnect_player"
+    player: "fragment_tester"
+    name: "Disconnect test player"

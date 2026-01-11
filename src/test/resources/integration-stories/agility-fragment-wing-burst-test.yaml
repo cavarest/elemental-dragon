@@ -1,0 +1,136 @@
+# Agility Fragment - Wing Burst Ability Test
+# Tests the Agility Fragment's Ability 2: Wing Burst (knockback AOE)
+# Original Specification: Unleashes a powerful gust that launches ALL nearby entities (mobs and players) away
+# Cooldown: 30 seconds
+
+name: "Agility Fragment - Wing Burst Test"
+description: "Test that Wing Burst launches nearby entities away with knockback"
+
+setup:
+  - action: "connect_player"
+    player: "fragment_tester"
+    name: "Connect test player"
+
+  - action: "make_operator"
+    player: "fragment_tester"
+    name: "Make test player operator"
+
+  # Spawn zombies around the player
+  - action: "execute_rcon_command"
+    command: "summon zombie ~2 ~ ~0 {CustomName:'{\"text\":\"KnockbackTest1\"}',CustomNameVisible:1b}"
+    player: "fragment_tester"
+    name: "Spawn zombie to the side"
+
+  - action: "execute_rcon_command"
+    command: "summon zombie ~-2 ~ ~0 {CustomName:'{\"text\":\"KnockbackTest2\"}',CustomNameVisible:1b}"
+    player: "fragment_tester"
+    name: "Spawn zombie to the other side"
+
+  # Give Agility Fragment to player
+  - action: "execute_rcon_command"
+    command: "fragment give fragment_tester agility"
+    name: "Give Agility Fragment to player"
+
+  - action: "wait"
+    duration: 1000
+    name: "Wait for fragment to be given"
+
+  # Equip the fragment
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/fragment equip agility"
+    name: "Equip Agility Fragment"
+
+  - action: "wait"
+    duration: 1000
+    name: "Wait for fragment to be equipped"
+
+  # Store initial positions of zombies
+  - action: "get_entity_location"
+    entity: "KnockbackTest1"
+    store_as: "zombie1_initial"
+    name: "Store initial position of zombie 1"
+
+  - action: "get_entity_location"
+    entity: "KnockbackTest2"
+    store_as: "zombie2_initial"
+    name: "Store initial position of zombie 2"
+
+steps:
+  # Use Wing Burst ability (Ability 2)
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/agility 2"
+    name: "Execute Wing Burst ability"
+
+  # Wait for knockback to complete
+  - action: "wait"
+    duration: 2000
+    name: "Wait for knockback effects"
+
+  # Get final positions of zombies
+  - action: "get_entity_location"
+    entity: "KnockbackTest1"
+    store_as: "zombie1_final"
+    name: "Get final position of zombie 1"
+
+  - action: "get_entity_location"
+    entity: "KnockbackTest2"
+    store_as: "zombie2_final"
+    name: "Get final position of zombie 2"
+
+  # Calculate distances moved
+  - action: "calculate_distance"
+    from: "zombie1_initial"
+    to: "zombie1_final"
+    store_as: "zombie1_distance"
+    name: "Calculate distance zombie 1 moved"
+
+  - action: "calculate_distance"
+    from: "zombie2_initial"
+    to: "zombie2_final"
+    store_as: "zombie2_distance"
+    name: "Calculate distance zombie 2 moved"
+
+  # Verify zombies were knocked back (moved at least 2 blocks)
+  - assertion: "variable_value"
+    variable: "zombie1_distance"
+    condition: "GREATER_THAN"
+    value: 2.0
+    name: "Verify zombie 1 was knocked back"
+
+  - assertion: "variable_value"
+    variable: "zombie2_distance"
+    condition: "GREATER_THAN"
+    value: 2.0
+    name: "Verify zombie 2 was knocked back"
+
+  # Try to use ability again (should be on cooldown)
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/agility 2"
+    name: "Attempt to use ability during cooldown"
+
+  - action: "wait"
+    duration: 500
+    name: "Wait for cooldown message"
+
+cleanup:
+  # Remove test entities
+  - action: "execute_rcon_command"
+    command: "kill @e[name=KnockbackTest1]"
+    name: "Remove test zombie 1"
+
+  - action: "execute_rcon_command"
+    command: "kill @e[name=KnockbackTest2]"
+    name: "Remove test zombie 2"
+
+  # Unequip fragment
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/fragment unequip"
+    name: "Unequip fragment"
+
+  - action: "disconnect_player"
+    player: "fragment_tester"
+    name: "Disconnect test player"

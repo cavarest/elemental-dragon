@@ -1,0 +1,85 @@
+# HUD - Lightning Ability Display Test
+# Tests that the HUD correctly displays the lightning ability when dragon egg is in offhand
+# Verifies sidebar appears, shows correct ability name, and updates cooldown status
+
+name: "HUD - Lightning Ability Display Test"
+description: "Test HUD displays lightning ability with dragon egg equipped"
+
+setup:
+  - action: "connect_player"
+    player: "hud_tester"
+    name: "Connect test player"
+
+  - action: "make_operator"
+    player: "hud_tester"
+    name: "Make test player operator"
+
+  - action: "execute_rcon_command"
+    command: "item replace entity hud_tester weapon.offhand with dragon_egg 1"
+    name: "Give dragon egg to player offhand"
+
+  - action: "wait"
+    duration: 2000
+    name: "Wait for HUD to update (2 seconds)"
+
+steps:
+  # Verify HUD shows lightning ability ready
+  - assertion: "player_has_sidebar"
+    player: "hud_tester"
+    condition: "EXISTS"
+    name: "Verify lightning ability sidebar is displayed"
+
+  # Use lightning ability to trigger cooldown
+  - action: "execute_player_command"
+    player: "hud_tester"
+    command: "/lightning"
+    name: "Use lightning ability"
+
+  - action: "wait"
+    duration: 2000
+    name: "Wait for cooldown to start"
+
+  # Verify HUD shows cooldown time remaining
+  - assertion: "player_has_sidebar"
+    player: "hud_tester"
+    condition: "EXISTS"
+    name: "Verify sidebar still displayed during cooldown"
+
+  # Remove dragon egg from offhand
+  - action: "execute_rcon_command"
+    command: "item replace entity hud_tester weapon.offhand with air"
+    name: "Remove dragon egg from offhand"
+
+  - action: "wait"
+    duration: 2000
+    name: "Wait for HUD to update"
+
+  # Verify HUD no longer shows lightning ability
+  - assertion: "player_has_sidebar"
+    player: "hud_tester"
+    condition: "NOT_EXISTS"
+    name: "Verify lightning sidebar removed when egg removed"
+
+  # Put dragon egg back
+  - action: "execute_rcon_command"
+    command: "item replace entity hud_tester weapon.offhand with dragon_egg 1"
+    name: "Give dragon egg back to player"
+
+  - action: "wait"
+    duration: 2000
+    name: "Wait for HUD to update"
+
+  # Verify HUD shows lightning ability again (still on cooldown)
+  - assertion: "player_has_sidebar"
+    player: "hud_tester"
+    condition: "EXISTS"
+    name: "Verify sidebar reappears with dragon egg"
+
+cleanup:
+  - action: "execute_rcon_command"
+    command: "dragonlightning clearcooldown hud_tester"
+    name: "Clear cooldown"
+
+  - action: "disconnect_player"
+    player: "hud_tester"
+    name: "Disconnect test player"

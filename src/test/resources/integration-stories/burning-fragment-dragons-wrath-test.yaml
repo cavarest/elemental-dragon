@@ -1,0 +1,94 @@
+# Burning Fragment - Dragon's Wrath Ability Test
+# Tests the Burning Fragment's Ability 1: Dragon's Wrath (targeted homing fireball)
+# Original Specification: Ignites the nearest enemy with an unblockable flaming projectile
+# Cooldown: 120 seconds (2 minutes)
+
+name: "Burning Fragment - Dragon's Wrath Test"
+description: "Test that Dragon's Wrath ability fires a homing fireball at the nearest hostile entity"
+
+setup:
+  - action: "connect_player"
+    player: "fragment_tester"
+    name: "Connect test player"
+
+  - action: "make_operator"
+    player: "fragment_tester"
+    name: "Make test player operator"
+
+  # Spawn a zombie as the target
+  - action: "execute_rcon_command"
+    command: "summon zombie ~5 ~ ~5 {CustomName:'{\"text\":\"DragonTarget\"}',CustomNameVisible:1b}"
+    player: "fragment_tester"
+    name: "Spawn target zombie 5 blocks away"
+
+  # Give Burning Fragment to player
+  - action: "execute_rcon_command"
+    command: "fragment give fragment_tester burning"
+    name: "Give Burning Fragment to player"
+
+  - action: "wait"
+    duration: 1000
+    name: "Wait for fragment to be given"
+
+  # Equip the fragment
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/fragment equip burning"
+    name: "Equip Burning Fragment"
+
+  - action: "wait"
+    duration: 1000
+    name: "Wait for fragment to be equipped"
+
+steps:
+  # Use Dragon's Wrath ability (Ability 1)
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/burn 1"
+    name: "Execute Dragon's Wrath ability"
+
+  # Wait for ability execution and fireball travel time
+  - action: "wait"
+    duration: 3000
+    name: "Wait for fireball to hit target"
+
+  # Check that the zombie took damage (health should be less than full)
+  - assertion: "entity_health"
+    entity: "DragonTarget"
+    condition: "LESS_THAN"
+    value: 20.0
+    name: "Verify target took damage from fireball"
+
+  # Verify zombie is on fire
+  - assertion: "entity_burning"
+    entity: "DragonTarget"
+    condition: "EQUALS"
+    value: true
+    name: "Verify target is burning"
+
+  # Try to use ability again (should be on cooldown)
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/burn 1"
+    name: "Attempt to use ability during cooldown"
+
+  # Wait a moment for cooldown message
+  - action: "wait"
+    duration: 500
+    name: "Wait for cooldown message"
+
+cleanup:
+  # Remove test entities
+  - action: "execute_rcon_command"
+    command: "kill @e[name=DragonTarget]"
+    name: "Remove test zombie"
+
+  # Unequip fragment
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/fragment unequip"
+    name: "Unequip fragment"
+
+  - action: "disconnect_player"
+    player: "fragment_tester"
+    name: "Disconnect test player"

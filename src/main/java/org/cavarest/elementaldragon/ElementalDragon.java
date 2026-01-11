@@ -10,7 +10,9 @@ import org.cavarest.elementaldragon.command.ElementalDragonCommand;
 import org.cavarest.elementaldragon.command.FireCommand;
 import org.cavarest.elementaldragon.command.ImmortalCommand;
 import org.cavarest.elementaldragon.command.LightningCommand;
+import org.cavarest.elementaldragon.command.WithdrawabilityCommand;
 import org.cavarest.elementaldragon.cooldown.CooldownManager;
+import org.cavarest.elementaldragon.crafting.CraftedCountManager;
 import org.cavarest.elementaldragon.crafting.CraftingListener;
 import org.cavarest.elementaldragon.crafting.CraftingManager;
 import org.cavarest.elementaldragon.fragment.FragmentManager;
@@ -38,9 +40,11 @@ public class ElementalDragon extends JavaPlugin {
   private HudManager hudManager;
   private FragmentHudManager fragmentHudManager;
   private CraftingManager craftingManager;
+  private CraftedCountManager craftedCountManager;
   private ChronicleManager chronicleManager;
   private AchievementManager achievementManager;
   private ElementalPlayerTracker playerTracker;
+  private WithdrawabilityCommand withdrawabilityCommand;
 
   @Override
   public void onEnable() {
@@ -57,6 +61,7 @@ public class ElementalDragon extends JavaPlugin {
     // FragmentHudManager is redundant - HudManager already handles both lightning and fragment status
     // this.fragmentHudManager = new FragmentHudManager(this, fragmentManager);
     this.craftingManager = new CraftingManager(this);
+    this.craftedCountManager = new CraftedCountManager(this);
 
     registerCommands();
     registerListeners();
@@ -109,13 +114,17 @@ public class ElementalDragon extends JavaPlugin {
     getCommand("corrupt").setExecutor(corruptedCommand);
     getCommand("corrupt").setTabCompleter(corruptedCommand);
 
-    CraftCommand craftCommand = new CraftCommand(this, craftingManager);
+    CraftCommand craftCommand = new CraftCommand(this, craftingManager, craftedCountManager);
     getCommand("craft").setExecutor(craftCommand);
     getCommand("craft").setTabCompleter(craftCommand);
 
     ChronicleCommand chronicleCommand = new ChronicleCommand(this);
     getCommand("chronicle").setExecutor(chronicleCommand);
     getCommand("chronicle").setTabCompleter(chronicleCommand);
+
+    // Register withdraw WithdrawabilityCommandability command
+    withdrawabilityCommand = new WithdrawabilityCommand(this, fragmentManager);
+    getCommand("withdrawability").setExecutor(withdrawabilityCommand);
   }
 
   /**
@@ -127,15 +136,16 @@ public class ElementalDragon extends JavaPlugin {
       getServer().getPluginManager().registerEvents(playerTracker, this);
     }
 
-    // Register fragment item listener for right-click equipping and inventory restrictions
+    // Register fragment item listener for item loss detection, container restrictions, and right-click equip
     if (fragmentManager != null) {
-      FragmentItemListener fragmentItemListener = new FragmentItemListener(this, fragmentManager);
+      org.cavarest.elementaldragon.fragment.FragmentItemListener fragmentItemListener =
+        new org.cavarest.elementaldragon.fragment.FragmentItemListener(this, fragmentManager);
       getServer().getPluginManager().registerEvents(fragmentItemListener, this);
     }
 
     // Register crafting listener for Heavy Core validation in fragment recipes
     if (craftingManager != null) {
-      CraftingListener craftingListener = new CraftingListener(this, craftingManager);
+      CraftingListener craftingListener = new CraftingListener(this, craftingManager, craftedCountManager);
       getServer().getPluginManager().registerEvents(craftingListener, this);
     }
   }
@@ -162,6 +172,10 @@ public class ElementalDragon extends JavaPlugin {
 
   public CraftingManager getCraftingManager() {
     return craftingManager;
+  }
+
+  public CraftedCountManager getCraftedCountManager() {
+    return craftedCountManager;
   }
 
   public ChronicleManager getChronicleManager() {

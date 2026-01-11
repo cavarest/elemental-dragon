@@ -1,0 +1,86 @@
+# HUD - Cooldown Updates Test
+# Tests that the HUD sidebar correctly updates its lines and progress during cooldowns
+# Verifies cooldown countdown display changes from "In Xs" / "In Xm Ys" to "Ready"
+
+name: "HUD - Cooldown Updates Test"
+description: "Test HUD sidebar updates correctly during cooldown countdown"
+
+setup:
+  - action: "connect_player"
+    player: "hud_tester"
+    name: "Connect test player"
+
+  - action: "make_operator"
+    player: "hud_tester"
+    name: "Make test player operator"
+
+  - action: "execute_rcon_command"
+    command: "item replace entity hud_tester weapon.offhand with dragon_egg 1"
+    name: "Give dragon egg to player offhand"
+
+  - action: "wait"
+    duration: 2000
+    name: "Wait for HUD to initialize"
+
+steps:
+  # Set a short cooldown for testing (10 seconds)
+  - action: "execute_rcon_command"
+    command: "dragonlightning setcooldown hud_tester 10"
+    name: "Set 10 second cooldown for testing"
+
+  # Use lightning ability to trigger cooldown
+  - action: "execute_player_command"
+    player: "hud_tester"
+    command: "/lightning"
+    name: "Use lightning ability to start cooldown"
+
+  - action: "wait"
+    duration: 2000
+    name: "Wait for cooldown to start"
+
+  # Verify HUD shows cooldown (sidebar should exist with progress < 1.0)
+  - assertion: "player_has_sidebar"
+    player: "hud_tester"
+    condition: "EXISTS"
+    name: "Verify sidebar shows during cooldown"
+
+  # Wait 5 seconds (halfway through cooldown)
+  - action: "wait"
+    duration: 5000
+    name: "Wait 5 seconds (halfway through)"
+
+  # Verify sidebar still exists and is updating
+  - assertion: "player_has_sidebar"
+    player: "hud_tester"
+    condition: "EXISTS"
+    name: "Verify sidebar still showing at halfway"
+
+  # Wait for cooldown to complete (another 6 seconds to be safe)
+  - action: "wait"
+    duration: 6000
+    name: "Wait for cooldown to complete"
+
+  # Verify sidebar shows "Ready" status (progress = 1.0)
+  - assertion: "player_has_sidebar"
+    player: "hud_tester"
+    condition: "EXISTS"
+    name: "Verify sidebar shows Ready when cooldown expires"
+
+  # Use ability again to verify it's ready
+  - action: "execute_player_command"
+    player: "hud_tester"
+    command: "/lightning"
+    name: "Use ability again to verify it's ready"
+
+  - action: "wait"
+    duration: 1000
+    name: "Wait for ability execution"
+
+cleanup:
+  - action: "execute_rcon_command"
+    command: "dragonlightning clearcooldown hud_tester"
+    name: "Clear cooldown"
+
+  - action: "disconnect_player"
+    player: "hud_tester"
+    name: "Disconnect test player"

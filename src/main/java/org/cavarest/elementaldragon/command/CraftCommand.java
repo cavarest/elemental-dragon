@@ -8,7 +8,9 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.cavarest.elementaldragon.ElementalDragon;
+import org.cavarest.elementaldragon.crafting.CraftedCountManager;
 import org.cavarest.elementaldragon.crafting.CraftingManager;
+import org.cavarest.elementaldragon.fragment.FragmentType;
 import org.cavarest.elementaldragon.item.ElementalItems;
 
 import java.util.ArrayList;
@@ -24,6 +26,7 @@ public class CraftCommand implements CommandExecutor, TabCompleter {
 
   private final ElementalDragon plugin;
   private final CraftingManager craftingManager;
+  private final CraftedCountManager craftedCountManager;
 
   // Valid crafting types
   private static final String[] CRAFT_TYPES = {
@@ -54,10 +57,12 @@ public class CraftCommand implements CommandExecutor, TabCompleter {
    *
    * @param plugin The plugin instance
    * @param craftingManager The crafting manager for recipe access
+   * @param craftedCountManager The crafted count manager for tracking quantities
    */
-  public CraftCommand(ElementalDragon plugin, CraftingManager craftingManager) {
+  public CraftCommand(ElementalDragon plugin, CraftingManager craftingManager, CraftedCountManager craftedCountManager) {
     this.plugin = plugin;
     this.craftingManager = craftingManager;
+    this.craftedCountManager = craftedCountManager;
   }
 
   @Override
@@ -95,19 +100,19 @@ public class CraftCommand implements CommandExecutor, TabCompleter {
 
     switch (craftType) {
       case "heavy_core":
-        showRecipe(player, "Heavy Core", craftingManager.getHeavyCoreRecipe(), true);
+        showRecipe(player, "Heavy Core", craftingManager.getHeavyCoreRecipe(), true, null);
         break;
       case "fire":
-        showRecipe(player, "Burning Fragment", craftingManager.getBurningFragmentRecipe(), false);
+        showRecipe(player, "Burning Fragment", craftingManager.getBurningFragmentRecipe(), false, FragmentType.BURNING);
         break;
       case "agile":
-        showRecipe(player, "Agility Fragment", craftingManager.getAgilityFragmentRecipe(), false);
+        showRecipe(player, "Agility Fragment", craftingManager.getAgilityFragmentRecipe(), false, FragmentType.AGILITY);
         break;
       case "immortal":
-        showRecipe(player, "Immortal Fragment", craftingManager.getImmortalFragmentRecipe(), false);
+        showRecipe(player, "Immortal Fragment", craftingManager.getImmortalFragmentRecipe(), false, FragmentType.IMMORTAL);
         break;
       case "corrupt":
-        showRecipe(player, "Corrupted Core", craftingManager.getCorruptedCoreRecipe(), false);
+        showRecipe(player, "Corrupted Core", craftingManager.getCorruptedCoreRecipe(), false, FragmentType.CORRUPTED);
         break;
       case "help":
       case "?":
@@ -139,8 +144,9 @@ public class CraftCommand implements CommandExecutor, TabCompleter {
    * @param displayName The display name of the item
    * @param recipeData The recipe data from CraftingManager
    * @param requiresOp Whether this recipe requires OP status
+   * @param fragmentType The fragment type (null for Heavy Core)
    */
-  private void showRecipe(Player player, String displayName, CraftingManager.RecipeData recipeData, boolean requiresOp) {
+  private void showRecipe(Player player, String displayName, CraftingManager.RecipeData recipeData, boolean requiresOp, FragmentType fragmentType) {
     // Check OP requirement for Heavy Core
     if (requiresOp && !player.isOp()) {
       player.sendMessage(
@@ -197,6 +203,36 @@ public class CraftCommand implements CommandExecutor, TabCompleter {
           net.kyori.adventure.text.format.NamedTextColor.YELLOW
         )
       );
+    }
+
+    // Display crafted quantity status for fragments (ORIGINAL SPECIFICATION)
+    if (fragmentType != null && craftedCountManager != null) {
+      int current = craftedCountManager.getCraftedCount(player, fragmentType);
+      int max = craftedCountManager.getMaxCraftableCount(fragmentType);
+      boolean canCraft = craftedCountManager.canCraft(player, fragmentType);
+
+      // Show status message
+      if (canCraft) {
+        player.sendMessage(
+          net.kyori.adventure.text.Component.text(
+            "Crafting Status: " + current + "/" + max + " crafted (You can still craft " + (max - current) + " more)",
+            net.kyori.adventure.text.format.NamedTextColor.GREEN
+          )
+        );
+      } else {
+        player.sendMessage(
+          net.kyori.adventure.text.Component.text(
+            "Crafting Status: " + current + "/" + max + " crafted (LIMIT REACHED)",
+            net.kyori.adventure.text.format.NamedTextColor.RED
+          )
+        );
+        player.sendMessage(
+          net.kyori.adventure.text.Component.text(
+            "You cannot craft any more of this fragment type.",
+            net.kyori.adventure.text.format.NamedTextColor.GRAY
+          )
+        );
+      }
     }
   }
 

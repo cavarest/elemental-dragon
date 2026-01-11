@@ -1,0 +1,94 @@
+# HUD - Fragment Abilities Display Test
+# Tests that the HUD correctly displays fragment abilities when fragment is equipped
+# Verifies both ability 1 and ability 2 appear in sidebar with correct names and icons
+
+name: "HUD - Fragment Abilities Display Test"
+description: "Test HUD displays both fragment abilities when fragment equipped"
+
+setup:
+  - action: "connect_player"
+    player: "hud_tester"
+    name: "Connect test player"
+
+  - action: "make_operator"
+    player: "hud_tester"
+    name: "Make test player operator"
+
+  # Give Burning Fragment
+  - action: "execute_rcon_command"
+    command: "ed give hud_tester equipment fire"
+    name: "Give Burning Fragment to player"
+
+  - action: "wait"
+    duration: 1000
+    name: "Wait for fragment to be given"
+
+steps:
+  # Equip Burning Fragment
+  - action: "execute_player_command"
+    player: "hud_tester"
+    command: "/fire equip"
+    name: "Equip Burning Fragment"
+
+  - action: "wait"
+    duration: 2000
+    name: "Wait for HUD to update (2 seconds)"
+
+  # Verify HUD shows both fire abilities
+  - assertion: "player_has_sidebar"
+    player: "hud_tester"
+    condition: "EXISTS"
+    name: "Verify fire ability sidebars displayed"
+
+  # Use ability 1 to trigger cooldown
+  - action: "execute_player_command"
+    player: "hud_tester"
+    command: "/fire 1"
+    name: "Use Dragon's Wrath (ability 1)"
+
+  - action: "wait"
+    duration: 2000
+    name: "Wait for cooldown to start"
+
+  # Verify HUD shows ability 1 on cooldown, ability 2 ready
+  - assertion: "player_has_sidebar"
+    player: "hud_tester"
+    condition: "EXISTS"
+    name: "Verify both abilities still shown"
+
+  # Use ability 2 to trigger cooldown
+  - action: "execute_player_command"
+    player: "hud_tester"
+    command: "/fire 2"
+    name: "Use Infernal Dominion (ability 2)"
+
+  - action: "wait"
+    duration: 2000
+    name: "Wait for cooldown to start"
+
+  # Verify HUD shows both abilities on cooldown
+  - assertion: "player_has_sidebar"
+    player: "hud_tester"
+    condition: "EXISTS"
+    name: "Verify both abilities shown with cooldowns"
+
+  # Unequip fragment
+  - action: "execute_player_command"
+    player: "hud_tester"
+    command: "/fire unequip"
+    name: "Unequip Burning Fragment"
+
+  - action: "wait"
+    duration: 2000
+    name: "Wait for HUD to update"
+
+  # Verify HUD no longer shows fire abilities
+  - assertion: "player_has_sidebar"
+    player: "hud_tester"
+    condition: "NOT_EXISTS"
+    name: "Verify fire sidebars removed when unequipped"
+
+cleanup:
+  - action: "disconnect_player"
+    player: "hud_tester"
+    name: "Disconnect test player"

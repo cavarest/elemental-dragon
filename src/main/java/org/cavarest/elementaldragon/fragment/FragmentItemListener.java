@@ -4,6 +4,7 @@ import org.cavarest.elementaldragon.ElementalDragon;
 import org.cavarest.elementaldragon.item.ElementalItems;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -17,7 +18,10 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * Listener for fragment item interactions and inventory restrictions.
@@ -28,13 +32,23 @@ public class FragmentItemListener implements Listener {
 
   private final ElementalDragon plugin;
   private final FragmentManager fragmentManager;
+  private final Map<UUID, Long> lastEquipClickTimes;
+  private final MiniMessage miniMessage = MiniMessage.miniMessage();
+
+  // Cooldown between equip attempts (500ms) to prevent spam clicking
+  private static final long EQUIP_COOLDOWN_MS = 500;
 
   public FragmentItemListener(ElementalDragon plugin, FragmentManager fragmentManager) {
     this.plugin = plugin;
     this.fragmentManager = fragmentManager;
+    this.lastEquipClickTimes = new HashMap<>();
   }
 
-  @EventHandler
+  /**
+   * Handle fragment right-click to equip.
+   * Uses HIGHEST priority to run before item's default behaviors (like FIRE_CHARGE throwing fire).
+   */
+  @EventHandler(priority = EventPriority.HIGHEST)
   public void onPlayerInteract(PlayerInteractEvent event) {
     // Only handle right-click actions
     if (event.getAction() != Action.RIGHT_CLICK_AIR &&
@@ -43,8 +57,19 @@ public class FragmentItemListener implements Listener {
     }
 
     Player player = event.getPlayer();
-    ItemStack item = event.getItem();
+    UUID playerId = player.getUniqueId();
 
+    // Check cooldown to prevent spam clicking
+    long lastClickTime = lastEquipClickTimes.getOrDefault(playerId, 0L);
+    long currentTime = System.currentTimeMillis();
+    if (currentTime - lastClickTime < EQUIP_COOLDOWN_MS) {
+      // Still in cooldown, just cancel the event but don't send any message
+      event.setCancelled(true);
+      return;
+    }
+
+    // Get item from hand (main hand or offhand)
+    ItemStack item = getItemInHand(player);
     if (item == null || !item.hasItemMeta()) {
       return;
     }
@@ -55,22 +80,47 @@ public class FragmentItemListener implements Listener {
       return;
     }
 
-    // Cancel the event to prevent other interactions
+    // Cancel the event to prevent default item behaviors (FIRE_CHARGE throwing fire, HEAVY_CORE placement)
     event.setCancelled(true);
+
+    // Update last click time
+    lastEquipClickTimes.put(playerId, currentTime);
 
     // Equip the fragment
     boolean success = fragmentManager.equipFragment(player, fragmentType);
 
     if (success) {
-      player.sendMessage(
-        Component.text("Equipped " + fragmentType.getDisplayName() + "!",
-          NamedTextColor.GOLD)
-      );
-      player.sendMessage(
-        Component.text(fragmentType.getPassiveBonus(),
-          NamedTextColor.GRAY)
-      );
+      // Check if already equipped message was shown by FragmentManager
+      // If equipFragment returns true and FragmentManager sent "Already equipped!",
+      // we should not send the full equip messages
+      FragmentType currentlyEquipped = fragmentManager.getEquippedFragment(player);
+      if (currentlyEquipped == fragmentType) {
+        // FragmentManager handles "Already equipped!" message internally
+        // No additional action needed
+      } else {
+        // Use MiniMessage for styled message with emoji
+        player.sendMessage(miniMessage.deserialize(
+          "<gold>Equipped <white>" + fragmentType.getDisplayName() + "</white>!</gold>\n" +
+          "<gray>" + fragmentType.getPassiveBonus() + "</gray>"
+        ));
+      }
     }
+  }
+
+  /**
+   * Get the item in the player's hand (checks both main hand and offhand).
+   *
+   * @param player The player
+   * @return The item in hand, or null if none
+   */
+  private ItemStack getItemInHand(Player player) {
+    // Check main hand first
+    ItemStack mainHand = player.getInventory().getItemInMainHand();
+    if (mainHand != null && mainHand.hasItemMeta()) {
+      return mainHand;
+    }
+    // Then check offhand
+    return player.getInventory().getItemInOffHand();
   }
 
   /**
@@ -98,14 +148,10 @@ public class FragmentItemListener implements Listener {
     if (existingCount > 0) {
       // Cancel pickup - player already has this fragment type
       event.setCancelled(true);
-      player.sendMessage(
-        Component.text("⚠️ You can only possess ONE " + pickupType.getDisplayName() + " at a time!",
-          NamedTextColor.RED)
-      );
-      player.sendMessage(
-        Component.text("Drop or store your existing " + pickupType.getDisplayName() + " before picking up another.",
-          NamedTextColor.GRAY)
-      );
+      player.sendMessage(miniMessage.deserialize(
+        "<red>⚠️ You can only possess ONE <white>" + pickupType.getDisplayName() + "</white> at a time!</red>\n" +
+        "<gray>Drop or store your existing <white>" + pickupType.getDisplayName() + "</white> before picking up another.</gray>"
+      ));
     }
   }
 
@@ -135,14 +181,10 @@ public class FragmentItemListener implements Listener {
         int containerCount = countFragmentType(event.getInventory().getContents(), cursorType);
         if (containerCount > 0) {
           event.setCancelled(true);
-          player.sendMessage(
-            Component.text("⚠️ This container already has a " + cursorType.getDisplayName() + "!",
-              NamedTextColor.RED)
-          );
-          player.sendMessage(
-            Component.text("Only ONE of each fragment type can be stored per container.",
-              NamedTextColor.GRAY)
-          );
+          player.sendMessage(miniMessage.deserialize(
+            "<red>⚠️ This container already has a <white>" + cursorType.getDisplayName() + "</white>!</red>\n" +
+            "<gray>Only ONE of each fragment type can be stored per container.</gray>"
+          ));
         }
       }
     }

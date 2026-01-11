@@ -5,10 +5,12 @@ import java.util.List;
 /**
  * Immutable data class representing a fragment ability definition.
  * Contains all metadata about a single ability including name, description,
- * aliases, and success messages.
+ * aliases, and success messages with emoji.
  *
  * <p>This class serves as the single source of truth for ability metadata,
  * eliminating duplication across commands and other components.</p>
+ *
+ * <p>Format: [elementEmoji][actionEmoji] Message for consistent dragonic themed display</p>
  */
 public class AbilityDefinition {
     private final int number;
@@ -16,9 +18,30 @@ public class AbilityDefinition {
     private final String description;
     private final List<String> aliases;
     private final String successMessage;
+    private final String actionEmoji;
 
     /**
-     * Creates a new ability definition.
+     * Creates a new ability definition with action emoji.
+     *
+     * @param number The ability number (1 or 2)
+     * @param name The display name of the ability
+     * @param description Brief description of what the ability does
+     * @param aliases List of command aliases that can trigger this ability
+     * @param successMessage Message shown when ability is successfully used
+     * @param actionEmoji Emoji representing the action (dragonic themed)
+     */
+    public AbilityDefinition(int number, String name, String description,
+                            List<String> aliases, String successMessage, String actionEmoji) {
+        this.number = number;
+        this.name = name;
+        this.description = description;
+        this.aliases = List.copyOf(aliases); // Immutable copy
+        this.successMessage = successMessage;
+        this.actionEmoji = actionEmoji;
+    }
+
+    /**
+     * Creates a new ability definition without action emoji (for backwards compatibility).
      *
      * @param number The ability number (1 or 2)
      * @param name The display name of the ability
@@ -28,11 +51,7 @@ public class AbilityDefinition {
      */
     public AbilityDefinition(int number, String name, String description,
                             List<String> aliases, String successMessage) {
-        this.number = number;
-        this.name = name;
-        this.description = description;
-        this.aliases = List.copyOf(aliases); // Immutable copy
-        this.successMessage = successMessage;
+        this(number, name, description, aliases, successMessage, "");
     }
 
     /**
@@ -73,6 +92,14 @@ public class AbilityDefinition {
      */
     public String getSuccessMessage() {
         return successMessage;
+    }
+
+    /**
+     * Gets the action emoji for this ability.
+     * @return Action emoji (e.g., "☄️", "🦅", "🛡️"), or empty string if none
+     */
+    public String getActionEmoji() {
+        return actionEmoji;
     }
 
     /**

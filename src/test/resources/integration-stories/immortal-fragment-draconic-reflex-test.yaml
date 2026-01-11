@@ -1,0 +1,126 @@
+# Immortal Fragment - Draconic Reflex Ability Test
+# Tests the Immortal Fragment's Ability 1: Draconic Reflex (dodge chance)
+# Original Specification: Grants a temporary 100% dodge chance against the next attack within 10 seconds
+# Cooldown: 120 seconds (2 minutes)
+
+name: "Immortal Fragment - Draconic Reflex Test"
+description: "Test that Draconic Reflex grants temporary dodge chance against the next attack"
+
+setup:
+  - action: "connect_player"
+    player: "fragment_tester"
+    name: "Connect test player"
+
+  - action: "make_operator"
+    player: "fragment_tester"
+    name: "Make test player operator"
+
+  # Spawn a zombie to attack the player
+  - action: "execute_rcon_command"
+    command: "summon zombie ~2 ~ ~2 {CustomName:'{\"text\":\"AttackerZombie\"}',CustomNameVisible:1b}"
+    player: "fragment_tester"
+    name: "Spawn zombie to attack player"
+
+  # Give Immortal Fragment to player
+  - action: "execute_rcon_command"
+    command: "fragment give fragment_tester immortal"
+    name: "Give Immortal Fragment to player"
+
+  - action: "wait"
+    duration: 1000
+    name: "Wait for fragment to be given"
+
+  # Equip the fragment
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/fragment equip immortal"
+    name: "Equip Immortal Fragment"
+
+  - action: "wait"
+    duration: 1000
+    name: "Wait for fragment to be equipped"
+
+  # Set player to half health for clearer damage detection
+  - action: "execute_rcon_command"
+    command: "effect give fragment_tester instant_damage 1 5"
+    name: "Reduce player health for testing"
+
+  - action: "wait"
+    duration: 500
+    name: "Wait for damage effect"
+
+  # Store initial player health
+  - action: "get_player_health"
+    player: "fragment_tester"
+    store_as: "health_before_dodge"
+    name: "Store player health before dodge test"
+
+steps:
+  # Use Draconic Reflex ability (Ability 1)
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/immortal 1"
+    name: "Execute Draconic Reflex ability"
+
+  # Wait a moment for ability to activate
+  - action: "wait"
+    duration: 1000
+    name: "Wait for dodge activation"
+
+  # Make zombie attack player (should be dodged)
+  - action: "execute_rcon_command"
+    command: "execute as @e[name=AttackerZombie] run damage fragment_tester 4 mob_attack by @s"
+    name: "Make zombie attack player"
+
+  # Wait for attack to be processed
+  - action: "wait"
+    duration: 1000
+    name: "Wait for attack processing"
+
+  # Get player health after dodged attack
+  - action: "get_player_health"
+    player: "fragment_tester"
+    store_as: "health_after_dodge"
+    name: "Get player health after dodge"
+
+  # Verify health hasn't changed (attack was dodged)
+  - assertion: "variable_equals"
+    variable1: "health_before_dodge"
+    variable2: "health_after_dodge"
+    name: "Verify health unchanged (attack dodged)"
+
+  # Wait for dodge effect to expire (10 seconds)
+  - action: "wait"
+    duration: 11000
+    name: "Wait for dodge effect to expire"
+
+  # Try to use ability again (should be on cooldown)
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/immortal 1"
+    name: "Attempt to use ability during cooldown"
+
+  - action: "wait"
+    duration: 500
+    name: "Wait for cooldown message"
+
+cleanup:
+  # Remove test entities
+  - action: "execute_rcon_command"
+    command: "kill @e[name=AttackerZombie]"
+    name: "Remove test zombie"
+
+  # Heal player
+  - action: "execute_rcon_command"
+    command: "effect give fragment_tester instant_health 1 10"
+    name: "Heal player"
+
+  # Unequip fragment
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/fragment unequip"
+    name: "Unequip fragment"
+
+  - action: "disconnect_player"
+    player: "fragment_tester"
+    name: "Disconnect test player"

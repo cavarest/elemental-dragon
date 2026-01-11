@@ -1,0 +1,101 @@
+# Agility Fragment - Draconic Surge Ability Test
+# Tests the Agility Fragment's Ability 1: Draconic Surge (20-block dash)
+# Original Specification: Dashes forward up to 20 blocks, stopping at obstacles
+# Cooldown: 45 seconds
+
+name: "Agility Fragment - Draconic Surge Test"
+description: "Test that Draconic Surge dashes the player forward up to 20 blocks"
+
+setup:
+  - action: "connect_player"
+    player: "fragment_tester"
+    name: "Connect test player"
+
+  - action: "make_operator"
+    player: "fragment_tester"
+    name: "Make test player operator"
+
+  # Give Agility Fragment to player
+  - action: "execute_rcon_command"
+    command: "fragment give fragment_tester agility"
+    name: "Give Agility Fragment to player"
+
+  - action: "wait"
+    duration: 1000
+    name: "Wait for fragment to be given"
+
+  # Equip the fragment
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/fragment equip agility"
+    name: "Equip Agility Fragment"
+
+  - action: "wait"
+    duration: 1000
+    name: "Wait for fragment to be equipped"
+
+  # Store initial player position
+  - action: "get_player_location"
+    player: "fragment_tester"
+    store_as: "initial_position"
+    name: "Store initial player position"
+
+steps:
+  # Use Draconic Surge ability (Ability 1)
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/agility 1"
+    name: "Execute Draconic Surge ability"
+
+  # Wait for dash to complete
+  - action: "wait"
+    duration: 1000
+    name: "Wait for dash to complete"
+
+  # Get player position after dash
+  - action: "get_player_location"
+    player: "fragment_tester"
+    store_as: "final_position"
+    name: "Get player position after dash"
+
+  # Calculate distance moved
+  - action: "calculate_distance"
+    from: "initial_position"
+    to: "final_position"
+    store_as: "distance_moved"
+    name: "Calculate distance moved"
+
+  # Verify player moved significant distance (at least 10 blocks)
+  - assertion: "variable_value"
+    variable: "distance_moved"
+    condition: "GREATER_THAN"
+    value: 10.0
+    name: "Verify player dashed at least 10 blocks"
+
+  # Verify player moved no more than 20 blocks (max dash distance)
+  - assertion: "variable_value"
+    variable: "distance_moved"
+    condition: "LESS_THAN_OR_EQUALS"
+    value: 20.0
+    name: "Verify player dashed no more than 20 blocks"
+
+  # Try to use ability again (should be on cooldown)
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/agility 1"
+    name: "Attempt to use ability during cooldown"
+
+  - action: "wait"
+    duration: 500
+    name: "Wait for cooldown message"
+
+cleanup:
+  # Unequip fragment
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/fragment unequip"
+    name: "Unequip fragment"
+
+  - action: "disconnect_player"
+    player: "fragment_tester"
+    name: "Disconnect test player"

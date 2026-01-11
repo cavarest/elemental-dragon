@@ -7,11 +7,13 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.cavarest.elementaldragon.ElementalDragon;
 import org.cavarest.elementaldragon.fragment.AbilityDefinition;
 import org.cavarest.elementaldragon.fragment.Fragment;
 import org.cavarest.elementaldragon.fragment.FragmentManager;
 import org.cavarest.elementaldragon.fragment.FragmentType;
+import org.cavarest.elementaldragon.item.ElementalItems;
 import org.cavarest.elementaldragon.lore.ChronicleManager;
 
 import java.util.ArrayList;
@@ -154,11 +156,47 @@ public abstract class AbstractFragmentCommand implements CommandExecutor, TabCom
 
   /**
    * Handle fragment equipping.
+   * If player doesn't have the fragment item and is an admin, give it to them first.
    *
    * @param player The player
    * @return true if successful
    */
   protected final boolean handleEquip(Player player) {
+    // Check if player already has this fragment
+    FragmentType currentEquipped = fragmentManager.getEquippedFragment(player);
+    if (currentEquipped == fragment.getType()) {
+      player.sendMessage(
+        Component.text(fragment.getName() + " is already equipped!", NamedTextColor.YELLOW)
+      );
+      return true;
+    }
+
+    // Check if player has the fragment item
+    boolean hasFragment = hasFragmentItem(player, fragment.getType());
+
+    if (!hasFragment) {
+      // Player doesn't have the fragment - check if admin (auto-give)
+      if (player.hasPermission("elementaldragon.fragment.admin")) {
+        // Give the fragment item to player
+        ItemStack fragmentItem = createFragmentItem(fragment.getType());
+        player.getInventory().addItem(fragmentItem);
+        player.sendMessage(
+          Component.text("✨ Admin granted: " + fragment.getName(), NamedTextColor.LIGHT_PURPLE)
+        );
+      } else {
+        // Regular player - tell them how to get it
+        player.sendMessage(
+          Component.text("You don't have the " + fragment.getName() + "!", NamedTextColor.RED)
+        );
+        player.sendMessage(
+          Component.text("Craft it with /craft " + fragment.getCommandName() +
+            " or ask an admin for help.", NamedTextColor.GRAY)
+        );
+        return false;
+      }
+    }
+
+    // Now equip the fragment
     boolean success = fragmentManager.equipFragment(player, fragment.getType());
 
     if (success) {
@@ -187,6 +225,37 @@ public abstract class AbstractFragmentCommand implements CommandExecutor, TabCom
     }
 
     return success;
+  }
+
+  /**
+   * Check if player has a specific fragment item in inventory.
+   *
+   * @param player The player
+   * @param fragmentType The fragment type to check
+   * @return true if player has the fragment
+   */
+  private boolean hasFragmentItem(Player player, FragmentType fragmentType) {
+    for (ItemStack item : player.getInventory().getContents()) {
+      if (item != null && ElementalItems.getFragmentType(item) == fragmentType) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Create a fragment item for the given type.
+   *
+   * @param fragmentType The fragment type
+   * @return The fragment item
+   */
+  private ItemStack createFragmentItem(FragmentType fragmentType) {
+    return switch (fragmentType) {
+      case BURNING -> ElementalItems.createBurningFragment();
+      case AGILITY -> ElementalItems.createAgilityFragment();
+      case IMMORTAL -> ElementalItems.createImmortalFragment();
+      case CORRUPTED -> ElementalItems.createCorruptedCore();
+    };
   }
 
   /**
@@ -250,11 +319,17 @@ public abstract class AbstractFragmentCommand implements CommandExecutor, TabCom
         .append(Component.text(" - Equip " + fragment.getName(), NamedTextColor.GRAY))
     );
 
-    // Auto-generate ability commands from fragment
+    // Auto-generate ability commands from fragment (with action emoji)
     for (AbilityDefinition ability : fragment.getAbilities()) {
+      String actionEmoji = ability.getActionEmoji();
+      if (actionEmoji != null && !actionEmoji.isEmpty()) {
+        actionEmoji = " " + actionEmoji;
+      } else {
+        actionEmoji = "";
+      }
       player.sendMessage(
         Component.text("/" + fragment.getCommandName() + " " + ability.getNumber(), NamedTextColor.YELLOW)
-          .append(Component.text(" - " + ability.getName() + " (" + ability.getDescription() + ")", NamedTextColor.GRAY))
+          .append(Component.text(actionEmoji + " - " + ability.getName() + " (" + ability.getDescription() + ")", NamedTextColor.GRAY))
       );
     }
 

@@ -16,6 +16,7 @@ import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Predicate;
 
 /**
  * Lightning ability that strikes targets with purple lightning.
@@ -47,7 +48,7 @@ public class LightningAbility implements Ability {
 
     if (target == null) {
       player.sendMessage(
-        Component.text("No valid target found!", NamedTextColor.RED)
+        Component.text("The ancient dragon sees no foe in your sights! 🥚⚡", NamedTextColor.RED)
       );
       return false;
     }
@@ -56,7 +57,7 @@ public class LightningAbility implements Ability {
     if (!hasRequiredItem(player)) {
       player.sendMessage(
         Component.text(
-          "You must hold a Dragon Egg in your offhand!",
+          "The dragon's power fades without the Dragon Egg in your offhand! 🥚❌",
           NamedTextColor.RED
         )
       );
@@ -67,7 +68,7 @@ public class LightningAbility implements Ability {
     executeLightningStrikes(player, target);
 
     player.sendMessage(
-      Component.text("Lightning ability activated!", NamedTextColor.LIGHT_PURPLE)
+      Component.text("The ancient dragon calls down lightning upon " + getTargetName(target) + "! 🥚⚡", NamedTextColor.LIGHT_PURPLE)
     );
 
     return true;
@@ -156,38 +157,9 @@ public class LightningAbility implements Ability {
     Location eyeLocation,
     Vector direction
   ) {
-    LivingEntity nearest = null;
-    double nearestDistance = MAX_RANGE;
-    double minDotProduct = 0.9; // Roughly 25 degree cone
-
-    for (Entity entity : player.getWorld().getNearbyEntities(
-      eyeLocation,
-      MAX_RANGE,
-      MAX_RANGE,
-      MAX_RANGE
-    )) {
-      if (!(entity instanceof LivingEntity) ||
-          entity == player ||
-          entity.isDead()) {
-        continue;
-      }
-
-      Vector toEntity = entity.getLocation()
-        .subtract(eyeLocation)
-        .toVector()
-        .normalize();
-      double dot = direction.dot(toEntity);
-
-      if (dot >= minDotProduct) {
-        double distance = eyeLocation.distance(entity.getLocation());
-        if (distance < nearestDistance) {
-          nearest = (LivingEntity) entity;
-          nearestDistance = distance;
-        }
-      }
-    }
-
-    return nearest;
+    return EntityTargeter.findInViewingCone(
+      player, MAX_RANGE, 0.9, null, null
+    );
   }
 
   /**
@@ -202,41 +174,32 @@ public class LightningAbility implements Ability {
       return null;
     }
 
-    Location eyeLocation = player.getEyeLocation();
-    Vector direction = eyeLocation.getDirection();
-    LivingEntity nextTarget = null;
-    double nearestDistance = MAX_RANGE;
-    double minDotProduct = 0.9; // Roughly 25 degree cone
+    return EntityTargeter.findInViewingCone(
+      player, MAX_RANGE, 0.9, null, currentTarget
+    );
+  }
 
-    for (Entity entity : player.getWorld().getNearbyEntities(
-      eyeLocation,
-      MAX_RANGE,
-      MAX_RANGE,
-      MAX_RANGE
-    )) {
-      if (!(entity instanceof LivingEntity) ||
-          entity == player ||
-          entity == currentTarget || // Exclude current target
-          entity.isDead()) {
-        continue;
-      }
-
-      Vector toEntity = entity.getLocation()
-        .subtract(eyeLocation)
-        .toVector()
-        .normalize();
-      double dot = direction.dot(toEntity);
-
-      if (dot >= minDotProduct) {
-        double distance = eyeLocation.distance(entity.getLocation());
-        if (distance < nearestDistance) {
-          nextTarget = (LivingEntity) entity;
-          nearestDistance = distance;
-        }
-      }
-    }
-
-    return nextTarget;
+  /**
+   * Common helper: Find nearest living entity within viewing cone, optionally excluding one entity.
+   * This consolidates the duplicate logic from findNearestEntityInCone and findNextTarget.
+   *
+   * @param player The player
+   * @param eyeLocation The player's eye location
+   * @param direction The player's look direction
+   * @param excludedEntity Entity to exclude from search (null for no exclusion)
+   * @return The nearest entity or null
+   * @deprecated Use {@link EntityTargeter#findInViewingCone} instead
+   */
+  @Deprecated
+  private LivingEntity findNearestEntityInConeExcluding(
+    Player player,
+    Location eyeLocation,
+    Vector direction,
+    Entity excludedEntity
+  ) {
+    return EntityTargeter.findInViewingCone(
+      player, MAX_RANGE, 0.9, null, excludedEntity
+    );
   }
 
   /**
@@ -260,7 +223,7 @@ public class LightningAbility implements Ability {
         if (!hasRequiredItem(finalPlayer)) {
           finalPlayer.sendMessage(
             Component.text(
-              "Ability cancelled! Dragon Egg removed from offhand.",
+              "The dragon's lightning fades as the Dragon Egg is removed! 🥚❌",
               NamedTextColor.RED
             )
           );
@@ -275,7 +238,7 @@ public class LightningAbility implements Ability {
           LivingEntity newTarget = findNextTarget(finalPlayer, currentTarget);
           if (newTarget == null) {
             finalPlayer.sendMessage(
-              Component.text("No more valid targets found!", NamedTextColor.RED)
+              Component.text("The ancient dragon's wrath is complete! No more targets! 🥚✨", NamedTextColor.GOLD)
             );
             cancel();
             return;
@@ -285,7 +248,7 @@ public class LightningAbility implements Ability {
             currentTargetNameRef.set(getTargetName(newTarget));
             strikesOnCurrentTargetRef.set(0);
             finalPlayer.sendMessage(
-              Component.text("Lightning shifts to " + currentTargetNameRef.get() + "!", NamedTextColor.GOLD)
+              Component.text("The dragon's fury shifts to " + currentTargetNameRef.get() + "! ⚡🎯", NamedTextColor.GOLD)
             );
           }
         }
@@ -297,8 +260,8 @@ public class LightningAbility implements Ability {
 
         // Send strike message with target information
         finalPlayer.sendMessage(
-          Component.text("Lightning strike " + totalStrikesRef.get() + "/" + STRIKE_COUNT +
-                        " hit " + currentTargetNameRef.get() + "!",
+          Component.text("⚡ Strike " + totalStrikesRef.get() + "/" + STRIKE_COUNT +
+                        " cascades upon " + currentTargetNameRef.get() + "!" + getThunderEmoji(totalStrikesRef.get()),
                         NamedTextColor.LIGHT_PURPLE)
         );
 
@@ -371,5 +334,22 @@ public class LightningAbility implements Ability {
    */
   private void createPurpleLightningEffect(Location location) {
     ParticleFX.createPurpleLightningEffect(location);
+  }
+
+  /**
+   * Get a thunder emoji based on the strike number.
+   * Final strike gets a special emoji.
+   *
+   * @param strikeNumber The current strike number
+   * @return Thunder emoji
+   */
+  private String getThunderEmoji(int strikeNumber) {
+    if (strikeNumber == STRIKE_COUNT) {
+      return " 🌩️💥"; // Final strike with explosion
+    } else if (strikeNumber == 2) {
+      return " 🌩️"; // Middle strike
+    } else {
+      return " ⚡"; // First strike
+    }
   }
 }

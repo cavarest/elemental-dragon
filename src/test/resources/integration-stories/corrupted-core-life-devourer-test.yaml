@@ -1,0 +1,145 @@
+# Corrupted Core - Life Devourer Ability Test
+# Tests the Corrupted Core's Ability 2: Life Devourer (life steal)
+# Original Specification: For 20 seconds, heals the wielder for 50% of all damage dealt to any entity
+# Cooldown: 120 seconds (2 minutes)
+
+name: "Corrupted Core - Life Devourer Test"
+description: "Test that Life Devourer grants life steal on all damage dealt"
+
+setup:
+  - action: "connect_player"
+    player: "fragment_tester"
+    name: "Connect test player"
+
+  - action: "make_operator"
+    player: "fragment_tester"
+    name: "Make test player operator"
+
+  # Spawn zombies to damage
+  - action: "execute_rcon_command"
+    command: "summon zombie ~3 ~ ~3 {CustomName:'{\"text\":\"LifeStealTarget1\"}',CustomNameVisible:1b}"
+    player: "fragment_tester"
+    name: "Spawn target zombie 1"
+
+  - action: "execute_rcon_command"
+    command: "summon zombie ~-3 ~ ~3 {CustomName:'{\"text\":\"LifeStealTarget2\"}',CustomNameVisible:1b}"
+    player: "fragment_tester"
+    name: "Spawn target zombie 2"
+
+  # Give Corrupted Core Fragment to player
+  - action: "execute_rcon_command"
+    command: "fragment give fragment_tester corrupted"
+    name: "Give Corrupted Core Fragment to player"
+
+  - action: "wait"
+    duration: 1000
+    name: "Wait for fragment to be given"
+
+  # Equip the fragment
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/fragment equip corrupted"
+    name: "Equip Corrupted Core Fragment"
+
+  - action: "wait"
+    duration: 1000
+    name: "Wait for fragment to be equipped"
+
+  # Reduce player health for life steal testing
+  - action: "execute_rcon_command"
+    command: "effect give fragment_tester instant_damage 1 5"
+    name: "Reduce player health for testing"
+
+  - action: "wait"
+    duration: 1000
+    name: "Wait for damage effect"
+
+  # Store initial player health
+  - action: "get_player_health"
+    player: "fragment_tester"
+    store_as: "health_before_lifesteal"
+    name: "Store player health before life steal"
+
+steps:
+  # Use Life Devourer ability (Ability 2)
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/corrupt 2"
+    name: "Execute Life Devourer ability"
+
+  # Wait for ability to activate
+  - action: "wait"
+    duration: 1000
+    name: "Wait for life steal activation"
+
+  # Attack zombie (should trigger life steal)
+  - action: "execute_rcon_command"
+    command: "execute as fragment_tester run damage @e[name=LifeStealTarget1,limit=1] 6 player_attack by @s"
+    name: "Attack zombie to trigger life steal"
+
+  # Wait for damage and healing
+  - action: "wait"
+    duration: 1000
+    name: "Wait for damage and healing processing"
+
+  # Get player health after life steal
+  - action: "get_player_health"
+    player: "fragment_tester"
+    store_as: "health_after_lifesteal"
+    name: "Get player health after life steal"
+
+  # Verify player health increased (gained 50% of 6 damage = 3 health)
+  - assertion: "variable_value"
+    variable: "health_after_lifesteal"
+    condition: "GREATER_THAN"
+    value: "health_before_lifesteal"
+    name: "Verify player gained health from life steal"
+
+  # Attack another zombie to verify life steal still active
+  - action: "execute_rcon_command"
+    command: "execute as fragment_tester run damage @e[name=LifeStealTarget2,limit=1] 4 player_attack by @s"
+    name: "Attack second zombie"
+
+  - action: "wait"
+    duration: 1000
+    name: "Wait for second attack processing"
+
+  # Wait for life steal to expire (20 seconds total)
+  - action: "wait"
+    duration: 19000
+    name: "Wait for life steal to expire"
+
+  # Try to use ability again (should be on cooldown)
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/corrupt 2"
+    name: "Attempt to use ability during cooldown"
+
+  - action: "wait"
+    duration: 500
+    name: "Wait for cooldown message"
+
+cleanup:
+  # Remove test entities
+  - action: "execute_rcon_command"
+    command: "kill @e[name=LifeStealTarget1]"
+    name: "Remove test zombie 1"
+
+  - action: "execute_rcon_command"
+    command: "kill @e[name=LifeStealTarget2]"
+    name: "Remove test zombie 2"
+
+  # Heal player
+  - action: "execute_rcon_command"
+    command: "effect give fragment_tester instant_health 1 10"
+    name: "Heal player"
+
+  # Unequip fragment
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/fragment unequip"
+    name: "Unequip fragment"
+
+  - action: "disconnect_player"
+    player: "fragment_tester"
+    name: "Disconnect test player"
