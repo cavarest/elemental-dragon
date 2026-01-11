@@ -5,20 +5,71 @@ services:
     image: elemental-dragon:latest
     container_name: ${CONTAINER_NAME:-papermc-elementaldragon}
     restart: unless-stopped
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        # Run the offline ops setup script BEFORE /start
+        if [ -f /image/scripts/auto/99-plugin-setup ]; then
+          . /image/scripts/auto/99-plugin-setup
+        fi
+        # Then run the original entrypoint
+        exec /start
     ports:
       - "25565:25565"
       - "25575:25575"
     environment:
-      # Base image environment variables
-      - MEMORYSIZE=${MEMORYSIZE:-2G}
+      # Server type and version
+      - TYPE=PAPER
+      - VERSION=${VERSION:-1.21.8}
+
+      # EULA (required)
       - EULA=${EULA:-TRUE}
+
+      # Memory configuration
+      - MEMORY=${MEMORYSIZE:-2G}
+
+      # Server configuration
       - ONLINE_MODE=${ONLINE_MODE:-false}
       - MAX_PLAYERS=${MAX_PLAYERS:-10}
-      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - DIFFICULTY=${DIFFICULTY:-normal}
+      - GAMEMODE=${GAMEMODE:-survival}
+      - PVP=${PVP:-true}
+      - SPAWN_PROTECTION=${SPAWN_PROTECTION:-16}
+      - MOTD=${MOTD:-Elemental Dragon Plugin Server}
+      - SERVER_NAME=${SERVER_NAME:-Dragon Egg Lightning Server}
+
+      # RCON configuration
+      - ENABLE_RCON=${ENABLE_RCON:-true}
+      - RCON_PORT=${RCON_PORT:-25575}
+      - RCON_PASSWORD=${RCON_PASSWORD:-dragon123}
+
+      # UID/GID for permissions
+      - UID=${MC_UID:-1000}
+      - GID=${MC_GID:-1000}
+
+      # Locale
+      - TZ=${TZ:-UTC}
+      - LC_ALL=${LC_ALL:-en_US.UTF-8}
+
+      # JVM flags (for PaperMC)
+      - PAPERMC_FLAGS=${PAPERMC_FLAGS}
+
+      # Plugins (synchronized from /plugins to /data/plugins)
+      - PLUGINS=/image/plugins/ElementalDragon.jar
+
+      # Offline operators (comma-separated usernames, offline UUIDs auto-generated)
+      - OFFLINE_OPS=${OFFLINE_OPS:-posiflow}
+      # Skip mc-image-helper processing of ops.json
+      - EXISTING_OPS_FILE=SKIP
+
+      # View distance
+      - VIEW_DISTANCE=${VIEW_DISTANCE:-10}
+
     volumes:
-      # Persist all server data (including any custom worlds players may create)
+      # Persist all server data
       - ./server-data:/data:rw
-      # Note: Plugins are baked into the Docker image, no need for separate volume mount
+
     stdin_open: true
     tty: true
     networks:
