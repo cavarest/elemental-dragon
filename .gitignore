@@ -131,8 +131,18 @@ mvnw
 mvnw.cmd
 
 # Build artifacts
+bin/
 *.apk
 *.ipa
+
+# Tools
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.claude
+.kilocode
 
 # PaperMC server data persistence
 server-data/
