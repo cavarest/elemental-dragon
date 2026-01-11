@@ -6,6 +6,7 @@ import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
+import org.bukkit.event.Listener;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
@@ -18,8 +19,11 @@ import java.util.List;
  *
  * <p>Provides default implementations for interface methods where possible,
  * allowing subclasses to define only fragment-specific metadata.</p>
+ *
+ * <p>Implements Listener so that fragment event handlers (@EventHandler methods)
+ * are automatically registered by FragmentRegistry.</p>
  */
-public abstract class AbstractFragment implements Fragment {
+public abstract class AbstractFragment implements Fragment, Listener {
 
   protected final ElementalDragon plugin;
   private final FragmentType type;
@@ -91,11 +95,12 @@ public abstract class AbstractFragment implements Fragment {
 
   @Override
   public String getCommandName() {
-    return getType().name().toLowerCase();
+    return type.getCanonicalName();
   }
 
   @Override
   public String getPermissionNode() {
+    // Permission nodes use enum names for backward compatibility with plugin.yml
     return "elementaldragon.fragment." + getType().name().toLowerCase();
   }
 

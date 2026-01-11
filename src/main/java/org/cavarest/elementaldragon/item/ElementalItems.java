@@ -19,49 +19,25 @@ import java.util.List;
 /**
  * Registry for custom items used in the Elemental Dragon plugin.
  * Queries Fragment classes for all metadata - Single Source of Truth pattern.
+ *
+ * Note: Heavy Core is now a vanilla Minecraft item (Material.HEAVY_CORE).
+ * Custom Heavy Core creation is deprecated - use vanilla item directly.
  */
 public class ElementalItems {
 
-  // Material types for items
-  private static final Material HEAVY_CORE_MATERIAL = Material.NETHERITE_INGOT;
-
   /**
-   * Create a Heavy Core item with custom display name and lore.
+   * Check if an ItemStack is a vanilla Heavy Core.
+   * This is the validation method for fragment recipes.
    *
-   * @return ItemStack representing a Heavy Core
+   * @param item The ItemStack to check
+   * @return true if the item is a vanilla Heavy Core
    */
-  public static ItemStack createHeavyCore() {
-    ItemStack item = new ItemStack(HEAVY_CORE_MATERIAL);
-    ItemMeta meta = item.getItemMeta();
-    if (meta != null) {
-      meta.displayName(Component.text(
-        "Heavy Core",
-        NamedTextColor.DARK_PURPLE
-      ));
-
-      List<Component> lore = new ArrayList<>();
-      lore.add(Component.text(
-        "A dense core forged from obsidian, iron, and dragon essence.",
-        NamedTextColor.GRAY
-      ));
-      lore.add(Component.text(
-        "Used to craft elemental fragments.",
-        NamedTextColor.AQUA
-      ));
-      lore.add(Component.text(
-        "",
-        NamedTextColor.WHITE
-      ));
-      lore.add(Component.text(
-        "Requires OP to craft",
-        NamedTextColor.YELLOW
-      ));
-
-      meta.lore(lore);
-      meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
-      item.setItemMeta(meta);
+  public static boolean isHeavyCore(ItemStack item) {
+    if (item == null) {
+      return false;
     }
-    return item;
+    // Check if it's the vanilla HEAVY_CORE material
+    return item.getType() == Material.HEAVY_CORE;
   }
 
   /**
@@ -138,8 +114,14 @@ public class ElementalItems {
       ));
 
       meta.lore(lore);
+      // Add item flags for fireproof appearance and enchanted glint
       meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+      meta.addItemFlags(ItemFlag.HIDE_ENCHANTS); // Shows enchanted glint effect
       item.setItemMeta(meta);
+
+      // Make item glow by adding a fake enchantment (using a dummy enchant)
+      // This gives the visual appearance without actual enchantment effects
+      item.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.MENDING, 1);
     }
 
     return item;
@@ -173,11 +155,12 @@ public class ElementalItems {
 
   /**
    * Get the Heavy Core ItemStack.
+   * Now returns the vanilla Minecraft Heavy Core item.
    *
-   * @return Heavy Core ItemStack
+   * @return Heavy Core ItemStack (vanilla)
    */
   public static ItemStack getHeavyCore() {
-    return createHeavyCore();
+    return new ItemStack(Material.HEAVY_CORE);
   }
 
   /**
@@ -202,24 +185,45 @@ public class ElementalItems {
    * @return true if the item matches the fragment type
    */
   public static boolean isFragment(ItemStack item, FragmentType fragmentType) {
-    if (item == null || item.getItemMeta() == null || item.getItemMeta().displayName() == null) {
-      return false;
-    }
-
-    String displayName = item.getItemMeta().displayName().toString();
-    return displayName.contains(fragmentType.getDisplayName());
+    return getFragmentType(item) == fragmentType;
   }
 
   /**
-   * Check if an ItemStack is a Heavy Core.
+   * Get the FragmentType from an ItemStack.
+   * Returns null if the item is not a fragment.
+   * This is the SINGLE SOURCE OF TRUTH for fragment type detection.
    *
    * @param item The ItemStack to check
-   * @return true if the item is a Heavy Core
+   * @return The FragmentType, or null if not a fragment
    */
-  public static boolean isHeavyCore(ItemStack item) {
-    if (item == null || item.getItemMeta() == null || item.getItemMeta().displayName() == null) {
-      return false;
+  public static FragmentType getFragmentType(ItemStack item) {
+    if (item == null || !item.hasItemMeta()) {
+      return null;
     }
-    return item.getItemMeta().displayName().toString().contains("Heavy Core");
+
+    try {
+      ItemMeta meta = item.getItemMeta();
+      if (meta == null || meta.displayName() == null) {
+        return null;
+      }
+
+      String displayName = meta.displayName().toString();
+
+      // Single source of truth: query displayName for fragment identification
+      // This matches the display names set in createFragmentItem()
+      if (displayName.contains("Burning Fragment")) {
+        return FragmentType.BURNING;
+      } else if (displayName.contains("Agility Fragment")) {
+        return FragmentType.AGILITY;
+      } else if (displayName.contains("Immortal Fragment")) {
+        return FragmentType.IMMORTAL;
+      } else if (displayName.contains("Corrupted Core")) {
+        return FragmentType.CORRUPTED;
+      }
+    } catch (Exception e) {
+      // Handle any unexpected errors gracefully
+    }
+
+    return null;
   }
 }

@@ -12,9 +12,11 @@ import org.bukkit.Sound;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.block.Block;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -34,26 +36,28 @@ import java.util.List;
  */
 public class AgilityFragment extends AbstractFragment implements Listener {
 
-  // Draconic Surge constants
-  private static final long DRACONIC_SURGE_COOLDOWN = 30000L; // 30 seconds
-  private static final int DRACONIC_SURGE_DURATION = 200; // 10 seconds (200 ticks)
-  private static final int DRACONIC_SURGE_SPEED_LEVEL = 1; // Speed II (amplifier 1)
-  private static final int DRACONIC_SURGE_JUMP_LEVEL = 1; // Jump Boost II (amplifier 1)
+  // Draconic Surge constants (ORIGINAL SPECIFICATION)
+  private static final long DRACONIC_SURGE_COOLDOWN = 45000L; // 45 seconds (original spec)
+  private static final double DRACONIC_SURGE_DISTANCE = 20.0; // 20 blocks (original spec)
+  private static final int DRACONIC_SURGE_DURATION = 30; // 1.5 seconds = 30 ticks (original spec)
+  private static final double DRACONIC_SURGE_VELOCITY = DRACONIC_SURGE_DISTANCE / DRACONIC_SURGE_DURATION; // ~0.667 blocks/tick
+  private static final int DRACONIC_SURGE_LANDING_PROTECTION = 20; // 1 second (20 ticks) invulnerability after dash
 
-  // Wing Burst constants
-  private static final long WING_BURST_COOLDOWN = 45000L; // 45 seconds
-  private static final double WING_BURST_VERTICAL_FORCE = 1.5; // Vertical launch strength
-  private static final double WING_BURST_FORWARD_FORCE = 0.5; // Forward momentum
-  private static final int WING_BURST_FALL_SLOW_DURATION = 60; // 3 seconds (60 ticks)
-  private static final int WING_BURST_DURATION = 40; // Duration for levitation effect (40 ticks = 2 seconds)
-  private static final int WING_BURST_AMPLIFIER = 1; // Levitation amplifier
+  // Wing Burst constants (ORIGINAL SPECIFICATION)
+  private static final long WING_BURST_COOLDOWN = 120000L; // 2 minutes (original spec)
+  private static final double WING_BURST_RADIUS = 8.0; // 8 blocks (original spec)
+  private static final double WING_BURST_DISTANCE = 20.0; // 20 blocks (original spec)
+  private static final int WING_BURST_PUSH_DURATION = 40; // 2 seconds = 40 ticks (original spec)
+  private static final double WING_BURST_VELOCITY = WING_BURST_DISTANCE / WING_BURST_PUSH_DURATION; // 0.5 blocks/tick
+  private static final int WING_BURST_FALL_SLOW_DURATION = 200; // 10 seconds (200 ticks)
 
   // Visual constants
   private static final Color TEAL_COLOR = Color.fromRGB(100, 255, 200);
   private static final Color WHITE_COLOR = Color.fromRGB(255, 255, 255);
 
   // Fragment metadata (Single Source of Truth)
-  private static final Material MATERIAL = Material.FEATHER;
+  // Using PHANTOM_MEMBRANE instead of WIND_CHARGE to avoid default right-click wind throwing behavior
+  private static final Material MATERIAL = Material.PHANTOM_MEMBRANE;
   private static final NamedTextColor THEME_COLOR = NamedTextColor.AQUA;
   private static final String ELEMENT_NAME = "WIND";
 
@@ -61,13 +65,16 @@ public class AgilityFragment extends AbstractFragment implements Listener {
   private final List<AbilityDefinition> abilities = List.of(
     new AbilityDefinition(1, "Draconic Surge", "speed boost",
       List.of("surge", "draconic-surge"),
-      "Speed courses through your veins like the wind!"),
-    new AbilityDefinition(2, "Wing Burst", "levitation jump",
-      List.of("burst", "wing-burst"),
-      "You leap into the air with the power of dragon wings!")
+      "Speed courses through your veins like the wind! 💨⚡", "⚡"),
+    new AbilityDefinition(2, "Wing Gust", "repulsion wave",
+      List.of("burst", "wing-burst", "gust"),
+      "A powerful gust pushes all nearby foes 20 blocks away! 💨🌊", "🌊")
   );
 
   private final ElementalDragon plugin;
+
+  // Track players currently dashing or landing (for invulnerability)
+  private final java.util.Set<java.util.UUID> dashingPlayers = new java.util.HashSet<>();
 
   /**
    * Create a new Agility Fragment.
@@ -214,128 +221,219 @@ public class AgilityFragment extends AbstractFragment implements Listener {
   }
 
   /**
-   * Execute Draconic Surge - grants speed boost and jump enhancement.
+   * Execute Draconic Surge - dash player 20 blocks in direction they are looking.
+   * Original Specification:
+   * - Dashes player 20 blocks in direction they are looking
+   * - Completes within 1.5 seconds (30 ticks)
+   * - Negates damage while flying and during landing
+   * - Cooldown: 45 seconds
    *
    * @param player The player executing the ability
    */
   private void executeDraconicSurge(Player player) {
     // No cooldown check needed - FragmentManager.useFragmentAbility() already checked
 
-    Location center = player.getLocation();
+    Location playerLocation = player.getLocation();
 
-    // Apply speed and jump boost
-    player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED,
-      (int) (DRACONIC_SURGE_DURATION / 50), // Convert ticks to duration
-      DRACONIC_SURGE_SPEED_LEVEL,
-      false, // No particles
-      true   // Show ambient particles
-    ));
+    // Calculate dash direction (3D - dashes in the direction player is looking)
+    Vector direction = playerLocation.getDirection().normalize();
+    Vector dashVelocity = direction.multiply(DRACONIC_SURGE_VELOCITY);
 
-    player.addPotionEffect(new PotionEffect(PotionEffectType.JUMP_BOOST,
-      (int) (DRACONIC_SURGE_DURATION / 50),
-      DRACONIC_SURGE_JUMP_LEVEL,
-      false,
-      true
-    ));
+    // Mark player as dashing (for invulnerability)
+    dashingPlayers.add(player.getUniqueId());
+
+    // Play activation sound
+    playAbilitySound(
+      playerLocation,
+      Sound.ENTITY_PHANTOM_FLAP,
+      2.0f,
+      1.5f
+    );
+
+    // Apply continuous velocity over 30 ticks (1.5 seconds)
+    new BukkitRunnable() {
+      private int ticks = 0;
+
+      @Override
+      public void run() {
+        if (ticks >= DRACONIC_SURGE_DURATION) {
+          // Dash complete - start landing protection period
+          cancel();
+
+          // Schedule landing protection removal (1 second after dash)
+          new BukkitRunnable() {
+            @Override
+            public void run() {
+              dashingPlayers.remove(player.getUniqueId());
+            }
+          }.runTaskLater(plugin, DRACONIC_SURGE_LANDING_PROTECTION);
+
+          return;
+        }
+
+        if (player.isDead() || !player.isValid()) {
+          cancel();
+          dashingPlayers.remove(player.getUniqueId());
+          return;
+        }
+
+        // Apply velocity each tick for smooth dash
+        player.setVelocity(dashVelocity);
+
+        // Show wind trail particles
+        player.getWorld().spawnParticle(
+          Particle.CLOUD,
+          player.getLocation().add(0, 0.5, 0),
+          3,
+          0.2,
+          0.2,
+          0.2,
+          0.02
+        );
+
+        ticks++;
+      }
+    }.runTaskTimer(plugin, 0L, 1L);
 
     // Cooldown is set by FragmentManager.useFragmentAbility()
 
     player.sendMessage(
-      Component.text("Draconic Surge activated! Speed and jump boost granted!",
+      Component.text("Draconic Surge activated! You dash forward at incredible speed!",
         NamedTextColor.GREEN)
     );
 
-    // Play ability sound
-    playAbilitySound(
-      player.getLocation(),
-      Sound.ENTITY_PHANTOM_FLAP,
-      1.0f,
-      1.0f
-    );
-
-    // Show particles - use CLOUD directly (doesn't require DustOptions)
+    // Show initial burst particles
     player.getWorld().spawnParticle(
       Particle.CLOUD,
-      player.getLocation().add(0, 1, 0),
-      15,
+      playerLocation.add(0, 1, 0),
+      20,
       0.5,
       0.5,
       0.5,
-      0.05
+      0.1
     );
-
-    // Visual indicator - spawn temporary colored particles
-    spawnSurgeParticles(player);
   }
 
   /**
-   * Execute Wing Burst - launch player upward in direction they are facing.
+   * Execute Wing Burst - push all nearby players away with knockback.
+   * Original Specification:
+   * - Pushes all players in 8 block radius 20 blocks away from wielder
+   * - Push completes within 2 seconds (40 ticks)
+   * - Applies slow falling for 10 seconds
+   * - Cooldown: 2 minutes
    *
    * @param player The player executing the ability
    */
   private void executeWingBurst(Player player) {
     // No cooldown check needed - FragmentManager.useFragmentAbility() already checked
 
-    Location playerLocation = player.getLocation();
+    Location center = player.getLocation();
 
-    // Play launch sound
-    playAbilitySound(playerLocation, Sound.ENTITY_PHANTOM_FLAP, 2.0f, 1.5f);
+    // Play activation sound
+    playAbilitySound(center, Sound.ENTITY_PHANTOM_FLAP, 2.0f, 1.5f);
 
-    // Calculate launch velocity
-    Vector direction = player.getLocation().getDirection().normalize();
-    Vector velocity = new Vector(
-      direction.getX() * WING_BURST_FORWARD_FORCE,
-      WING_BURST_VERTICAL_FORCE,
-      direction.getZ() * WING_BURST_FORWARD_FORCE
-    );
+    // Find all players in radius and calculate their knockback vectors
+    java.util.Map<java.util.UUID, Vector> affectedPlayers = new java.util.HashMap<>();
 
-    // Apply velocity to player
-    player.setVelocity(velocity);
+    for (Entity entity : player.getWorld().getNearbyEntities(
+        center, WING_BURST_RADIUS, WING_BURST_RADIUS, WING_BURST_RADIUS)) {
 
-    // Apply levitation effect for upward movement
-    player.addPotionEffect(new PotionEffect(PotionEffectType.LEVITATION,
-      (int) (WING_BURST_DURATION / 50),
-      WING_BURST_AMPLIFIER,
-      false,
-      true
-    ));
+      // Only affect players (original spec: all players in 8 block radius)
+      if (!(entity instanceof Player)) {
+        continue;
+      }
 
-    // Show wing burst particles
-    showWingBurstParticles(playerLocation);
+      Player targetPlayer = (Player) entity;
 
-    // Show trail particles during flight
-    showFlightTrailParticles(player);
+      // Skip the wielder (wielder is not affected)
+      if (targetPlayer.getUniqueId().equals(player.getUniqueId())) {
+        continue;
+      }
 
-    // Schedule fall slow after 3 seconds
+      // Calculate knockback direction (away from wielder, horizontal only)
+      Location targetLoc = targetPlayer.getLocation();
+      Vector knockbackDirection = targetLoc.toVector()
+        .subtract(center.toVector())
+        .setY(0) // Horizontal only (no vertical component)
+        .normalize();
+
+      // Calculate velocity for 20 block push over 40 ticks
+      Vector velocity = knockbackDirection.multiply(WING_BURST_VELOCITY);
+
+      // Store for continuous application
+      affectedPlayers.put(targetPlayer.getUniqueId(), velocity);
+
+      // Apply slow falling immediately (200 ticks = 10 seconds)
+      targetPlayer.addPotionEffect(
+        new PotionEffect(
+          PotionEffectType.SLOW_FALLING,
+          WING_BURST_FALL_SLOW_DURATION,
+          0,
+          false,
+          false,
+          false
+        )
+      );
+
+      // Visual feedback for affected player
+      targetPlayer.getWorld().spawnParticle(
+        Particle.CLOUD,
+        targetPlayer.getLocation().add(0, 1, 0),
+        10,
+        0.3,
+        0.5,
+        0.3,
+        0.05
+      );
+    }
+
+    // Show wind burst particles at origin
+    showWingBurstParticles(center);
+
+    // Apply continuous knockback velocity over 40 ticks (2 seconds)
     new BukkitRunnable() {
+      private int ticks = 0;
+
       @Override
       public void run() {
-        if (player.isDead() || !player.isValid()) {
+        if (ticks >= WING_BURST_PUSH_DURATION) {
           cancel();
           return;
         }
 
-        // Apply slow fall to prevent fall damage
-        player.addPotionEffect(
-          new PotionEffect(
-            PotionEffectType.SLOW_FALLING,
-            WING_BURST_FALL_SLOW_DURATION,
-            0,
-            false,
-            false,
-            false
-          )
-        );
+        // Apply velocity to all affected players
+        for (java.util.UUID uuid : affectedPlayers.keySet()) {
+          Player targetPlayer = plugin.getServer().getPlayer(uuid);
 
-        // Play landing preparation sound
-        playAbilitySound(player.getLocation(), Sound.ENTITY_PHANTOM_FLAP, 0.8f, 1.2f);
+          // Skip if player is no longer online or valid
+          if (targetPlayer == null || targetPlayer.isDead() || !targetPlayer.isValid()) {
+            continue;
+          }
+
+          // Apply knockback velocity
+          targetPlayer.setVelocity(affectedPlayers.get(uuid));
+
+          // Show wind trail particles
+          targetPlayer.getWorld().spawnParticle(
+            Particle.CLOUD,
+            targetPlayer.getLocation().add(0, 0.5, 0),
+            2,
+            0.2,
+            0.2,
+            0.2,
+            0.02
+          );
+        }
+
+        ticks++;
       }
-    }.runTaskLater(plugin, 60L); // 3 seconds (60 ticks) after launch
+    }.runTaskTimer(plugin, 0L, 1L);
 
     // Cooldown is set by FragmentManager.useFragmentAbility()
 
     player.sendMessage(
-      Component.text("Wing Burst activated! You soar into the air!", NamedTextColor.GREEN)
+      Component.text("Wing Burst activated! " + affectedPlayers.size() + " players knocked back!",
+        NamedTextColor.GREEN)
     );
 
     // Play ability sound
@@ -344,17 +442,6 @@ public class AgilityFragment extends AbstractFragment implements Listener {
       Sound.ENTITY_PARROT_FLY,
       1.0f,
       1.2f
-    );
-
-    // Visual effect - wing particles (use CLOUD directly)
-    player.getWorld().spawnParticle(
-      Particle.CLOUD,
-      player.getLocation().add(0, 1, 0),
-      15,
-      0.5,
-      0.5,
-      0.5,
-      0.05
     );
   }
 
@@ -515,8 +602,10 @@ public class AgilityFragment extends AbstractFragment implements Listener {
   }
 
   /**
-   * Event handler for fall damage reduction during Wing Burst.
-   * This provides additional fall protection alongside the slow falling effect.
+   * Event handler for damage negation and reduction.
+   * - Negates ALL damage during Draconic Surge dash and landing
+   * - Reduces fall damage during Wing Burst (slow falling effect)
+   * - Passive: 50% fall damage reduction when Agility Fragment equipped
    */
   @EventHandler
   public void onEntityDamage(EntityDamageEvent event) {
@@ -526,12 +615,82 @@ public class AgilityFragment extends AbstractFragment implements Listener {
 
     Player player = (Player) event.getEntity();
 
+    // Check if player is currently dashing or landing (Draconic Surge)
+    if (dashingPlayers.contains(player.getUniqueId())) {
+      // Negate ALL damage while dashing or landing (original spec requirement)
+      event.setCancelled(true);
+      return;
+    }
+
     // Check if this is fall damage
     if (event.getCause() == EntityDamageEvent.DamageCause.FALL) {
       // Check if player has slow falling (from Wing Burst)
       if (player.hasPotionEffect(PotionEffectType.SLOW_FALLING)) {
         // Reduce fall damage significantly
         event.setDamage(event.getDamage() * 0.2);
+        return;
+      }
+
+      // Passive Bonus: Wind Walker - 50% fall damage reduction
+      FragmentManager fragmentManager = plugin.getFragmentManager();
+      if (fragmentManager.getEquippedFragment(player) == FragmentType.AGILITY) {
+        // Reduce fall damage by 50%
+        event.setDamage(event.getDamage() * 0.5);
+
+        // Visual feedback - cloud particles on landing
+        if (event.getDamage() > 0) {
+          player.getWorld().spawnParticle(
+            Particle.CLOUD,
+            player.getLocation(),
+            5,
+            0.3,
+            0.1,
+            0.3,
+            0.02
+          );
+        }
+      }
+    }
+  }
+
+  /**
+   * Event handler for soul sand/honey block slowdown prevention.
+   * Passive Bonus: Wind Walker - No slow-down in soul sand/honey blocks
+   *
+   * @param event The player move event
+   */
+  @EventHandler
+  public void onPlayerMove(PlayerMoveEvent event) {
+    Player player = event.getPlayer();
+
+    // Check if player has Agility Fragment equipped
+    FragmentManager fragmentManager = plugin.getFragmentManager();
+    if (fragmentManager.getEquippedFragment(player) != FragmentType.AGILITY) {
+      return;
+    }
+
+    // Check if player is on soul sand or in honey block
+    Block blockBelow = player.getLocation().subtract(0, 1, 0).getBlock();
+    Block blockAt = player.getLocation().getBlock();
+
+    if (blockBelow.getType() == Material.SOUL_SAND ||
+        blockBelow.getType() == Material.SOUL_SOIL ||
+        blockAt.getType() == Material.HONEY_BLOCK) {
+
+      // Remove slowness effect caused by these blocks
+      player.removePotionEffect(PotionEffectType.SLOWNESS);
+
+      // Visual feedback - small cloud particles at feet
+      if (Math.random() < 0.1) { // 10% chance per move to avoid spam
+        player.getWorld().spawnParticle(
+          Particle.CLOUD,
+          player.getLocation(),
+          2,
+          0.2,
+          0.0,
+          0.2,
+          0.01
+        );
       }
     }
   }

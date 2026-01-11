@@ -28,8 +28,8 @@ class ImmortalFragmentTest {
   void testImmortalFragmentCooldowns() {
     ImmortalFragment fragment = new ImmortalFragment(null);
 
-    // Draconic Reflex: 90 seconds (90000ms)
-    assertEquals(90000L, fragment.getCooldownMillis());
+    // Draconic Reflex: 120 seconds / 2 minutes (120000ms) - original specification
+    assertEquals(120000L, fragment.getCooldownMillis());
   }
 
   @Test

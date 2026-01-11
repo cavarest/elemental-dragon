@@ -17,6 +17,22 @@ repositories {
         name = 'PaperMC'
         url = uri('https://repo.papermc.io/repository/maven-public/')
     }
+    maven {
+        name = 'JitPack'
+        url = uri('https://jitpack.io')
+    }
+    maven {
+        name = 'ViaVersion'
+        url = uri('https://repo.viaversion.com')
+    }
+    maven {
+        name = 'OSS Sonatype'
+        url = uri('https://oss.sonatype.org/content/groups/public/')
+    }
+    maven {
+        name = 'TCoded'
+        url = uri('https://repo.tcoded.com/releases')
+    }
 }
 
 // Dependency management
@@ -30,6 +46,15 @@ ext {
 dependencies {
     // Paper API for Minecraft server interaction
     implementation "io.papermc.paper:paper-api:${paperVersion}"
+
+    // ProtocolSidebar for HUD display - use master-SNAPSHOT with Adventure API support
+    implementation "com.github.CatCoderr:ProtocolSidebar:master-SNAPSHOT"
+
+    // FoliaLib - required by ProtocolSidebar master-SNAPSHOT for task scheduling
+    implementation "com.tcoded:FoliaLib:0.5.1"
+
+    // MiniMessage API for styled text
+    implementation "net.kyori:adventure-text-minimessage:4.25.0"
 
     // PILAF Framework - TEMPORARILY DISABLED
     // implementation project(':lib:pilaf')
@@ -54,12 +79,6 @@ test {
     }
 }
 
-// JAR task configuration for Paper plugins
-tasks.jar {
-    manifest {
-        attributes["paperweight-mappings-namespace"] = "mojang"
-    }
-}
 
 // Replace ${project.version} in plugin.yml with the actual version
 processResources {
@@ -67,3 +86,27 @@ processResources {
         expand('project': [version: project.version])
     }
 }
+
+// Include all runtime dependencies in the JAR
+tasks.jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    exclude 'META-INF/*.SF'
+    exclude 'META-INF/*.DSA'
+    exclude 'META-INF/*.RSA'
+    exclude 'META-INF/LICENSE*'
+    exclude 'META-INF/NOTICE*'
+    exclude 'META-INF/*.txt'
+}
+
+// Note: com.gradleup.shadow plugin (Java 17+) requires pluginManagement setup
+// For proper shading with Java 17+, add to settings.gradle:
+// pluginManagement {
+//     repositories {
+//         gradlePluginPortal()
+//     }
+// }
+// Then use: id 'com.gradleup.shadow' version '8.1.2'
+// Current setup works but FoliaLib relocation warning will appear

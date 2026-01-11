@@ -62,17 +62,17 @@ class FragmentAbilityTest {
   @Test
   @DisplayName("Fragment getCooldownMillis returns reasonable values")
   void testFragmentCooldownValues() {
-    // Burning: Dragon's Wrath is 40 seconds
-    assertEquals(40000L, createBurningFragment().getCooldownMillis());
+    // Burning: Dragon's Wrath is 120 seconds / 2 minutes (original specification)
+    assertEquals(120000L, createBurningFragment().getCooldownMillis());
 
-    // Agility: Draconic Surge is 30 seconds
-    assertEquals(30000L, createAgilityFragment().getCooldownMillis());
+    // Agility: Draconic Surge is 45 seconds (original specification)
+    assertEquals(45000L, createAgilityFragment().getCooldownMillis());
 
-    // Immortal: Draconic Reflex is 90 seconds
-    assertEquals(90000L, createImmortalFragment().getCooldownMillis());
+    // Immortal: Draconic Reflex is 120 seconds / 2 minutes (original specification)
+    assertEquals(120000L, createImmortalFragment().getCooldownMillis());
 
-    // Corrupted: Dread Gaze is 60 seconds
-    assertEquals(60000L, createCorruptedFragment().getCooldownMillis());
+    // Corrupted: Dread Gaze is 180 seconds / 3 minutes (original specification)
+    assertEquals(180000L, createCorruptedFragment().getCooldownMillis());
   }
 
   @Test

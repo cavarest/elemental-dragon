@@ -1,0 +1,127 @@
+# Corrupted Core - Dread Gaze Ability Test
+# Tests the Corrupted Core's Ability 1: Dread Gaze (complete freeze on hit)
+# Original Specification: Next melee hit completely freezes the target, preventing all actions for 5 seconds
+# Cooldown: 180 seconds (3 minutes)
+
+name: "Corrupted Core - Dread Gaze Test"
+description: "Test that Dread Gaze freezes the next hit target completely"
+
+setup:
+  - action: "connect_player"
+    player: "fragment_tester"
+    name: "Connect test player"
+
+  - action: "make_operator"
+    player: "fragment_tester"
+    name: "Make test player operator"
+
+  # Spawn a zombie to test the freeze effect
+  - action: "execute_rcon_command"
+    command: "summon zombie ~3 ~ ~3 {CustomName:'{\"text\":\"FreezeTarget\"}',CustomNameVisible:1b}"
+    player: "fragment_tester"
+    name: "Spawn target zombie"
+
+  # Give Corrupted Core Fragment to player
+  - action: "execute_rcon_command"
+    command: "fragment give fragment_tester corrupted"
+    name: "Give Corrupted Core Fragment to player"
+
+  - action: "wait"
+    duration: 1000
+    name: "Wait for fragment to be given"
+
+  # Equip the fragment
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/fragment equip corrupted"
+    name: "Equip Corrupted Core Fragment"
+
+  - action: "wait"
+    duration: 1000
+    name: "Wait for fragment to be equipped"
+
+steps:
+  # Use Dread Gaze ability (Ability 1)
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/corrupt 1"
+    name: "Execute Dread Gaze ability"
+
+  # Wait for ability to activate
+  - action: "wait"
+    duration: 1000
+    name: "Wait for Dread Gaze activation"
+
+  # Attack the zombie (should trigger freeze)
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/execute as @s run damage @e[name=FreezeTarget,limit=1] 1 player_attack by @s"
+    name: "Attack zombie to trigger freeze"
+
+  # Wait for freeze effects to apply
+  - action: "wait"
+    duration: 1000
+    name: "Wait for freeze effects"
+
+  # Check that zombie has slowness effect (frozen)
+  - assertion: "entity_has_effect"
+    entity: "FreezeTarget"
+    effect: "slowness"
+    condition: "EQUALS"
+    value: true
+    name: "Verify target has slowness effect (frozen)"
+
+  # Check that zombie has mining fatigue effect (frozen)
+  - assertion: "entity_has_effect"
+    entity: "FreezeTarget"
+    effect: "mining_fatigue"
+    condition: "EQUALS"
+    value: true
+    name: "Verify target has mining fatigue (frozen)"
+
+  # Check that zombie has weakness effect (frozen)
+  - assertion: "entity_has_effect"
+    entity: "FreezeTarget"
+    effect: "weakness"
+    condition: "EQUALS"
+    value: true
+    name: "Verify target has weakness (frozen)"
+
+  # Wait for freeze to expire (60 seconds)
+  - action: "wait"
+    duration: 61000
+    name: "Wait for freeze to expire"
+
+  # Verify freeze effects have expired
+  - assertion: "entity_has_effect"
+    entity: "FreezeTarget"
+    effect: "slowness"
+    condition: "EQUALS"
+    value: false
+    name: "Verify freeze expired (no slowness)"
+
+  # Try to use ability again (should be on cooldown)
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/corrupt 1"
+    name: "Attempt to use ability during cooldown"
+
+  - action: "wait"
+    duration: 500
+    name: "Wait for cooldown message"
+
+cleanup:
+  # Remove test entities
+  - action: "execute_rcon_command"
+    command: "kill @e[name=FreezeTarget]"
+    name: "Remove test zombie"
+
+  # Unequip fragment
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/fragment unequip"
+    name: "Unequip fragment"
+
+  - action: "disconnect_player"
+    player: "fragment_tester"
+    name: "Disconnect test player"

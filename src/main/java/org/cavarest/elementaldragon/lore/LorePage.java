@@ -1,11 +1,15 @@
 package org.cavarest.elementaldragon.lore;
 
 import org.cavarest.elementaldragon.fragment.FragmentType;
+import org.cavarest.elementaldragon.lore.conditions.UseAbilityCondition;
 
 /**
  * Enum representing pages in the Chronicle of the Fallen Dragons.
  * Each page has specific unlock conditions based on player actions.
- * 
+ *
+ * Supports both legacy UnlockTrigger (enum-based) and pluggable UnlockCondition.
+ * New pages can use custom UnlockCondition implementations for flexibility.
+ *
  * Expanded to ~19 pages with rich lore across 7 chapters.
  */
 public enum LorePage {
@@ -505,6 +509,9 @@ public enum LorePage {
   private final FragmentType fragmentType;
   private final int requiredCount;
 
+  // Pluggable unlock condition (for new/custom pages)
+  private final UnlockCondition customCondition;
+
   LorePage(
     int pageNumber,
     String title,
@@ -513,12 +520,25 @@ public enum LorePage {
     FragmentType fragmentType,
     int requiredCount
   ) {
+    this(pageNumber, title, content, trigger, fragmentType, requiredCount, null);
+  }
+
+  LorePage(
+    int pageNumber,
+    String title,
+    String content,
+    UnlockTrigger trigger,
+    FragmentType fragmentType,
+    int requiredCount,
+    UnlockCondition customCondition
+  ) {
     this.pageNumber = pageNumber;
     this.title = title;
     this.content = content;
     this.trigger = trigger;
     this.fragmentType = fragmentType;
     this.requiredCount = requiredCount;
+    this.customCondition = customCondition;
   }
 
   /**
@@ -573,6 +593,24 @@ public enum LorePage {
    */
   public int getRequiredCount() {
     return requiredCount;
+  }
+
+  /**
+   * Get the custom unlock condition, if any.
+   *
+   * @return Custom unlock condition, or null for legacy pages
+   */
+  public UnlockCondition getCustomCondition() {
+    return customCondition;
+  }
+
+  /**
+   * Check if this page has a custom unlock condition.
+   *
+   * @return true if using custom condition
+   */
+  public boolean hasCustomCondition() {
+    return customCondition != null;
   }
 
   /**

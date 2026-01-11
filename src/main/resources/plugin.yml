@@ -68,6 +68,12 @@ commands:
     permission: elementaldragon.chronicle
     permission-message: You do not have permission to access the chronicle!
 
+  withdrawability:
+    description: Withdraw your equipped fragment abilities (item stays in inventory)
+    usage: /withdrawability
+    permission: elementaldragon.withdrawability
+    permission-message: You do not have permission to use this command!
+
 permissions:
   elementaldragon.lightning:
     description: Allows use of lightning ability
@@ -103,4 +109,8 @@ permissions:
 
   elementaldragon.fragment.corrupted:
     description: Use Corrupted Core abilities
+    default: true
+
+  elementaldragon.withdrawability:
+    description: Withdraw fragment abilities
     default: true

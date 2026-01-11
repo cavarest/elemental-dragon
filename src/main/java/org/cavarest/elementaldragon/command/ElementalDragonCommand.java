@@ -9,6 +9,7 @@ import org.cavarest.elementaldragon.command.subcommands.CooldownSubcommand;
 import org.cavarest.elementaldragon.command.subcommands.GiveSubcommand;
 import org.cavarest.elementaldragon.command.subcommands.GlobalCooldownSubcommand;
 import org.cavarest.elementaldragon.command.subcommands.InfoSubcommand;
+import org.cavarest.elementaldragon.command.subcommands.SetCountdownSymbolSubcommand;
 import org.cavarest.elementaldragon.command.util.ElementValidator;
 import org.cavarest.elementaldragon.command.util.PlayerResolver;
 import org.cavarest.elementaldragon.cooldown.CooldownManager;
@@ -45,6 +46,7 @@ public class ElementalDragonCommand implements CommandExecutor, TabCompleter {
     private final GiveSubcommand giveSubcommand;
     private final CooldownSubcommand cooldownSubcommand;
     private final GlobalCooldownSubcommand globalCooldownSubcommand;
+    private final SetCountdownSymbolSubcommand setCountdownSymbolSubcommand;
 
     /**
      * Creates a new ElementalDragonCommand.
@@ -80,6 +82,7 @@ public class ElementalDragonCommand implements CommandExecutor, TabCompleter {
             globalCooldownFormatter,
             elementValidator
         );
+        this.setCountdownSymbolSubcommand = new SetCountdownSymbolSubcommand();
     }
 
     @Override
@@ -120,6 +123,9 @@ public class ElementalDragonCommand implements CommandExecutor, TabCompleter {
             case "getglobalcooldown":
                 return globalCooldownSubcommand.executeGetGlobalCooldown(sender, subArgs);
 
+            case "setcountdownsym":
+                return setCountdownSymbolSubcommand.execute(sender, subArgs);
+
             case "help":
             default:
                 showHelp(sender);
@@ -139,7 +145,7 @@ public class ElementalDragonCommand implements CommandExecutor, TabCompleter {
             // First level: subcommand names
             completions.addAll(Arrays.asList(
                 "give", "info", "setcooldown", "clearcooldown", "getcooldown",
-                "setglobalcooldown", "getglobalcooldown", "help"
+                "setglobalcooldown", "getglobalcooldown", "setcountdownsym", "help"
             ));
             String partial = args[0].toLowerCase();
             completions.removeIf(c -> !c.toLowerCase().startsWith(partial));
@@ -169,6 +175,9 @@ public class ElementalDragonCommand implements CommandExecutor, TabCompleter {
 
                 case "getglobalcooldown":
                     return globalCooldownSubcommand.tabCompleteGetGlobalCooldown(sender, subArgs);
+
+                case "setcountdownsym":
+                    return setCountdownSymbolSubcommand.tabComplete(sender, subArgs);
             }
         }
 
@@ -202,6 +211,8 @@ public class ElementalDragonCommand implements CommandExecutor, TabCompleter {
             .append(Component.text(" - Set global cooldown", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/ed getglobalcooldown", NamedTextColor.YELLOW)
             .append(Component.text(" - Get global cooldowns", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/ed setcountdownsym <style> [width]", NamedTextColor.YELLOW)
+            .append(Component.text(" - Set countdown progress bar style", NamedTextColor.GRAY)));
 
         sender.sendMessage(Component.text("", NamedTextColor.WHITE));
         sender.sendMessage(Component.text("Player Selectors: @p (you), @a (all), @s (self), or player name", NamedTextColor.DARK_GRAY));

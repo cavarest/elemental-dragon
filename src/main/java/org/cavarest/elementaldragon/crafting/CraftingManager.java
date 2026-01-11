@@ -41,14 +41,10 @@ public class CraftingManager {
 
   /**
    * Register all custom recipes with the Bukkit recipe manager.
+   * Note: Heavy Core is now a vanilla item, no custom recipe needed.
    */
   public void registerRecipes() {
-    try {
-      registerHeavyCoreRecipe();
-    } catch (Exception e) {
-      plugin.getLogger().severe("Failed to register Heavy Core recipe: " + e.getMessage());
-      e.printStackTrace();
-    }
+    // Heavy Core is a vanilla item, no custom recipe needed
 
     try {
       registerBurningFragmentRecipe();
@@ -82,34 +78,6 @@ public class CraftingManager {
   }
 
   /**
-   * Register the Heavy Core recipe.
-   * Pattern:
-   * O O O
-   * O D O
-   * O I O
-   * Where O = Obsidian, D = Dragon Egg, I = Iron Block
-   */
-  private void registerHeavyCoreRecipe() {
-    ItemStack result = ElementalItems.getHeavyCore();
-    ShapedRecipe recipe = new ShapedRecipe(heavyCoreKey, result);
-
-    // Define the recipe shape
-    recipe.shape(
-      "OOO",
-      "ODO",
-      "OIO"
-    );
-
-    // Set the ingredients
-    recipe.setIngredient('O', Material.OBSIDIAN);
-    recipe.setIngredient('D', Material.DRAGON_EGG);
-    recipe.setIngredient('I', Material.IRON_BLOCK);
-
-    Bukkit.addRecipe(recipe);
-    plugin.getLogger().info("Heavy Core recipe registered");
-  }
-
-  /**
    * Register the Burning Fragment recipe.
    * Pattern from original proposal:
    * nt	st	nt
@@ -119,7 +87,7 @@ public class CraftingManager {
    * nt = Netherite Upgrade Smithing Template
    * st = Stout Armor Trim (using BOLT_ARMOR_TRIM_SMITHING_TEMPLATE)
    * ni = Netherite Ingot
-   * hc = Heavy Core (custom Netherite Ingot with display name)
+   * hc = Heavy Core (vanilla HEAVY_CORE item)
    * rt = Rib Armor Trim (using RIB_ARMOR_TRIM_SMITHING_TEMPLATE)
    */
   private void registerBurningFragmentRecipe() {
@@ -138,11 +106,11 @@ public class CraftingManager {
     recipe.setIngredient('I', Material.NETHERITE_INGOT);  // Netherite Ingots
     recipe.setIngredient('R', Material.RIB_ARMOR_TRIM_SMITHING_TEMPLATE);  // Rib trim
 
-    // Use base material for Heavy Core - validation happens in CraftItemEvent
-    recipe.setIngredient('H', Material.NETHERITE_INGOT);
+    // Using vanilla Heavy Core as per reworded feedback
+    recipe.setIngredient('H', Material.HEAVY_CORE);
 
     Bukkit.addRecipe(recipe);
-    plugin.getLogger().info("Burning Fragment recipe registered (original proposal)");
+    plugin.getLogger().info("Burning Fragment recipe registered (uses vanilla HEAVY_CORE)");
   }
 
   /**
@@ -156,7 +124,7 @@ public class CraftingManager {
    * ft = Flow Armor Trim
    * ad = Ancient Debris
    * bd = Block of Diamond
-   * hc = Heavy Core (custom Netherite Ingot with display name)
+   * hc = Heavy Core (vanilla HEAVY_CORE item)
    */
   private void registerAgilityFragmentRecipe() {
     ItemStack result = ElementalItems.createAgilityFragment();
@@ -173,11 +141,11 @@ public class CraftingManager {
     recipe.setIngredient('A', Material.ANCIENT_DEBRIS);
     recipe.setIngredient('D', Material.DIAMOND_BLOCK);
 
-    // Use base material for Heavy Core - validation happens in CraftItemEvent
-    recipe.setIngredient('H', Material.NETHERITE_INGOT);
+    // Using vanilla Heavy Core as per reworded feedback
+    recipe.setIngredient('H', Material.HEAVY_CORE);
 
     Bukkit.addRecipe(recipe);
-    plugin.getLogger().info("Agility Fragment recipe registered (original proposal)");
+    plugin.getLogger().info("Agility Fragment recipe registered (uses vanilla HEAVY_CORE)");
   }
 
   /**
@@ -190,7 +158,7 @@ public class CraftingManager {
    * tu = Totem of Undying
    * ad = Ancient Debris
    * bd = Block of Diamond
-   * hc = Heavy Core (custom Netherite Ingot with display name)
+   * hc = Heavy Core (vanilla HEAVY_CORE item)
    */
   private void registerImmortalFragmentRecipe() {
     ItemStack result = ElementalItems.createImmortalFragment();
@@ -206,11 +174,11 @@ public class CraftingManager {
     recipe.setIngredient('A', Material.ANCIENT_DEBRIS);
     recipe.setIngredient('D', Material.DIAMOND_BLOCK);
 
-    // Use base material for Heavy Core - validation happens in CraftItemEvent
-    recipe.setIngredient('H', Material.NETHERITE_INGOT);
+    // Using vanilla Heavy Core as per reworded feedback
+    recipe.setIngredient('H', Material.HEAVY_CORE);
 
     Bukkit.addRecipe(recipe);
-    plugin.getLogger().info("Immortal Fragment recipe registered (original proposal)");
+    plugin.getLogger().info("Immortal Fragment recipe registered (uses vanilla HEAVY_CORE)");
   }
 
   /**
@@ -295,9 +263,9 @@ public class CraftingManager {
   /**
    * Unregister all recipes managed by this CraftingManager.
    * Useful for plugin reload functionality.
+   * Note: Heavy Core is a vanilla item, no recipe to unregister.
    */
   public void unregisterRecipes() {
-    Bukkit.removeRecipe(heavyCoreKey);
     Bukkit.removeRecipe(burningFragmentKey);
     Bukkit.removeRecipe(agilityFragmentKey);
     Bukkit.removeRecipe(immortalFragmentKey);
@@ -337,20 +305,13 @@ public class CraftingManager {
 
   /**
    * Get Heavy Core recipe data.
+   * Note: Heavy Core is now a vanilla Minecraft item, no crafting recipe needed.
    *
-   * @return RecipeData for Heavy Core
+   * @return RecipeData for Heavy Core (null - vanilla item)
    */
   public RecipeData getHeavyCoreRecipe() {
-    java.util.Map<Character, Material> ingredients = new java.util.HashMap<>();
-    ingredients.put('O', Material.OBSIDIAN);
-    ingredients.put('D', Material.DRAGON_EGG);
-    ingredients.put('I', Material.IRON_BLOCK);
-
-    return new RecipeData(
-      new String[]{"OOO", "ODO", "OIO"},
-      ingredients,
-      "Dragon Egg will be consumed!"
-    );
+    // Heavy Core is a vanilla Minecraft item, no crafting recipe needed
+    return null;
   }
 
   /**
@@ -363,13 +324,13 @@ public class CraftingManager {
     ingredients.put('N', Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE);
     ingredients.put('S', Material.BOLT_ARMOR_TRIM_SMITHING_TEMPLATE);
     ingredients.put('I', Material.NETHERITE_INGOT);
-    ingredients.put('H', Material.NETHERITE_INGOT); // Heavy Core displays as Netherite Ingot
+    ingredients.put('H', Material.HEAVY_CORE); // Using vanilla Heavy Core
     ingredients.put('R', Material.RIB_ARMOR_TRIM_SMITHING_TEMPLATE);
 
     return new RecipeData(
       new String[]{"NSN", "IHI", "NRN"},
       ingredients,
-      "Requires 1 Heavy Core in center (H)!"
+      "Requires 1 Heavy Core (vanilla) in center (H)!"
     );
   }
 
@@ -384,12 +345,12 @@ public class CraftingManager {
     ingredients.put('F', Material.FLOW_ARMOR_TRIM_SMITHING_TEMPLATE);
     ingredients.put('A', Material.ANCIENT_DEBRIS);
     ingredients.put('D', Material.DIAMOND_BLOCK);
-    ingredients.put('H', Material.NETHERITE_INGOT); // Heavy Core displays as Netherite Ingot
+    ingredients.put('H', Material.HEAVY_CORE); // Using vanilla Heavy Core
 
     return new RecipeData(
       new String[]{"BFA", "DHD", "AFB"},
       ingredients,
-      "Requires 1 Heavy Core in center (H)!"
+      "Requires 1 Heavy Core (vanilla) in center (H)!"
     );
   }
 
@@ -403,12 +364,12 @@ public class CraftingManager {
     ingredients.put('T', Material.TOTEM_OF_UNDYING);
     ingredients.put('A', Material.ANCIENT_DEBRIS);
     ingredients.put('D', Material.DIAMOND_BLOCK);
-    ingredients.put('H', Material.NETHERITE_INGOT); // Heavy Core displays as Netherite Ingot
+    ingredients.put('H', Material.HEAVY_CORE); // Using vanilla Heavy Core
 
     return new RecipeData(
       new String[]{"TAT", "DHD", "TAT"},
       ingredients,
-      "Requires 1 Heavy Core in center (H)!"
+      "Requires 1 Heavy Core (vanilla) in center (H)!"
     );
   }
 

@@ -26,9 +26,9 @@ class CorruptedCoreFragmentTest {
   @DisplayName("CorruptedCoreFragment has correct cooldown values")
   void testCorruptedCoreFragmentCooldowns() {
     CorruptedCoreFragment fragment = new CorruptedCoreFragment(null);
-    
-    // Dread Gaze: 60 seconds (60000ms)
-    assertEquals(60000L, fragment.getCooldownMillis());
+
+    // Dread Gaze: 180 seconds / 3 minutes (180000ms) - original specification
+    assertEquals(180000L, fragment.getCooldownMillis());
   }
 
   @Test

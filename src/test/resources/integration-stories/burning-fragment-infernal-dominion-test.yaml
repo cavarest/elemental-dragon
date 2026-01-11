@@ -1,0 +1,115 @@
+# Burning Fragment - Infernal Dominion Ability Test
+# Tests the Burning Fragment's Ability 2: Infernal Dominion (AOE fire)
+# Original Specification: Unleashes a blazing ring of fire, igniting all nearby PLAYERS (but not mobs)
+# Cooldown: 60 seconds (1 minute)
+
+name: "Burning Fragment - Infernal Dominion Test"
+description: "Test that Infernal Dominion creates an AOE fire ring that only affects players"
+
+setup:
+  - action: "connect_player"
+    player: "fragment_tester"
+    name: "Connect test player"
+
+  - action: "connect_player"
+    player: "target_player"
+    name: "Connect second player as target"
+
+  - action: "make_operator"
+    player: "fragment_tester"
+    name: "Make test player operator"
+
+  # Spawn a zombie near the player (to verify it's NOT affected)
+  - action: "execute_rcon_command"
+    command: "summon zombie ~3 ~ ~3 {CustomName:'{\"text\":\"SafeZombie\"}',CustomNameVisible:1b}"
+    player: "fragment_tester"
+    name: "Spawn zombie that should not be affected"
+
+  # Give Burning Fragment to player
+  - action: "execute_rcon_command"
+    command: "fragment give fragment_tester burning"
+    name: "Give Burning Fragment to player"
+
+  - action: "wait"
+    duration: 1000
+    name: "Wait for fragment to be given"
+
+  # Equip the fragment
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/fragment equip burning"
+    name: "Equip Burning Fragment"
+
+  - action: "wait"
+    duration: 1000
+    name: "Wait for fragment to be equipped"
+
+  # Teleport target player near the test player
+  - action: "execute_rcon_command"
+    command: "tp target_player fragment_tester"
+    name: "Teleport target player near test player"
+
+  - action: "wait"
+    duration: 500
+    name: "Wait for teleport"
+
+steps:
+  # Use Infernal Dominion ability (Ability 2)
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/burn 2"
+    name: "Execute Infernal Dominion ability"
+
+  # Wait for ability execution and fire effects
+  - action: "wait"
+    duration: 2000
+    name: "Wait for fire effects"
+
+  # Check that the target player is on fire
+  - assertion: "player_burning"
+    player: "target_player"
+    condition: "EQUALS"
+    value: true
+    name: "Verify target player is burning"
+
+  # Check that the zombie is NOT on fire (player-only AOE)
+  - assertion: "entity_burning"
+    entity: "SafeZombie"
+    condition: "EQUALS"
+    value: false
+    name: "Verify zombie is NOT affected (player-only AOE)"
+
+  # Try to use ability again (should be on cooldown)
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/burn 2"
+    name: "Attempt to use ability during cooldown"
+
+  - action: "wait"
+    duration: 500
+    name: "Wait for cooldown message"
+
+cleanup:
+  # Extinguish target player
+  - action: "execute_rcon_command"
+    command: "effect give target_player fire_resistance 10 10"
+    name: "Give fire resistance to extinguish target"
+
+  # Remove test entities
+  - action: "execute_rcon_command"
+    command: "kill @e[name=SafeZombie]"
+    name: "Remove test zombie"
+
+  # Unequip fragment
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/fragment unequip"
+    name: "Unequip fragment"
+
+  - action: "disconnect_player"
+    player: "target_player"
+    name: "Disconnect target player"
+
+  - action: "disconnect_player"
+    player: "fragment_tester"
+    name: "Disconnect test player"

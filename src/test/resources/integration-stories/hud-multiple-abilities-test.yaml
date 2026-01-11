@@ -1,0 +1,122 @@
+# HUD - Multiple Abilities Display Test
+# Tests that the HUD correctly displays multiple abilities simultaneously
+# Verifies lightning ability + fragment abilities show together when both are available
+
+name: "HUD - Multiple Abilities Display Test"
+description: "Test HUD displays lightning and fragment abilities simultaneously"
+
+setup:
+  - action: "connect_player"
+    player: "hud_tester"
+    name: "Connect test player"
+
+  - action: "make_operator"
+    player: "hud_tester"
+    name: "Make test player operator"
+
+  # Give dragon egg for lightning ability
+  - action: "execute_rcon_command"
+    command: "item replace entity hud_tester weapon.offhand with dragon_egg 1"
+    name: "Give dragon egg to player offhand"
+
+  - action: "wait"
+    duration: 2000
+    name: "Wait for HUD to update"
+
+  # Give Agility Fragment
+  - action: "execute_rcon_command"
+    command: "ed give hud_tester equipment agility"
+    name: "Give Agility Fragment to player"
+
+  - action: "wait"
+    duration: 1000
+    name: "Wait for fragment to be given"
+
+steps:
+  # Verify only lightning is shown (fragment not equipped yet)
+  - assertion: "player_has_sidebar"
+    player: "hud_tester"
+    condition: "EXISTS"
+    name: "Verify lightning sidebar shown"
+
+  # Equip Agility Fragment
+  - action: "execute_player_command"
+    player: "hud_tester"
+    command: "/agile equip"
+    name: "Equip Agility Fragment"
+
+  - action: "wait"
+    duration: 2000
+    name: "Wait for HUD to update (2 seconds)"
+
+  # Verify HUD shows all 3 abilities (lightning + agile 1 + agile 2)
+  - assertion: "player_has_sidebar"
+    player: "hud_tester"
+    condition: "EXISTS"
+    name: "Verify all 3 abilities displayed (lightning + 2 agility)"
+
+  # Use lightning ability
+  - action: "execute_player_command"
+    player: "hud_tester"
+    command: "/lightning"
+    name: "Use lightning ability"
+
+  - action: "wait"
+    duration: 1000
+    name: "Wait for ability execution"
+
+  # Use agility ability 1
+  - action: "execute_player_command"
+    player: "hud_tester"
+    command: "/agile 1"
+    name: "Use Draconic Surge (ability 1)"
+
+  - action: "wait"
+    duration: 2000
+    name: "Wait for ability execution"
+
+  # Verify all 3 abilities still shown (some on cooldown, some ready)
+  - assertion: "player_has_sidebar"
+    player: "hud_tester"
+    condition: "EXISTS"
+    name: "Verify all 3 abilities still displayed"
+
+  # Remove dragon egg
+  - action: "execute_rcon_command"
+    command: "item replace entity hud_tester weapon.offhand with air"
+    name: "Remove dragon egg from offhand"
+
+  - action: "wait"
+    duration: 2000
+    name: "Wait for HUD to update"
+
+  # Verify only 2 fragment abilities shown (lightning removed)
+  - assertion: "player_has_sidebar"
+    player: "hud_tester"
+    condition: "EXISTS"
+    name: "Verify only fragment abilities shown after egg removed"
+
+  # Unequip fragment
+  - action: "execute_player_command"
+    player: "hud_tester"
+    command: "/agile unequip"
+    name: "Unequip Agility Fragment"
+
+  - action: "wait"
+    duration: 2000
+    name: "Wait for HUD to update"
+
+  # Verify no abilities shown
+  - assertion: "player_has_sidebar"
+    player: "hud_tester"
+    condition: "NOT_EXISTS"
+    name: "Verify no sidebars when nothing equipped"
+
+cleanup:
+  - action: "execute_rcon_command"
+    command: "dragonlightning clearcooldown hud_tester"
+    name: "Clear lightning cooldown"
+
+  - action: "disconnect_player"
+    player: "hud_tester"
+    name: "Disconnect test player"

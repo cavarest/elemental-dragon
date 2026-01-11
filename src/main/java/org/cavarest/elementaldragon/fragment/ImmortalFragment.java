@@ -40,15 +40,14 @@ import java.util.Random;
  */
 public class ImmortalFragment extends AbstractFragment implements Listener {
 
-  // Draconic Reflex constants
-  private static final long DRACONIC_REFLEX_COOLDOWN = 90000L; // 90 seconds
-  private static final int DRACONIC_REFLEX_DURATION = 100; // 5 seconds (100 ticks)
-  private static final double DRACONIC_REFLEX_DAMAGE_REDUCTION = 0.75; // 75%
-  private static final double DRACONIC_REFLEX_REFLECT = 0.25; // 25% reflect
+  // Draconic Reflex constants (ORIGINAL SPECIFICATION)
+  private static final long DRACONIC_REFLEX_COOLDOWN = 120000L; // 2 minutes (original spec)
+  private static final int DRACONIC_REFLEX_DURATION = 300; // 15 seconds = 300 ticks (original spec)
+  private static final double DRACONIC_REFLEX_DODGE_CHANCE = 0.2; // 20% (1/5 chance)
 
-  // Essence Rebirth constants
-  private static final long ESSENCE_REBIRTH_COOLDOWN = 300000L; // 5 minutes (300,000ms)
-  private static final int ESSENCE_REBIRTH_ARROWS = 32;
+  // Essence Rebirth constants (ORIGINAL SPECIFICATION)
+  private static final long ESSENCE_REBIRTH_COOLDOWN = 480000L; // 8 minutes (480,000ms) (original spec)
+  private static final int ESSENCE_REBIRTH_DURATION = 600; // 30 seconds = 600 ticks (original spec)
 
   // Visual constants
   private static final Color BROWN_COLOR = Color.fromRGB(139, 69, 19);
@@ -64,10 +63,10 @@ public class ImmortalFragment extends AbstractFragment implements Listener {
   private final List<AbilityDefinition> abilities = List.of(
     new AbilityDefinition(1, "Draconic Reflex", "damage reduction",
       List.of("reflex", "draconic-reflex"),
-      "A protective shield of ancient dragon energy surrounds you!"),
+      "A protective shield of ancient dragon energy surrounds you! 🛡️✨", "✨"),
     new AbilityDefinition(2, "Essence Rebirth", "death protection",
       List.of("rebirth", "essence-rebirth"),
-      "The dragon's essence will restore you upon death!")
+      "The dragon's essence will restore you upon death! 🛡️🐉", "🐉")
   );
 
   // Metadata keys
@@ -89,7 +88,7 @@ public class ImmortalFragment extends AbstractFragment implements Listener {
       DRACONIC_REFLEX_COOLDOWN, // Use Draconic Reflex cooldown as default
       Arrays.asList(
         "Ability 1: Draconic Reflex - 75% DMG reduction (90s cooldown)",
-        "Ability 2: Essence Rebirth - Enhanced respawn (5min cooldown)",
+        "Ability 2: Essence Rebirth - Second life (8min cooldown)",
         "",
         "Passive: 25% knockback reduction, +2 hearts"
       )
@@ -224,7 +223,11 @@ public class ImmortalFragment extends AbstractFragment implements Listener {
   }
 
   /**
-   * Execute Draconic Reflex - grant damage reduction and reflection.
+   * Execute Draconic Reflex - grant 20% dodge chance for 15 seconds.
+   * Original Specification:
+   * - Provides 1/5 chance (20%) to avoid damage for 15 seconds after activation
+   * - Plays anvil sound on miss (when dodge fails)
+   * - Cooldown: 2 minutes
    *
    * @param player The player executing the ability
    */
@@ -241,19 +244,7 @@ public class ImmortalFragment extends AbstractFragment implements Listener {
 
     Location center = player.getLocation();
 
-    // Apply resistance effect (amplifier 2 = 75% reduction)
-    player.addPotionEffect(
-      new PotionEffect(
-        PotionEffectType.RESISTANCE,
-        DRACONIC_REFLEX_DURATION,
-        2, // Amplifier 2 = 75% damage reduction
-        false,
-        true,
-        true
-      )
-    );
-
-    // Mark player as having Draconic Reflex active
+    // Mark player as having Draconic Reflex active (dodge chance enabled)
     player.setMetadata(
       DRACONIC_REFLEX_ACTIVE_KEY,
       new org.bukkit.metadata.FixedMetadataValue(plugin, true)
@@ -267,7 +258,7 @@ public class ImmortalFragment extends AbstractFragment implements Listener {
     showShieldAuraParticles(player);
 
     player.sendMessage(
-      Component.text("Draconic Reflex activated! 75% damage reduction for 5 seconds!",
+      Component.text("Draconic Reflex activated! 20% dodge chance for 15 seconds!",
         NamedTextColor.GREEN)
     );
 
@@ -287,9 +278,6 @@ public class ImmortalFragment extends AbstractFragment implements Listener {
           player.removeMetadata(DRACONIC_REFLEX_ACTIVE_KEY, plugin);
         }
 
-        // Remove resistance effect early if still present
-        player.removePotionEffect(PotionEffectType.RESISTANCE);
-
         // Play expiration sound
         playAbilitySound(player.getLocation(), Sound.BLOCK_STONE_BREAK, 1.0f, 1.0f);
 
@@ -301,14 +289,19 @@ public class ImmortalFragment extends AbstractFragment implements Listener {
   }
 
   /**
-   * Execute Essence Rebirth - enhanced respawn with bonus items.
+   * Execute Essence Rebirth - grants second life for 30 seconds.
+   * Original Specification:
+   * - Grants wielder second life if reduced to 0 hearts
+   * - Active for 30 seconds post-activation
+   * - Retains all previous effects (fire resistance, speed, etc.)
+   * - Cooldown: 8 minutes
    *
    * @param player The player executing the ability
    */
   private void executeEssenceRebirth(Player player) {
     // No cooldown check needed - FragmentManager.useFragmentAbility() already checked
 
-    // Mark Essence Rebirth as activated
+    // Mark Essence Rebirth as activated (30-second protection window)
     player.setMetadata(
       ESSENCE_REBIRTH_ACTIVATED_KEY,
       new org.bukkit.metadata.FixedMetadataValue(plugin, true)
@@ -325,9 +318,28 @@ public class ImmortalFragment extends AbstractFragment implements Listener {
     // Cooldown is set by FragmentManager.useFragmentAbility()
 
     player.sendMessage(
-      Component.text("Essence Rebirth activated! You will respawn with bonus items!",
+      Component.text("Essence Rebirth activated! 30-second death protection active!",
         NamedTextColor.GREEN)
     );
+
+    // Schedule protection window expiration after 30 seconds (600 ticks)
+    new BukkitRunnable() {
+      @Override
+      public void run() {
+        if (player.isDead() || !player.isValid()) {
+          cancel();
+          return;
+        }
+
+        // Remove protection if still active (wasn't consumed by death prevention)
+        if (player.hasMetadata(ESSENCE_REBIRTH_ACTIVATED_KEY)) {
+          player.removeMetadata(ESSENCE_REBIRTH_ACTIVATED_KEY, plugin);
+          player.sendMessage(
+            Component.text("Essence Rebirth protection has expired.", NamedTextColor.GRAY)
+          );
+        }
+      }
+    }.runTaskLater(plugin, ESSENCE_REBIRTH_DURATION);
   }
 
   /**
@@ -365,9 +377,13 @@ public class ImmortalFragment extends AbstractFragment implements Listener {
   }
 
   /**
-   * Event handler for damage reflection during Draconic Reflex.
+   * Event handler for dodge chance during Draconic Reflex.
+   * Original Specification:
+   * - 20% chance (1/5) to avoid damage completely
+   * - Plays anvil sound when dodge fails (80% of the time)
+   * - Active for 15 seconds after Draconic Reflex activation
    *
-   * @param event The entity damage by entity event
+   * @param event The entity damage event
    */
   @EventHandler
   public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
@@ -382,33 +398,33 @@ public class ImmortalFragment extends AbstractFragment implements Listener {
       return;
     }
 
-    Entity attacker = event.getDamager();
+    // Roll 20% dodge chance
+    if (random.nextDouble() < DRACONIC_REFLEX_DODGE_CHANCE) {
+      // Dodge successful - negate all damage
+      event.setCancelled(true);
 
-    // Only reflect damage from living entities (not projectiles, etc.)
-    if (!(attacker instanceof LivingEntity)) {
-      return;
-    }
+      // Show dodge success particles
+      player.getWorld().spawnParticle(
+        Particle.DUST,
+        player.getLocation().add(0, 1, 0),
+        15,
+        0.5,
+        0.5,
+        0.5,
+        0.05,
+        new Particle.DustOptions(GOLD_COLOR, 1.5f)
+      );
 
-    LivingEntity attackerEntity = (LivingEntity) attacker;
+      // Play dodge success sound
+      playAbilitySound(player.getLocation(), Sound.ENTITY_GUARDIAN_HURT, 1.0f, 1.2f);
 
-    // Calculate reflected damage (25% of original)
-    double originalDamage = event.getDamage();
-    double reflectedDamage = originalDamage * DRACONIC_REFLEX_REFLECT;
-
-    // Apply damage reduction to player (75% reduction)
-    double reducedDamage = originalDamage * DRACONIC_REFLEX_DAMAGE_REDUCTION;
-    event.setDamage(reducedDamage);
-
-    // Reflect damage back to attacker
-    if (reflectedDamage > 0) {
-      attackerEntity.damage(reflectedDamage);
-
-      // Show reflect particles
-      Location reflectLocation = attackerEntity.getLocation();
-      showReflectParticles(reflectLocation);
-
-      // Play reflect sound
-      playAbilitySound(reflectLocation, Sound.ENTITY_IRON_GOLEM_HURT, 1.0f, 0.8f);
+      // Send dodge success message
+      player.sendMessage(
+        Component.text("Draconic Reflex: Dodge successful!", NamedTextColor.GOLD)
+      );
+    } else {
+      // Dodge failed - play miss sound (anvil sound as specified)
+      playAbilitySound(player.getLocation(), Sound.BLOCK_ANVIL_LAND, 1.0f, 1.0f);
     }
   }
 
@@ -441,131 +457,73 @@ public class ImmortalFragment extends AbstractFragment implements Listener {
   }
 
   /**
-   * Event handler for player death - handles Essence Rebirth tracking.
+   * Event handler for Essence Rebirth fatal damage prevention.
+   * Original Specification:
+   * - Grants second life if reduced to 0 hearts
+   * - Active for 30 seconds after activation
+   * - Retains all active potion effects
+   * - Plays totem animation/sound effects
    *
-   * @param event The player death event
+   * @param event The entity damage event
    */
-  @EventHandler
-  public void onPlayerDeath(PlayerDeathEvent event) {
-    Player player = event.getEntity();
-
-    // Check if Essence Rebirth was activated
-    if (player.hasMetadata(ESSENCE_REBIRTH_ACTIVATED_KEY)) {
-      // Store that this player should receive rebirth benefits
-      // The actual benefits are applied in PlayerRespawnEvent
-      player.setMetadata(
-        "immortal_rebirth_pending",
-        new org.bukkit.metadata.FixedMetadataValue(plugin, true)
-      );
-    }
-  }
-
-  /**
-   * Event handler for player respawn - applies Essence Rebirth benefits.
-   *
-   * @param event The player respawn event
-   */
-  @EventHandler
-  public void onPlayerRespawn(PlayerRespawnEvent event) {
-    Player player = event.getPlayer();
-
-    // Check if player should receive rebirth benefits
-    if (!player.hasMetadata("immortal_rebirth_pending")) {
+  @EventHandler(priority = org.bukkit.event.EventPriority.HIGH)
+  public void onEntityDamageForEssenceRebirth(EntityDamageEvent event) {
+    if (!(event.getEntity() instanceof Player)) {
       return;
     }
 
-    // Check if respawn location is in spawn chunks (protected area)
-    // For now, we'll apply benefits if the respawn location is the world spawn
-    Location respawnLocation = event.getRespawnLocation();
+    Player player = (Player) event.getEntity();
 
-    // Apply rebirth benefits
-    applyRebirthBenefits(player);
-
-    // Clear the pending metadata
-    player.removeMetadata("immortal_rebirth_pending", plugin);
-
-    // Clear the activated metadata (ready for next activation)
-    if (player.hasMetadata(ESSENCE_REBIRTH_ACTIVATED_KEY)) {
-      player.removeMetadata(ESSENCE_REBIRTH_ACTIVATED_KEY, plugin);
+    // Check if player has Essence Rebirth active (30-second protection window)
+    if (!player.hasMetadata(ESSENCE_REBIRTH_ACTIVATED_KEY)) {
+      return;
     }
-  }
 
-  /**
-   * Apply rebirth benefits to a respawning player.
-   *
-   * @param player The player
-   */
-  private void applyRebirthBenefits(Player player) {
-    // Give random diamond armor piece if available
-    ItemStack[] diamondPieces = {
-      new ItemStack(Material.DIAMOND_HELMET),
-      new ItemStack(Material.DIAMOND_CHESTPLATE),
-      new ItemStack(Material.DIAMOND_LEGGINGS),
-      new ItemStack(Material.DIAMOND_BOOTS)
-    };
+    // Check if damage would be fatal
+    double finalDamage = event.getFinalDamage();
+    if (player.getHealth() - finalDamage <= 0) {
+      // Cancel fatal damage
+      event.setCancelled(true);
 
-    // Give one random diamond armor piece
-    if (random.nextBoolean()) {
-      ItemStack randomArmor = diamondPieces[random.nextInt(diamondPieces.length)];
-      player.getInventory().addItem(randomArmor);
+      // Restore to full health (20.0 = 10 hearts)
+      player.setHealth(20.0);
 
-      // Show item given particles
+      // Remove Essence Rebirth protection (consumed - single use within 30-second window)
+      player.removeMetadata(ESSENCE_REBIRTH_ACTIVATED_KEY, plugin);
+
+      // Play totem sound effect (same as Totem of Undying)
+      player.playSound(player.getLocation(), Sound.ITEM_TOTEM_USE, 1.0f, 1.0f);
+
+      // Show totem particle effect
+      player.getWorld().spawnParticle(
+        Particle.TOTEM_OF_UNDYING,
+        player.getLocation().add(0, 1, 0),
+        50,
+        0.5,
+        0.5,
+        0.5,
+        0.1
+      );
+
+      // Show golden rebirth particles (additional visual feedback)
       player.getWorld().spawnParticle(
         Particle.DUST,
         player.getLocation().add(0, 1, 0),
-        15,
-        0.5,
-        0.5,
-        0.5,
-        0.05,
-        new Particle.DustOptions(Color.fromRGB(0, 255, 255), 2.0f)
+        50,
+        1.0,
+        1.0,
+        1.0,
+        0.1,
+        new Particle.DustOptions(GOLD_COLOR, 2.0f)
       );
 
+      // Notify player
       player.sendMessage(
-        Component.text("Essence Rebirth: You received a diamond armor piece!",
-          NamedTextColor.GOLD)
+        Component.text("Essence Rebirth saved you from death!", NamedTextColor.GOLD)
       );
+
+      // Note: All active potion effects are automatically retained (no action needed)
     }
-
-    // Set hunger to full (20)
-    player.setFoodLevel(20);
-
-    // Give 32 arrows if player has a bow
-    boolean hasBow = false;
-    for (ItemStack item : player.getInventory().getContents()) {
-      if (item != null && item.getType() == Material.BOW) {
-        hasBow = true;
-        break;
-      }
-    }
-
-    if (hasBow) {
-      player.getInventory().addItem(new ItemStack(Material.ARROW, ESSENCE_REBIRTH_ARROWS));
-      player.sendMessage(
-        Component.text("Essence Rebirth: 32 arrows added to your inventory!",
-          NamedTextColor.GOLD)
-      );
-    }
-
-    // Play respawn sound
-    playAbilitySound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.5f, 1.2f);
-
-    // Show golden rebirth particles
-    player.getWorld().spawnParticle(
-      Particle.DUST,
-      player.getLocation().add(0, 1, 0),
-      50,
-      1.0,
-      1.0,
-      1.0,
-      0.1,
-      new Particle.DustOptions(GOLD_COLOR, 2.0f)
-    );
-
-    player.sendMessage(
-      Component.text("Essence Rebirth complete! Welcome back, immortal warrior!",
-        NamedTextColor.GREEN)
-    );
   }
 
   /**
