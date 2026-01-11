@@ -20,6 +20,7 @@ export ADMIN_USERNAME
 # Parse arguments
 RESET=false
 CLEAN=false
+BLOCKING=false
 
 for arg in "$@"; do
     case $arg in
@@ -29,19 +30,29 @@ for arg in "$@"; do
         -c|--clean)
             CLEAN=true
             ;;
+        -b|--blocking)
+            BLOCKING=true
+            ;;
         -h|--help)
             echo "Usage: $0 [OPTIONS]"
             echo ""
             echo "Options:"
             echo "  -r, --rebuild    Rebuild Docker image and restart server"
             echo "  -c, --clean      Clean build (Gradle clean + fresh Docker image)"
+            echo "  -b, --blocking   Start in blocking mode (logs shown directly)"
             echo "  -h, --help       Show this help message"
             echo ""
+            echo "Modes:"
+            echo "  Daemon (default)    Server runs in background, use 'docker logs -f' to view"
+            echo "  Blocking (-b)        Server logs shown directly, Ctrl+C to stop"
+            echo ""
             echo "Examples:"
-            echo "  $0               # Start server normally (uses cached Docker layers)"
-            echo "  $0 -r            # Rebuild Docker image and restart"
-            echo "  $0 -c            # Clean build and start"
-            echo "  $0 -r -c         # Clean rebuild and restart"
+            echo "  $0                  # Start server in daemon mode (background)"
+            echo "  $0 -b               # Start server in blocking mode (see logs)"
+            echo "  $0 -r               # Rebuild and start in daemon mode"
+            echo "  $0 -r -b            # Rebuild and start in blocking mode"
+            echo "  $0 -c               # Clean rebuild and start in daemon mode"
+            echo "  $0 -c -b            # Clean rebuild and start in blocking mode"
             exit 0
             ;;
     esac
@@ -183,7 +194,14 @@ echo ""
 
 # Start Docker container with docker-compose
 echo "Starting Docker container..."
-docker-compose up -d --remove-orphans
+if [ "$BLOCKING" = true ]; then
+    echo "Mode: BLOCKING (logs will be shown directly, Ctrl+C to stop)"
+    echo ""
+    docker-compose up --remove-orphans
+else
+    echo "Mode: DAEMON (background, use 'docker logs -f ${CONTAINER_NAME}' to view logs)"
+    docker-compose up -d --remove-orphans
+fi
 
 echo ""
 echo "================================"
@@ -193,77 +211,88 @@ echo ""
 echo "Server will be available on port 25565"
 echo "RCON will be available on port 25575"
 echo ""
-echo "Useful commands:"
-echo "  View logs:      docker logs -f ${CONTAINER_NAME:-papermc-elementaldragon}"
-echo "  Server console: docker attach ${CONTAINER_NAME:-papermc-elementaldragon}"
-echo "  Stop server:    ./stop-server.sh"
-echo "  Rebuild:        ./start-server.sh -r"
-echo "  Clean rebuild:  ./start-server.sh -c"
-echo ""
 
-
-# Wait for server to be ready with proper detection
-echo "Waiting for server to start..."
-echo "(This may take 30-60 seconds on first run)"
-echo ""
-
-MAX_WAIT=120
-WAIT_COUNT=0
-SERVER_READY=false
-
-while [ $WAIT_COUNT -lt $MAX_WAIT ]; do
-    # Check if container is running
-    if ! docker ps --format "{{.Names}}" | grep -q "^${CONTAINER_NAME}$"; then
-        echo "✗ Container stopped unexpectedly!"
-        echo "Container logs:"
-        docker logs ${CONTAINER_NAME:-papermc-elementaldragon} --tail 50
-        exit 1
-    fi
-
-    # Check logs for server ready indicators
-    LOGS=$(docker logs ${CONTAINER_NAME:-papermc-elementaldragon} 2>&1)
-
-    if echo "$LOGS" | grep -qE "Done \([0-9.]+s\)!"; then
-        SERVER_READY=true
-        break
-    elif echo "$LOGS" | grep -qE "ThreadedAnvilChunkStorage.*Loading"; then
-        # Server is loading chunks, getting close
-        echo "   Server is loading world data..."
-    elif echo "$LOGS" | grep -qE "ElementalDragon.*enabled"; then
-        # Plugin loaded
-        echo "   Plugin loaded!"
-    fi
-
-    sleep 2
-    WAIT_COUNT=$((WAIT_COUNT + 2))
-    echo -ne "   Still starting... ${WAIT_COUNT}s elapsed\r"
-done
-
-echo ""
-
-
-if [ "$SERVER_READY" = true ]; then
-    echo "✅ Server is ready for manual testing!"
+# Show mode-specific information
+if [ "$BLOCKING" = true ]; then
+    echo "📺 Running in BLOCKING mode - logs will be shown below"
+    echo "   Press Ctrl+C to stop the server"
+    echo ""
 else
-    echo "⚠️  Server may still be starting, checking logs..."
+    echo "Useful commands:"
+    echo "  View logs:      docker logs -f ${CONTAINER_NAME:-papermc-elementaldragon}"
+    echo "  Server console: docker attach ${CONTAINER_NAME:-papermc-elementaldragon}"
+    echo "  Stop server:    ./stop-server.sh"
+    echo "  Rebuild:        ./start-server.sh -r"
+    echo "  Clean rebuild:  ./start-server.sh -c"
+    echo "  Blocking mode:  ./start-server.sh -b"
+    echo ""
 fi
 
-echo ""
-echo "Recent server logs:"
-echo "==================="
-docker logs ${CONTAINER_NAME:-papermc-elementaldragon} --tail 20
-echo "==================="
-echo ""
 
-
-if [ "$SERVER_READY" = true ]; then
-    echo "✅ Server is ready! You can now connect with your Minecraft client."
+# Wait for server to be ready with proper detection (skip in blocking mode)
+if [ "$BLOCKING" = false ]; then
+    echo "Waiting for server to start..."
+    echo "(This may take 30-60 seconds on first run)"
     echo ""
-    echo "Connection details:"
-    echo "  Address: localhost (or your server IP)"
-    echo "  Port: 25565"
-    echo "  Version: 1.21.x (PaperMC)"
-else
-    echo "⚠️  Server might still be loading. Check logs above for status."
-    echo "   If you see 'Done' in the logs, the server is ready."
+
+    MAX_WAIT=120
+    WAIT_COUNT=0
+    SERVER_READY=false
+
+    while [ $WAIT_COUNT -lt $MAX_WAIT ]; do
+        # Check if container is running
+        if ! docker ps --format "{{.Names}}" | grep -q "^${CONTAINER_NAME}$"; then
+            echo "✗ Container stopped unexpectedly!"
+            echo "Container logs:"
+            docker logs ${CONTAINER_NAME:-papermc-elementaldragon} --tail 50
+            exit 1
+        fi
+
+        # Check logs for server ready indicators
+        LOGS=$(docker logs ${CONTAINER_NAME:-papermc-elementaldragon} 2>&1)
+
+        if echo "$LOGS" | grep -qE "Done \([0-9.]+s\)!"; then
+            SERVER_READY=true
+            break
+        elif echo "$LOGS" | grep -qE "ThreadedAnvilChunkStorage.*Loading"; then
+            # Server is loading chunks, getting close
+            echo "   Server is loading world data..."
+        elif echo "$LOGS" | grep -qE "ElementalDragon.*enabled"; then
+            # Plugin loaded
+            echo "   Plugin loaded!"
+        fi
+
+        sleep 2
+        WAIT_COUNT=$((WAIT_COUNT + 2))
+        echo -ne "   Still starting... ${WAIT_COUNT}s elapsed\r"
+    done
+
+    echo ""
+
+
+    if [ "$SERVER_READY" = true ]; then
+        echo "✅ Server is ready for manual testing!"
+    else
+        echo "⚠️  Server may still be starting, checking logs..."
+    fi
+
+    echo ""
+    echo "Recent server logs:"
+    echo "==================="
+    docker logs ${CONTAINER_NAME:-papermc-elementaldragon} --tail 20
+    echo "==================="
+    echo ""
+
+
+    if [ "$SERVER_READY" = true ]; then
+        echo "✅ Server is ready! You can now connect with your Minecraft client."
+        echo ""
+        echo "Connection details:"
+        echo "  Address: localhost (or your server IP)"
+        echo "  Port: 25565"
+        echo "  Version: 1.21.x (PaperMC)"
+    else
+        echo "⚠️  Server might still be loading. Check logs above for status."
+        echo "   If you see 'Done' in the logs, the server is ready."
+    fi
 fi

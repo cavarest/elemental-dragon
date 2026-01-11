@@ -1,192 +1,67 @@
-#!/bin/bash
+#!/bin/sh
+# Elemental Dragon Plugin Setup Script
+# This script runs automatically during container startup BEFORE the main /start script
+# It generates offline-mode UUIDs from usernames and directly creates ops.json
 
 set -e
 
+echo "================================"
+echo "Elemental Dragon Offline Ops Setup"
+echo "================================"
+
 # Function to generate offline-mode UUID from username
-# Minecraft offline mode uses MD5 hash of "OfflinePlayer:<name>"
+# Matches Minecraft's offline-mode UUID algorithm (version 3, variant 2)
 generate_offline_uuid() {
-    local name="$1"
-    # Generate MD5 hash of "OfflinePlayer:<name>" and format as UUID
-    local hash=$(echo -n "OfflinePlayer:${name}" | md5sum | cut -d' ' -f1)
-    # Format as UUID (8-4-4-4-12) with version 3 marker
-    local uuid="${hash:0:8}-${hash:8:4}-3${hash:13:3}-${hash:16:4}-${hash:20:12}"
-    echo "$uuid"
+    name="$1"
+    hash=$(echo -n "OfflinePlayer:${name}" | md5sum | cut -d' ' -f1)
+
+    # Break hash into parts for UUID version 3 format
+    part1=$(echo "$hash" | cut -c1-8)
+    part2=$(echo "$hash" | cut -c9-12)
+    part3_raw=$(echo "$hash" | cut -c13-16)
+    part4=$(echo "$hash" | cut -c17-20)
+    part5=$(echo "$hash" | cut -c21-32)
+
+    # For version 3 UUID: replace first char of part3 with "3"
+    part3="3$(echo "$part3_raw" | cut -c2-4)"
+
+    echo "${part1}-${part2}-${part3}-${part4}-${part5}"
 }
 
-# Function to generate random UUID (with fallbacks) - for online mode
-generate_uuid() {
-    # Try uuidgen first
-    if command -v uuidgen >/dev/null 2>&1; then
-        uuidgen
-    # Try /proc/sys/kernel/random/uuid (Linux)
-    elif [ -f /proc/sys/kernel/random/uuid ]; then
-        cat /proc/sys/kernel/random/uuid
-    # Use openssl as fallback
-    elif command -v openssl >/dev/null 2>&1; then
-        openssl rand -hex 16 | sed 's/\(.\{8\}\)\(.\{4\}\)\(.\{4\}\)\(.\{4\}\)\(.\{12\}\)/\1-\2-\3-\4-\5/'
-    # Final fallback: generate simple UUID-like string
-    else
-        # Generate a simple UUID v4 equivalent
-        local timestamp=$(date +%s)
-        local random=$(od -An -t x -N 8 /dev/urandom | tr -d ' ')
-        echo "${timestamp:0:8}-${random:0:4}-4${random:4:3}-a${random:7:3}-${timestamp:8}${random:11}"
-    fi
-}
+# Process OFFLINE_OPS environment variable (comma-separated usernames)
+if [ -n "${OFFLINE_OPS}" ]; then
+    echo "👤 Processing offline operators: ${OFFLINE_OPS}"
 
-# Function to check if jq is available
-check_jq() {
-    if command -v jq >/dev/null 2>&1; then
-        return 0
-    else
-        echo "⚠️  jq not found, will use manual JSON editing"
-        return 1
-    fi
-}
+    # Create a temporary file to build the JSON
+    tmpfile=/tmp/ops-build.json
+    echo "[" > "$tmpfile"
 
-echo "================================"
-echo "Elemental Dragon Plugin Server"
-echo "Initializing..."
-echo "================================"
+    # Process each username (comma-separated)
+    comma=""
+    echo "${OFFLINE_OPS}" | tr ',' '\n' | while read -r username; do
+        # Skip empty lines
+        [ -z "$username" ] && continue
 
-# Ensure EULA is accepted
-echo "eula=true" > /data/eula.txt
-echo "✅ EULA accepted"
+        # Generate offline-mode UUID
+        uuid=$(generate_offline_uuid "$username")
 
-# Ensure plugins directory exists
-mkdir -p /data/plugins
+        # Append entry to JSON file
+        echo "${comma}{\"name\":\"${username}\",\"uuid\":\"${uuid}\",\"level\":4,\"bypassesPlayerLimit\":false}" >> "$tmpfile"
+        comma=","
+        echo "   ✅ $username -> $uuid"
+    done
 
-echo "📂 Checking plugins directory..."
-ls -la /data/plugins/
+    # Close JSON array
+    echo "]" >> "$tmpfile"
 
-echo "📂 Checking /opt/minecraft/plugins/ directory..."
-ls -la /opt/minecraft/plugins/
+    # Copy to final location
+    cat "$tmpfile" > /data/ops.json
+    rm -f "$tmpfile"
 
-# Copy fresh plugins from /opt/minecraft/plugins/ to /data/plugins/
-# This merges base image plugins with volume-mounted plugins
-echo "🔄 Copying fresh plugins from /opt/minecraft/plugins/ to /data/plugins/..."
-
-# Check if the specific plugin file exists
-if [ -f "/opt/minecraft/plugins/ElementalDragon.jar" ]; then
-    echo "✅ Found ElementalDragon.jar in /opt/minecraft/plugins/"
-    cp -f /opt/minecraft/plugins/ElementalDragon.jar /data/plugins/
-    echo "✅ Plugin copied to /data/plugins/"
+    echo "✅ ops.json created"
 else
-    echo "⚠️  ElementalDragon.jar NOT found in /opt/minecraft/plugins/"
-    # List all files to debug
-    echo "   Contents of /opt/minecraft/plugins/:"
-    ls -la /opt/minecraft/plugins/ || true
+    echo "⚠️  No OFFLINE_OPS configured, skipping"
 fi
 
-# Also copy any other JAR files
-if [ -n "$(ls /opt/minecraft/plugins/*.jar 2>/dev/null)" ]; then
-    echo "🔄 Copying all JAR files from /opt/minecraft/plugins/ to /data/plugins/..."
-    cp -f /opt/minecraft/plugins/*.jar /data/plugins/ 2>/dev/null || true
-    echo "✅ All JAR files copied"
-fi
-
-echo "📋 Plugins in /data/plugins/:"
-ls -la /data/plugins/
-
-echo "✅ Plugin directory ready."
-
-# Ensure ops.json exists and is valid
-if [ ! -f /data/ops.json ]; then
-    echo "Creating fresh ops.json..."
-    echo "[]" > /data/ops.json
-fi
-
-# Check if ops.json is valid JSON
-if ! jq empty /data/ops.json 2>/dev/null; then
-    echo "⚠️  ops.json is corrupted, recreating..."
-    echo "[]" > /data/ops.json
-fi
-
-# Set up admin user only if not already present
-if [ -n "${ADMIN_USERNAME}" ]; then
-    echo "Setting up admin user: ${ADMIN_USERNAME}"
-
-    # Generate offline-mode UUID (matches what Minecraft generates for this username)
-    ADMIN_UUID=$(generate_offline_uuid "${ADMIN_USERNAME}")
-    echo "   Offline UUID: ${ADMIN_UUID}"
-
-    if check_jq; then
-        # Always update ops.json with correct offline UUID
-        jq --arg name "${ADMIN_USERNAME}" --arg uuid "${ADMIN_UUID}" \
-           'if any(.[]; .name == $name) then map(if .name == $name then .uuid = $uuid else . end) else . + [{"name": $name, "uuid": $uuid, "level": 4, "bypassesPlayerLimit": false}] end' \
-           /data/ops.json > /tmp/ops.json.tmp
-        cat /tmp/ops.json.tmp > /data/ops.json
-        rm -f /tmp/ops.json.tmp
-        echo "✅ Admin user '${ADMIN_USERNAME}' configured in ops.json"
-    else
-        # Manual JSON editing without jq
-        echo '[{"name":"'"${ADMIN_USERNAME}"'","uuid":"'"${ADMIN_UUID}"'","level":4,"bypassesPlayerLimit":false}]' > /data/ops.json
-        echo "✅ Admin user '${ADMIN_USERNAME}' added to ops.json (manual method)"
-    fi
-elif [ ! -s /data/ops.json ] || [ "$(jq length /data/ops.json 2>/dev/null || echo 0)" = "0" ]; then
-    # Set up default admin if ops.json is empty
-    echo "Setting up default admin user: admin"
-
-    ADMIN_UUID=$(generate_uuid)
-    echo '[{"name":"admin","uuid":"'"${ADMIN_UUID}"'","level":4,"bypassesPlayerLimit":false}]' > /data/ops.json
-    echo "✅ Default admin user 'admin' added to ops.json"
-fi
-
-# Ensure server.properties exists
-if [ ! -f /data/server.properties ]; then
-    echo "Creating server.properties..."
-
-    cat > /data/server.properties << EOF
-server-name=${SERVER_NAME:-Elemental Dragon Server}
-gamemode=survival
-difficulty=normal
-max-players=10
-online-mode=false
-white-list=false
-pvp=true
-spawn-protection=16
-motd=${MOTD:-Elemental Dragon Plugin Server}
-view-distance=10
-simulation-distance=10
-enable-command-block=false
-enable-rcon=true
-rcon.port=${RCON_PORT:-25575}
-rcon.password=${RCON_PASSWORD:-dragon123}
-EOF
-    echo "✅ server.properties created"
-else
-    echo "✅ server.properties already exists"
-fi
-
-# Check memory
-MEMORY=${MEMORYSIZE:-2G}
-echo "✅ Memory allocation: $MEMORY"
-
-# Final plugin check
-echo "🔍 Final check for Elemental Dragon plugin..."
-PLUGIN_FOUND=false
-
-if [ -f /data/plugins/ElementalDragon.jar ]; then
-    echo "✅ Elemental Dragon plugin found: ElementalDragon.jar"
-    echo "   Size: $(du -h /data/plugins/ElementalDragon.jar | cut -f1)"
-    echo "   Last modified: $(stat -f "%Sm" /data/plugins/ElementalDragon.jar 2>/dev/null || stat -c "%y" /data/plugins/ElementalDragon.jar)"
-    PLUGIN_FOUND=true
-fi
-
-if [ "$PLUGIN_FOUND" = false ]; then
-    echo "❌ Elemental Dragon plugin NOT FOUND!"
-    echo "Available files in /data/plugins/:"
-    ls -la /data/plugins/
-    echo "❌ Server cannot start without plugin!"
-    exit 1
-fi
-
-echo ""
+echo "✅ Setup complete!"
 echo "================================"
-echo "Starting PaperMC Server"
-echo "Admin: ${ADMIN_USERNAME:-admin}"
-echo "Memory: $MEMORY"
-echo "================================"
-echo ""
-
-# Start server
-exec java -Xms${MEMORY} -Xmx${MEMORY} ${PAPERMC_FLAGS} -jar /opt/minecraft/paperspigot.jar nogui

@@ -1,16 +1,9 @@
 # Dockerfile for Elemental Dragon Plugin
-# Note: The plugin JAR copy is placed at the end to maximize Docker cache reuse
+# Uses itzg/minecraft-server as the base (Java 21)
 
-# PaperMC Server with pre-built plugin
-FROM marctv/minecraft-papermc-server:1.21.8
+FROM itzg/minecraft-server:java21
 
-# Install required tools for Ubuntu-based PaperMC image
-RUN apt-get update && apt-get install -y jq uuid-runtime && apt-get clean
-
-# Copy the entrypoint script
-COPY entrypoint.sh /entrypoint.sh
-
-# Set environment variables for JVM compatibility
+# Set environment variables for JVM compatibility (for PaperMC servers)
 ENV PAPERMC_FLAGS="--add-modules=jdk.unsupported \
   --add-exports=java.base/sun.nio.ch=ALL-UNNAMED \
   --add-opens=java.base/java.lang=ALL-UNNAMED \
@@ -26,30 +19,23 @@ ENV PAPERMC_FLAGS="--add-modules=jdk.unsupported \
   --add-opens=java.base/sun.nio.ch=ALL-UNNAMED \
   --add-opens=java.base/sun.security.action=ALL-UNNAMED"
 
-# Make entrypoint script executable
-RUN chmod +x /entrypoint.sh
+# Copy offline ops setup script to auto-execution directory
+# Scripts in /image/scripts/auto/ run automatically during startup BEFORE /start
+COPY entrypoint.sh /image/scripts/auto/99-plugin-setup
+RUN chmod +x /image/scripts/auto/99-plugin-setup
 
-# Copy the pre-built plugin JAR to /data/plugins/ (where PaperMC loads plugins from)
-# AND to /opt/minecraft/plugins/ (for entrypoint.sh to copy during container startup)
-# This allows volume-mounted plugins to merge with base image plugins
-RUN mkdir -p /data/plugins /opt/minecraft/plugins
-COPY build/libs/elemental-dragon-*.jar /data/plugins/ElementalDragon.jar
-COPY build/libs/elemental-dragon-*.jar /opt/minecraft/plugins/ElementalDragon.jar
+# Copy the pre-built plugin JAR to the image
+# The PLUGINS environment variable in docker-compose.yml will sync this to /data/plugins
+RUN mkdir -p /image/plugins
+COPY build/libs/elemental-dragon-*.jar /image/plugins/ElementalDragon.jar
 
-# Verify the plugin was copied successfully - FAIL BUILD IF NOT FOUND
-RUN if [ ! -f "/data/plugins/ElementalDragon.jar" ] || [ ! -f "/opt/minecraft/plugins/ElementalDragon.jar" ]; then \
-        echo "❌ Plugin not found in both locations"; \
-        ls -la /data/plugins/ /opt/minecraft/plugins/ || true; \
+# Verify the plugin was copied successfully
+RUN if [ ! -f "/image/plugins/ElementalDragon.jar" ]; then \
+        echo "❌ Plugin not found in /image/plugins/"; \
+        ls -la /image/plugins/ || true; \
         exit 1; \
     fi && \
-    echo "✅ Plugin successfully copied to both /data/plugins/ and /opt/minecraft/plugins/"
-
-# Set the entrypoint
-ENTRYPOINT ["/entrypoint.sh"]
+    echo "✅ Plugin successfully copied to /image/plugins/"
 
 # Expose Minecraft and RCON ports
 EXPOSE 25565 25575
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD rcon-cli "list" > /dev/null 2>&1 || exit 1
