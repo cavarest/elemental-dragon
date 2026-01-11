@@ -3,7 +3,7 @@ plugins {
 }
 
 group = 'org.cavarest'
-version = '1.1.0'
+version = '1.2.0'
 description = 'Elemental Dragon Plugin - Lightning ability and secret powers'
 
 java {
