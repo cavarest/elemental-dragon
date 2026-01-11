@@ -1,3 +1,11 @@
+---
+layout: default
+title: CI/CD Pipeline
+nav_order: 4
+has_children: false
+permalink: /admin/cicd/
+---
+
 # CI/CD Pipeline Fixes - Final Implementation Update
 
 ## Issue Resolved ✅

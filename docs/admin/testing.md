@@ -1,3 +1,11 @@
+---
+layout: default
+title: Testing Guide
+nav_order: 5
+has_children: false
+permalink: /admin/testing/
+---
+
 # Real-World Plugin Testing Guide
 
 ## ⚠️ IMPORTANT: Testing Status

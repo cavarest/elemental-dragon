@@ -1,0 +1,76 @@
+# Lychee link checker configuration for Elemental Dragon documentation
+# https://github.com/lycheeverse/lychee
+
+# Exclude certain file patterns
+exclude_files = [
+  "vendor/*",
+  ".jekyll-cache/*",
+  "Gemfile*",
+]
+
+# Exclude certain URL patterns
+exclude = [
+  # Exclude localhost URLs
+  "http://localhost:*",
+  "https://localhost:*",
+
+  # Exclude example domains
+  "http://example.com*",
+  "https://example.com*",
+
+  # Exclude test URLs
+  "http://test.test*",
+  "https://test.test*",
+
+  # Exclude GitHub issue URLs that may not exist yet
+  "https://github.com/cavarest/papermc-plugin-dragon-egg/issues/[0-9]+",
+  "https://github.com/cavarest/papermc-plugin-dragon-egg/pull/[0-9]+",
+
+  # Exclude unreleased PaperMC versions (may return 404)
+  "https://papermc.io/downloads/paper*",
+
+  # Exclude JavaDoc links that may be version-specific
+  "https://papermc.io/javadocs/*",
+
+  # Exclude GitHub Pages URLs (not deployed yet)
+  "https://cavarest.github.io/papermc-plugin-dragon-egg/*",
+
+  # Exclude LICENSE file (doesn't exist)
+  "https://github.com/cavarest/papermc-plugin-dragon-egg/blob/main/LICENSE",
+]
+
+# Only check links of certain schemes
+schemes = ["http", "https"]
+
+# Request timeout in seconds
+timeout = 20
+
+# Maximum number of concurrent requests
+max_concurrency = 8
+
+# Maximum number of retries for failed requests
+max_retries = 3
+
+# Accept 200 OK, successful responses, redirects, and rate limit
+accept = [200, 201, 202, 203, 204, 205, 206, 207, 208, 226, 301, 302, 303, 307, 308, 429]
+
+# Don't verify SSL certificates (for testing only, disabled by default)
+verify = true
+
+# Follow HTTP redirects
+follow_redirects = true
+
+# Maximum number of redirects to follow
+max_redirects = 10
+
+# Cache configuration
+cache = true
+
+# Cache expiration in days
+cache_expires = 1
+
+# Skip missing URLs (files that don't exist locally)
+skip_missing = false
+
+# Ignore case when matching URL patterns
+ignore_case = false

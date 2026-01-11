@@ -1,65 +1,694 @@
-# Docker Architecture Decision: Command vs Dockerfile
+---
+layout: default
+title: Docker Deployment Guide
+nav_order: 2
+has_children: false
+permalink: /admin/docker/
+---
 
-## Current Issue
-We have the startup command in `docker-compose.yml` instead of the `Dockerfile`. This creates several problems:
+# Docker Deployment Guide
 
-1. **Inconsistency**: Same image runs differently depending on how it's started
-2. **Maintenance**: Commands duplicated across environments
-3. **Portability**: Image isn't self-contained
-4. **Security**: Easy to accidentally override critical startup logic
+This guide covers deploying the Elemental Dragon plugin using Docker for development and production environments.
 
-## Best Practice Analysis
+## Table of Contents
 
-### Approach 1: Command in docker-compose.yml ✅
-**When to use:**
-- Development environments with frequent configuration changes
-- Multi-environment deployments (dev/staging/prod) with different needs
-- Testing different configurations without rebuilding
+- [Overview](#overview)
+- [Quick Start](#quick-start)
+- [Offline-Mode Operator Setup](#offline-mode-operator-setup)
+- [Configuration](#configuration)
+- [Docker Commands](#docker-commands)
+- [Troubleshooting](#troubleshooting)
 
-**Pros:**
-- Flexible - easy to change without rebuilding image
-- Good for development
-- Allows environment-specific overrides
+---
 
-**Cons:**
-- Inconsistent behavior across environments
-- Not portable
-- Maintenance overhead
+## Overview
 
-### Approach 2: Command in Dockerfile ✅
-**When to use:**
-- Production deployments
-- When image should be self-contained
-- When consistency is critical
+### Docker Architecture
 
-**Pros:**
-- Portable - same image everywhere
-- Consistent behavior
-- Self-documenting
-- Better security
+The Elemental Dragon plugin uses a containerized development environment based on `itzg/minecraft-server:java21`:
 
-**Cons:**
-- Less flexible for development
-- Requires image rebuild for changes
+```
+┌─────────────────────────────────────────────────────────┐
+│                   Docker Container                      │
+│  ┌───────────────────────────────────────────────────┐  │
+│  │  Base: itzg/minecraft-server:java21              │  │
+│  │  - PaperMC 1.21.8                                 │  │
+│  │  - Java 21                                        │  │
+│  │  - mc-image-helper (user management)              │  │
+│  └───────────────────────────────────────────────────┘  │
+│  ┌───────────────────────────────────────────────────┐  │
+│  │  Plugin Layer (Elemental Dragon)                 │  │
+│  │  - /image/plugins/ElementalDragon.jar             │  │
+│  │  - /image/scripts/auto/99-plugin-setup            │  │
+│  │    (offline UUID generation + ops.json creation)  │  │
+│  └───────────────────────────────────────────────────┘  │
+│  ┌───────────────────────────────────────────────────┐  │
+│  │  Server Data (Persisted Volume)                   │  │
+│  │  - /data/ops.json (offline operators)             │  │
+│  │  - /data/world/ (world data)                      │  │
+│  │  - /data/plugins/ElementalDragon/ (plugin config) │  │
+│  └───────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────┘
+```
 
-## Recommended Solution for This Project
+### Key Files
 
-For a Minecraft server plugin, we should use **Approach 2** (command in Dockerfile) because:
+| File | Purpose |
+|------|---------|
+| `Dockerfile` | Builds Docker image with plugin and entrypoint script |
+| `docker-compose.yml` | Orchestrates container with environment variables |
+| `entrypoint.sh` | Generates offline-mode UUIDs and creates ops.json |
+| `.env` | Local configuration (OFFLINE_OPS, memory, RCON, etc.) |
+| `start-server.sh` | Developer-friendly wrapper for docker-compose |
+| `stop-server.sh` | Stops the container |
 
-1. **Consistency**: Server should behave the same way in dev/prod
-2. **Reliability**: Critical startup logic shouldn't be accidentally overridden
-3. **Simplicity**: Self-contained image is easier to deploy
-4. **CI/CD**: Works better with automated pipelines
+---
 
-## Implementation Plan
+## Quick Start
 
-1. **Remove command from docker-compose.yml**
-2. **Add proper CMD/ENTRYPOINT to Dockerfile**
-3. **Use docker-compose.yml only for environment variables and volumes**
-4. **Keep .env file for configuration management**
+### Prerequisites
 
-This approach gives us:
-- Self-contained, portable Docker image
-- Consistent behavior across all environments
-- Clean separation: Dockerfile = how to run, docker-compose.yml = what to run
-- Easy configuration management through .env file
+- **Docker Desktop** (or Docker Engine) installed
+- **Java 21+** (for local building)
+- **Git** (to clone repository)
+
+### Start Development Server
+
+```bash
+# Clone repository
+git clone https://github.com/cavarest/papermc-plugin-dragon-egg.git
+cd papermc-plugin-dragon-egg
+
+# Build plugin JAR
+./build.sh
+
+# Start server (rebuilds Docker image)
+./start-server.sh --rebuild
+
+# Or use cached image (faster)
+./start-server.sh
+```
+
+### Connect to Server
+
+- **Server Address**: `localhost:25565`
+- **Default Operator**: `posiflow` (configured in `.env`)
+- **RCON Port**: `localhost:25575`
+- **RCON Password**: `dragon123`
+
+### Stop Server
+
+```bash
+./stop-server.sh
+```
+
+---
+
+## Offline-Mode Operator Setup
+
+### Why Offline Mode?
+
+The development server runs in **offline mode** (`ONLINE_MODE=false`) for convenience:
+
+- ✅ No internet connection required
+- ✅ Works with any username (no Mojang account needed)
+- ✅ Faster iteration for testing
+- ✅ Reproducible UUID generation
+
+### The UUID Problem
+
+**Online Mode**: Minecraft clients get UUIDs from Mojang's authentication servers.
+
+**Offline Mode**: Minecraft clients generate UUIDs locally using:
+```
+UUID = MD5("OfflinePlayer:username")
+```
+
+This creates a problem: The `itzg/minecraft-server` base image uses the `OPS` environment variable, which queries **playerdb.co API** for **online-mode** UUIDs. These don't match the **offline-mode** UUIDs generated by clients!
+
+### Our Solution: Custom Entrypoint
+
+We solve this with a custom entrypoint script (`entrypoint.sh`) that:
+
+1. **Reads** `OFFLINE_OPS` environment variable (comma-separated usernames)
+2. **Generates** correct offline-mode UUIDs for each username
+3. **Creates** `/data/ops.json` with the proper format
+4. **Skips** mc-image-helper processing (via `EXISTING_OPS_FILE=SKIP`)
+
+### How It Works
+
+#### Step 1: Environment Variable Configuration
+
+```bash
+# In .env file or docker-compose.yml
+OFFLINE_OPS=posiflow,player2,admin3
+```
+
+#### Step 2: Entrypoint Script Execution
+
+The entrypoint runs **BEFORE** the main `/start` script:
+
+```bash
+# docker-compose.yml entrypoint override
+entrypoint:
+  - /bin/sh
+  - -c
+  - |
+    if [ -f /image/scripts/auto/99-plugin-setup ]; then
+      . /image/scripts/auto/99-plugin-setup
+    fi
+    exec /start
+```
+
+#### Step 3: UUID Generation Algorithm
+
+```bash
+generate_offline_uuid() {
+    name="$1"
+    hash=$(echo -n "OfflinePlayer:${name}" | md5sum | cut -d' ' -f1)
+
+    # Format hash as version 3 UUID
+    part1=$(echo "$hash" | cut -c1-8)
+    part2=$(echo "$hash" | cut -c9-12)
+    part3_raw=$(echo "$hash" | cut -c13-16)
+    part4=$(echo "$hash" | cut -c17-20)
+    part5=$(echo "$hash" | cut -c21-32)
+
+    # Replace first char with "3" for version 3 UUID
+    part3="3$(echo "$part3_raw" | cut -c2-4)"
+
+    echo "${part1}-${part2}-${part3}-${part4}-${part5}"
+}
+```
+
+#### Step 4: Create ops.json
+
+```json
+[
+  {
+    "name": "posiflow",
+    "uuid": "763be461-6d24-3e4b-9e74-6ead0315f2bf",
+    "level": 4,
+    "bypassesPlayerLimit": false
+  }
+]
+```
+
+### Example: "posiflow" UUID
+
+```
+Input: "OfflinePlayer:posiflow"
+MD5:   6e4b366c246d61be461b73e49ead0315f2bf
+Hash parts:
+  part1: 763be461
+  part2: 6d24
+  part3_raw: 6e4b → part3: 3e4b (replace '6' with '3')
+  part4: 9e74
+  part5: 6ead0315f2bf
+
+Output UUID: 763be461-6d24-3e4b-9e74-6ead0315f2bf
+             └────────┬────────┘ └─────┬─────┘
+                  part1-part2      part3-part4-part5
+                                    ↑
+                               Version 3 UUID
+```
+
+### Adding More Operators
+
+**Option 1: Edit .env file**
+
+```bash
+# .env
+OFFLINE_OPS=posiflow,player2,admin3
+
+# Restart server
+./stop-server.sh
+./start-server.sh
+```
+
+**Option 2: Set in docker-compose.yml**
+
+```yaml
+environment:
+  - OFFLINE_OPS=${OFFLINE_OPS:-posiflow,player2,admin3}
+```
+
+**Option 3: Command line override**
+
+```bash
+OFFLINE_OPS="newplayer1,newplayer2" docker-compose up
+```
+
+### Verify Operator Setup
+
+```bash
+# Check entrypoint logs
+docker logs papermc-elementaldragon | grep "Elemental Dragon Offline Ops"
+
+# Expected output:
+# ================================
+# Elemental Dragon Offline Ops Setup
+# ================================
+# 👤 Processing offline operators: posiflow
+#    ✅ posiflow -> 763be461-6d24-3e4b-9e74-6ead0315f2bf
+# ✅ ops.json created
+# ✅ Setup complete!
+# ================================
+
+# Verify ops.json file
+docker exec papermc-elementaldragon cat /data/ops.json
+
+# Test UUID generation locally
+echo -n "OfflinePlayer:posiflow" | md5sum
+# Should show: e4b366c246d61be461b73e49ead0315  (middle part of UUID)
+```
+
+---
+
+## Configuration
+
+### Environment Variables
+
+All configuration is done via environment variables in `docker-compose.yml` or `.env`:
+
+#### Server Configuration
+
+```yaml
+environment:
+  # Server type and version
+  - TYPE=PAPER
+  - VERSION=1.21.8
+
+  # EULA (required)
+  - EULA=TRUE
+
+  # Offline mode (for development)
+  - ONLINE_MODE=false
+
+  # Server settings
+  - MAX_PLAYERS=10
+  - DIFFICULTY=normal
+  - GAMEMODE=survival
+  - PVP=true
+  - SPAWN_PROTECTION=16
+  - MOTD=Elemental Dragon Plugin Server
+
+  # Memory
+  - MEMORY=2G
+```
+
+#### Operator Configuration
+
+```yaml
+environment:
+  # Comma-separated list of operators
+  - OFFLINE_OPS=posiflow
+
+  # Skip mc-image-helper processing of ops.json
+  - EXISTING_OPS_FILE=SKIP
+```
+
+#### RCON Configuration
+
+```yaml
+environment:
+  - ENABLE_RCON=true
+  - RCON_PORT=25575
+  - RCON_PASSWORD=dragon123
+```
+
+#### Plugin Configuration
+
+```yaml
+environment:
+  # Sync plugin JAR from image to data directory
+  - PLUGINS=/image/plugins/ElementalDragon.jar
+```
+
+### Volume Mounts
+
+```yaml
+volumes:
+  # Persist all server data
+  - ./server-data:/data:rw
+```
+
+This includes:
+- World data (`/data/world/`)
+- Plugin configs (`/data/plugins/ElementalDragon/`)
+- Operator file (`/data/ops.json`)
+- Server properties (`/data/server.properties`)
+
+---
+
+## Docker Commands
+
+### Start Server
+
+```bash
+# Rebuild image and start
+./start-server.sh --rebuild
+
+# Use cached image (faster)
+./start-server.sh
+
+# Start in background
+docker-compose up -d
+
+# Start with logs
+docker-compose up
+```
+
+### View Logs
+
+```bash
+# Follow logs
+docker logs -f papermc-elementaldragon
+
+# Last 100 lines
+docker logs --tail 100 papermc-elementaldragon
+
+# Search logs
+docker logs papermc-elementaldragon | grep "Elemental Dragon"
+```
+
+### Stop Server
+
+```bash
+# Using wrapper script
+./stop-server.sh
+
+# Using docker-compose
+docker-compose down
+
+# Stop but keep container
+docker stop papermc-elementaldragon
+```
+
+### Interactive Access
+
+```bash
+# Attach to server console (Ctrl+P, Ctrl+Q to detach)
+docker attach papermc-elementaldragon
+
+# Execute commands in container
+docker exec -it papermc-elementaldragon bash
+
+# Access RCON
+docker exec -it papermc-elementaldragon rcon-cli
+> op list
+> list
+> say Hello from RCON
+```
+
+### Build Management
+
+```bash
+# Force rebuild of Docker image
+docker-compose build --no-cache
+
+# Rebuild specific service
+docker-compose build minecraft
+
+# Remove old images
+docker image prune -a
+```
+
+### Data Management
+
+```bash
+# Access persisted data
+ls -la server-data/
+
+# Backup world data
+tar -czf world-backup-$(date +%Y%m%d).tar.gz server-data/world/
+
+# Reset server (delete all data)
+rm -rf server-data/
+./start-server.sh --rebuild
+```
+
+---
+
+## Troubleshooting
+
+### Issue: Cannot Login as Operator
+
+**Symptoms**: You cannot run operator commands, but you're listed in OFFLINE_OPS.
+
+**Solutions**:
+
+1. **Check entrypoint executed**:
+   ```bash
+   docker logs papermc-elementaldragon | grep "Elemental Dragon Offline Ops"
+   ```
+
+2. **Verify ops.json exists**:
+   ```bash
+   docker exec papermc-elementaldragon cat /data/ops.json
+   ```
+
+3. **Check username case**:
+   ```bash
+   # Case-sensitive! "Posiflow" != "posiflow"
+   # Make sure your Minecraft username matches OFFLINE_OPS exactly
+   ```
+
+4. **Verify UUID generation**:
+   ```bash
+   # Generate UUID manually
+   echo -n "OfflinePlayer:posiflow" | md5sum
+   # Middle part should match: 763be461-6d24-3e4b-9e74-6ead0315f2bf
+   ```
+
+5. **Recreate container**:
+   ```bash
+   ./stop-server.sh
+   docker-compose rm -f
+   ./start-server.sh --rebuild
+   ```
+
+### Issue: Plugin Not Loading
+
+**Symptoms**: Plugin doesn't appear in server logs.
+
+**Solutions**:
+
+1. **Check JAR copied**:
+   ```bash
+   docker exec papermc-elementaldragon ls -la /image/plugins/
+   ```
+
+2. **Rebuild image**:
+   ```bash
+   ./build.sh
+   ./start-server.sh --rebuild
+   ```
+
+3. **Check for errors**:
+   ```bash
+   docker logs papermc-elementaldragon | grep -i error
+   ```
+
+### Issue: Server Won't Start
+
+**Symptoms**: Container exits immediately.
+
+**Solutions**:
+
+1. **Check logs**:
+   ```bash
+   docker logs papermc-elementaldragon
+   ```
+
+2. **Verify EULA accepted**:
+   ```bash
+   grep EULA .env
+   # Should be: EULA=TRUE
+   ```
+
+3. **Check memory allocation**:
+   ```bash
+   grep MEMORY .env
+   # Should be at least: MEMORYSIZE=2G
+   ```
+
+### Issue: Port Already in Use
+
+**Symptoms**: Error "port is already allocated".
+
+**Solutions**:
+
+1. **Stop existing container**:
+   ```bash
+   docker stop papermc-elementaldragon
+   ```
+
+2. **Find process using port**:
+   ```bash
+   lsof -i :25565
+   ```
+
+3. **Change port in docker-compose.yml**:
+   ```yaml
+   ports:
+     - "25566:25565"  # Use 25566 instead
+   ```
+
+### Issue: Container Won't Stop
+
+**Solutions**:
+
+```bash
+# Force stop
+docker kill papermc-elementaldragon
+
+# Remove container
+docker rm -f papermc-elementaldragon
+```
+
+---
+
+## Production Deployment
+
+For production deployment, consider these changes:
+
+### Security
+
+1. **Enable online mode** for authentication:
+   ```yaml
+   - ONLINE_MODE=true
+   ```
+
+2. **Use strong RCON password**:
+   ```yaml
+   - RCON_PASSWORD=${RCON_PASSWORD}  # Set in environment
+   ```
+
+3. **Remove unnecessary operators**:
+   ```yaml
+   - OFFLINE_OPS=  # Empty list, use /op command in-game
+   ```
+
+### Performance
+
+1. **Increase memory allocation**:
+   ```yaml
+   - MEMORY=4G  # Adjust based on player count
+   ```
+
+2. **Use dedicated volume mount**:
+   ```yaml
+   volumes:
+     - minecraft-data:/data:rw
+   ```
+
+3. **Set view distance**:
+   ```yaml
+   - VIEW_DISTANCE=12
+   ```
+
+### Monitoring
+
+1. **Enable health check**:
+   ```yaml
+   healthcheck:
+     test: ["CMD", "mc-health"]
+     interval: 30s
+     timeout: 10s
+     retries: 3
+   ```
+
+2. **Configure logging**:
+   ```yaml
+   logging:
+     driver: "json-file"
+     options:
+       max-size: "10m"
+       max-file: "3"
+   ```
+
+### Backup Strategy
+
+```bash
+# Daily backup script
+#!/bin/bash
+DATE=$(date +%Y%m%d)
+docker exec papermc-elementaldragon rcon-cli "save-all"
+tar -czf backups/world-$DATE.tar.gz server-data/world/
+find backups/ -mtime -7 -delete  # Keep 7 days
+```
+
+---
+
+## Advanced Usage
+
+### Custom JVM Flags
+
+The Dockerfile includes `PAPERMC_FLAGS` for JVM module access. Add custom flags in `.env`:
+
+```bash
+PAPERMC_FLAGS="--add-modules=jdk.unsupported -Xms2G -Xmx2G"
+```
+
+### Multiple Servers
+
+Run multiple instances by changing container names and ports:
+
+```yaml
+services:
+  minecraft1:
+    container_name: papermc-server1
+    ports:
+      - "25565:25565"
+      - "25575:25575"
+
+  minecraft2:
+    container_name: papermc-server2
+    ports:
+      - "25566:25565"
+      - "25576:25575"
+```
+
+### Plugin Hot-Reload
+
+For development, mount the plugin directory:
+
+```yaml
+volumes:
+  - ./build/libs/elemental-dragon-1.1.0.jar:/image/plugins/ElementalDragon.jar:ro
+```
+
+Then restart container to reload plugin.
+
+---
+
+## Reference
+
+### File Structure
+
+```
+papermc-plugin-dragon-egg/
+├── Dockerfile              # Image definition
+├── docker-compose.yml      # Container orchestration
+├── entrypoint.sh           # Offline UUID generation
+├── .env                    # Local configuration
+├── start-server.sh         # Developer wrapper
+├── stop-server.sh          # Stop wrapper
+├── build.sh                # Plugin build script
+├── build/libs/             # Compiled JAR
+│   └── elemental-dragon-*.jar
+└── server-data/            # Persisted volume
+    ├── world/              # World data
+    ├── ops.json            # Operator file (generated)
+    └── plugins/            # Plugin configs
+        └── ElementalDragon/
+            └── config.yml
+```
+
+### Useful Links
+
+- **itzg/minecraft-server Documentation**: https://github.com/itzg/docker-minecraft-server
+- **PaperMC Downloads**: https://papermc.io/downloads/paper
+- **Docker Compose Reference**: https://docs.docker.com/compose/
+- **Minecraft Wiki - Server**: https://minecraft.fandom.com/wiki/Tutorials/Setting_up_a_server

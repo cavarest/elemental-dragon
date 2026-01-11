@@ -1,3 +1,11 @@
+---
+layout: default
+title: Installation Guide
+nav_order: 3
+has_children: false
+permalink: /user/installation/
+---
+
 # Dragon Egg Lightning Plugin - Installation Guide
 
 ## Quick Installation (5 Minutes)
