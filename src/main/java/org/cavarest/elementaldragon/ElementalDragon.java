@@ -17,6 +17,7 @@ import org.cavarest.elementaldragon.crafting.CraftingListener;
 import org.cavarest.elementaldragon.crafting.CraftingManager;
 import org.cavarest.elementaldragon.fragment.FragmentManager;
 import org.cavarest.elementaldragon.fragment.FragmentItemListener;
+import org.cavarest.elementaldragon.hud.PlayerPreferenceManager;
 import org.cavarest.elementaldragon.hud.FragmentHudManager;
 import org.cavarest.elementaldragon.hud.HudManager;
 import org.cavarest.elementaldragon.lore.ChronicleManager;
@@ -45,6 +46,7 @@ public class ElementalDragon extends JavaPlugin {
   private AchievementManager achievementManager;
   private ElementalPlayerTracker playerTracker;
   private WithdrawabilityCommand withdrawabilityCommand;
+  private PlayerPreferenceManager playerPreferenceManager;
 
   @Override
   public void onEnable() {
@@ -62,6 +64,7 @@ public class ElementalDragon extends JavaPlugin {
     // this.fragmentHudManager = new FragmentHudManager(this, fragmentManager);
     this.craftingManager = new CraftingManager(this);
     this.craftedCountManager = new CraftedCountManager(this);
+    this.playerPreferenceManager = new PlayerPreferenceManager();
 
     registerCommands();
     registerListeners();
@@ -77,6 +80,9 @@ public class ElementalDragon extends JavaPlugin {
   public void onDisable() {
     if (hudManager != null) {
       hudManager.shutdown();
+    }
+    if (playerPreferenceManager != null) {
+      playerPreferenceManager.clearCache();
     }
     // FragmentHudManager disabled - using combined HudManager instead
     // if (fragmentHudManager != null) {
@@ -188,6 +194,10 @@ public class ElementalDragon extends JavaPlugin {
 
   public ElementalPlayerTracker getPlayerTracker() {
     return playerTracker;
+  }
+
+  public PlayerPreferenceManager getPlayerPreferenceManager() {
+    return playerPreferenceManager;
   }
 
   /**

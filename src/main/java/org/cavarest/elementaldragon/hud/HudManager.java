@@ -6,6 +6,7 @@ import org.cavarest.elementaldragon.ability.AbilityManager;
 import org.cavarest.elementaldragon.cooldown.CooldownManager;
 import org.cavarest.elementaldragon.fragment.FragmentManager;
 import org.cavarest.elementaldragon.fragment.FragmentType;
+import org.cavarest.elementaldragon.hud.ProgressBarRenderer.ProgressVariant;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
@@ -334,7 +335,7 @@ public class HudManager implements Listener {
     boolean isReady = cooldown <= 0;
 
     // Progress bar - single vertical block for 100%
-    String progressBar = buildProgressBar(progress);
+    String progressBar = buildProgressBar(player, progress);
     String barColor = getProgressBarColorMiniMessage(progress, isReady);
 
     // Build the line using MiniMessage
@@ -381,11 +382,18 @@ public class HudManager implements Listener {
    * - 50%: "▒▒" ↔ "██" (flashing at threshold)
    * - 100%: "██" (solid full)
    *
+   * Uses player's preferred countdown style from PlayerPreferenceManager.
+   *
+   * @param player The player to get the preference for
    * @param progress Progress from 0.0 (empty) to 1.0 (full/ready)
    * @return Progress bar string (2 characters)
    */
-  private String buildProgressBar(float progress) {
-    return ProgressBarRenderer.render(progress, System.currentTimeMillis());
+  private String buildProgressBar(Player player, float progress) {
+    // Get player's preferred countdown variant
+    PlayerPreferenceManager preferenceManager = plugin.getPlayerPreferenceManager();
+    ProgressVariant variant = preferenceManager.getVariant(player);
+
+    return ProgressBarRenderer.render(progress, System.currentTimeMillis(), variant);
   }
 
   /**

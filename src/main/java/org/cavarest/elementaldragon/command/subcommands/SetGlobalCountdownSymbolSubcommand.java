@@ -9,53 +9,47 @@ import org.cavarest.elementaldragon.hud.ProgressBarRenderer.VariantType;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
- * Subcommand for setting the countdown progress bar style.
+ * Subcommand for setting the global countdown progress bar style.
+ * This sets the default style for players who haven't set their own preference.
  * Handles switching between TILES, MOON, CLOCK, SHADE, BLOCK1-4, and TRIANGLE variants.
  * Also supports configurable width for some variants.
  *
  * <p>Usage:</p>
  * <ul>
- *   <li>{@code /ed setcountdownsym <style> [width]} - Set progress bar style</li>
+ *   <li>{@code /ed setglobalcountdownsym <style> [width]} - Set global progress bar style</li>
  * </ul>
  *
- * <p>Available styles:</p>
- * <ul>
- *   <li>TILES - Unicode tile progress bar with rainbow gradient (default, width fixed at 7)</li>
- *   <li>MOON - Moon phase emoji (width affects states: 1=5 states, 2=10 states)</li>
- *   <li>CLOCK - Clock emoji (width affects states: 1=12 states, 2=24 states)</li>
- *   <li>SHADE - Block shading ░▒▓█ (width affects states: 1=4, 2=8, 3=12)</li>
- *   <li>BLOCK1 - Left eighth block ▏ (width = number of characters)</li>
- *   <li>BLOCK2 - One quarter block ▍ (width = number of characters)</li>
- *   <li>BLOCK3 - Three eighths block ▋ (width = number of characters)</li>
- *   <li>BLOCK4 - Five eighths block ▉ (width = number of characters)</li>
- *   <li>TRIANGLE - Triangle fill ▹▸ (width affects states: 1=6, 2=12)</li>
- * </ul>
+ * <p>Note: Players can override the global style using {@code /<type> setcountdownsym}</p>
  */
-public class SetCountdownSymbolSubcommand extends AbstractSubcommand {
-
-    private static final List<String> VALID_STYLES = Arrays.asList(
-        "TILES", "MOON", "CLOCK", "SHADE", "BLOCK1", "BLOCK2", "BLOCK3", "BLOCK4", "TRIANGLE", "HELP"
-    );
+public class SetGlobalCountdownSymbolSubcommand extends AbstractSubcommand {
 
     /**
-     * Creates a new set countdown symbol subcommand.
+     * Creates a new set global countdown symbol subcommand.
      */
-    public SetCountdownSymbolSubcommand() {
+    public SetGlobalCountdownSymbolSubcommand() {
         super(
-            "setcountdownsym",
-            "Set countdown progress bar style",
-            "/ed setcountdownsym <style> [width]",
+            "setglobalcountdownsym",
+            "Set global countdown progress bar style",
+            "/ed setglobalcountdownsym <style> [width]",
             "elementaldragon.admin"
         );
     }
 
     @Override
     public boolean execute(CommandSender sender, String[] args) {
+        // Auto-generate list of available variant types (exclude CUSTOM)
+        String availableStyles = Arrays.stream(VariantType.values())
+            .filter(type -> type != VariantType.CUSTOM)
+            .map(Enum::name)
+            .collect(Collectors.joining(", "));
+
         if (args.length < 1) {
-            sendError(sender, "Usage: /ed setcountdownsym <style> [width]");
-            sendStyleInfo(sender);
+            sendError(sender, "Usage: /ed setglobalcountdownsym <style> [width]");
+            sendError(sender, "Available styles: " + availableStyles);
+            sendInfo(sender, "Players can override this with /<type> setcountdownsym");
             return true;
         }
 
@@ -67,13 +61,19 @@ public class SetCountdownSymbolSubcommand extends AbstractSubcommand {
             return true;
         }
 
-        if (!VALID_STYLES.contains(styleArg)) {
+        // Validate style using enum (Single Source of Truth)
+        VariantType type;
+        try {
+            type = VariantType.valueOf(styleArg);
+            if (type == VariantType.CUSTOM) {
+                throw new IllegalArgumentException("CUSTOM variant type is not allowed");
+            }
+        } catch (IllegalArgumentException e) {
             sendError(sender, "Invalid style: " + styleArg);
-            sendStyleInfo(sender);
+            sendError(sender, "Available styles: " + availableStyles);
             return true;
         }
 
-        VariantType type = VariantType.valueOf(styleArg);
         int width = 1; // default width
 
         // Parse optional width parameter
@@ -94,47 +94,47 @@ public class SetCountdownSymbolSubcommand extends AbstractSubcommand {
         switch (type) {
             case TILES:
                 variant = ProgressBarRenderer.TILES;
-                sendSuccess(sender, "Set countdown style to TILES (rainbow tiles, 7 tiles)");
+                sendSuccess(sender, "Set global countdown style to TILES (rainbow tiles, 7 tiles)");
                 break;
 
             case MOON:
                 variant = ProgressBarRenderer.MOON.withWidth(width);
-                sendSuccess(sender, "Set countdown style to MOON (moon phases, width=" + width + ", " + (5 * width) + " states)");
+                sendSuccess(sender, "Set global countdown style to MOON (moon phases, width=" + width + ", " + (5 * width) + " states)");
                 break;
 
             case CLOCK:
                 variant = ProgressBarRenderer.CLOCK.withWidth(width);
-                sendSuccess(sender, "Set countdown style to CLOCK (clock faces, width=" + width + ", " + (12 * width) + " states)");
+                sendSuccess(sender, "Set global countdown style to CLOCK (clock faces, width=" + width + ", " + (12 * width) + " states)");
                 break;
 
             case SHADE:
                 variant = ProgressBarRenderer.SHADE.withWidth(width);
-                sendSuccess(sender, "Set countdown style to SHADE (░▒▓█, width=" + width + ", " + (4 * width) + " states)");
+                sendSuccess(sender, "Set global countdown style to SHADE (░▒▓█, width=" + width + ", " + (4 * width) + " states)");
                 break;
 
             case BLOCK1:
                 variant = ProgressBarRenderer.BLOCK1.withWidth(width);
-                sendSuccess(sender, "Set countdown style to BLOCK1 (▏, width=" + width + ", " + (width + 1) + " states)");
+                sendSuccess(sender, "Set global countdown style to BLOCK1 (▏, width=" + width + ", " + (width + 1) + " states)");
                 break;
 
             case BLOCK2:
                 variant = ProgressBarRenderer.BLOCK2.withWidth(width);
-                sendSuccess(sender, "Set countdown style to BLOCK2 (▍, width=" + width + ", " + (width + 1) + " states)");
+                sendSuccess(sender, "Set global countdown style to BLOCK2 (▍, width=" + width + ", " + (width + 1) + " states)");
                 break;
 
             case BLOCK3:
                 variant = ProgressBarRenderer.BLOCK3.withWidth(width);
-                sendSuccess(sender, "Set countdown style to BLOCK3 (▋, width=" + width + ", " + (width + 1) + " states)");
+                sendSuccess(sender, "Set global countdown style to BLOCK3 (▋, width=" + width + ", " + (width + 1) + " states)");
                 break;
 
             case BLOCK4:
                 variant = ProgressBarRenderer.BLOCK4.withWidth(width);
-                sendSuccess(sender, "Set countdown style to BLOCK4 (▉, width=" + width + ", " + (width + 1) + " states)");
+                sendSuccess(sender, "Set global countdown style to BLOCK4 (▉, width=" + width + ", " + (width + 1) + " states)");
                 break;
 
             case TRIANGLE:
                 variant = ProgressBarRenderer.TRIANGLE.withWidth(width);
-                sendSuccess(sender, "Set countdown style to TRIANGLE (▹▸, width=" + width + ", " + (width + 1) + " states)");
+                sendSuccess(sender, "Set global countdown style to TRIANGLE (▹▸, width=" + width + ", " + (width + 1) + " states)");
                 break;
 
             default:
@@ -143,7 +143,8 @@ public class SetCountdownSymbolSubcommand extends AbstractSubcommand {
         }
 
         ProgressBarRenderer.setCurrentVariant(variant);
-        sendInfo(sender, "Progress bar will now use " + styleArg + " variant.");
+        sendInfo(sender, "Global progress bar will now use " + styleArg + " variant.");
+        sendInfo(sender, "Players can override this with /<type> setcountdownsym");
 
         return true;
     }
@@ -156,11 +157,14 @@ public class SetCountdownSymbolSubcommand extends AbstractSubcommand {
             "═══════════════════════════════════════════════════════",
             net.kyori.adventure.text.format.NamedTextColor.GOLD));
         sender.sendMessage(net.kyori.adventure.text.Component.text(
-            "   Countdown Progress Bar Styles",
+            "   Global Countdown Progress Bar Styles",
             net.kyori.adventure.text.format.NamedTextColor.GOLD));
         sender.sendMessage(net.kyori.adventure.text.Component.text(
             "═══════════════════════════════════════════════════════",
             net.kyori.adventure.text.format.NamedTextColor.GOLD));
+        sender.sendMessage(net.kyori.adventure.text.Component.text(
+            "Players can override this with /<type> setcountdownsym",
+            net.kyori.adventure.text.format.NamedTextColor.GRAY));
 
         // TILES
         sender.sendMessage(net.kyori.adventure.text.Component.text(
@@ -238,25 +242,11 @@ public class SetCountdownSymbolSubcommand extends AbstractSubcommand {
             "",
             net.kyori.adventure.text.format.NamedTextColor.WHITE));
         sender.sendMessage(net.kyori.adventure.text.Component.text(
-            "Usage: /ed setcountdownsym <style> [width]",
+            "Usage: /ed setglobalcountdownsym <style> [width]",
             net.kyori.adventure.text.format.NamedTextColor.YELLOW));
         sender.sendMessage(net.kyori.adventure.text.Component.text(
-            "Example: /ed setcountdownsym MOON 2 (10 states)",
+            "Example: /ed setglobalcountdownsym MOON 2 (10 states)",
             net.kyori.adventure.text.format.NamedTextColor.GRAY));
-    }
-
-    private void sendStyleInfo(CommandSender sender) {
-        sendInfo(sender, "Valid styles:");
-        sendInfo(sender, "  TILES - Rainbow tiles (fixed 7 tiles)");
-        sendInfo(sender, "  MOON - Moon phases (width 1-10, 5×width states)");
-        sendInfo(sender, "  CLOCK - Clock faces (width 1-10, 12×width states)");
-        sendInfo(sender, "  SHADE - Block shading ░▒▓█ (width 1-10, 4×width states)");
-        sendInfo(sender, "  BLOCK1 - Left eighth block ▏ (width 1-10, binary: width+1 states)");
-        sendInfo(sender, "  BLOCK2 - One quarter block ▍ (width 1-10, binary: width+1 states)");
-        sendInfo(sender, "  BLOCK3 - Three eighths block ▋ (width 1-10, binary: width+1 states)");
-        sendInfo(sender, "  BLOCK4 - Five eighths block ▉ (width 1-10, binary: width+1 states)");
-        sendInfo(sender, "  TRIANGLE - Triangle fill ▹▸ (width 1-10, binary: width+1 states)");
-        sendInfo(sender, "  HELP - Show detailed style information with transitions");
     }
 
     @Override
@@ -264,7 +254,12 @@ public class SetCountdownSymbolSubcommand extends AbstractSubcommand {
         List<String> completions = new ArrayList<>();
 
         if (args.length == 1) {
-            completions.addAll(VALID_STYLES);
+            // Auto-generate from VariantType enum (exclude CUSTOM) - Single Source of Truth
+            Arrays.stream(VariantType.values())
+                .filter(type -> type != VariantType.CUSTOM)
+                .map(Enum::name)
+                .forEach(completions::add);
+            completions.add("HELP");
         } else if (args.length == 2) {
             // Width suggestions (1-10)
             for (int i = 1; i <= 10; i++) {

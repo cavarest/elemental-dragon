@@ -9,7 +9,7 @@ import org.cavarest.elementaldragon.command.subcommands.CooldownSubcommand;
 import org.cavarest.elementaldragon.command.subcommands.GiveSubcommand;
 import org.cavarest.elementaldragon.command.subcommands.GlobalCooldownSubcommand;
 import org.cavarest.elementaldragon.command.subcommands.InfoSubcommand;
-import org.cavarest.elementaldragon.command.subcommands.SetCountdownSymbolSubcommand;
+import org.cavarest.elementaldragon.command.subcommands.SetGlobalCountdownSymbolSubcommand;
 import org.cavarest.elementaldragon.command.util.ElementValidator;
 import org.cavarest.elementaldragon.command.util.PlayerResolver;
 import org.cavarest.elementaldragon.cooldown.CooldownManager;
@@ -46,7 +46,7 @@ public class ElementalDragonCommand implements CommandExecutor, TabCompleter {
     private final GiveSubcommand giveSubcommand;
     private final CooldownSubcommand cooldownSubcommand;
     private final GlobalCooldownSubcommand globalCooldownSubcommand;
-    private final SetCountdownSymbolSubcommand setCountdownSymbolSubcommand;
+    private final SetGlobalCountdownSymbolSubcommand setCountdownSymbolSubcommand;
 
     /**
      * Creates a new ElementalDragonCommand.
@@ -82,7 +82,7 @@ public class ElementalDragonCommand implements CommandExecutor, TabCompleter {
             globalCooldownFormatter,
             elementValidator
         );
-        this.setCountdownSymbolSubcommand = new SetCountdownSymbolSubcommand();
+        this.setCountdownSymbolSubcommand = new SetGlobalCountdownSymbolSubcommand();
     }
 
     @Override
