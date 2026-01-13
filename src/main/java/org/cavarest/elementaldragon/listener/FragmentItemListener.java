@@ -35,19 +35,24 @@ public class FragmentItemListener implements Listener {
   // ===== Item Loss Detection =====
 
   /**
-   * Detect when a player drops a fragment and unequip it.
+   * Detect when a player drops a fragment and unequip it ONLY if it's the currently equipped fragment.
    */
   @EventHandler(priority = EventPriority.MONITOR)
   public void onPlayerDropItem(PlayerDropItemEvent event) {
     ItemStack droppedItem = event.getItemDrop().getItemStack();
-    FragmentType fragmentType = getFragmentType(droppedItem);
+    FragmentType droppedFragmentType = getFragmentType(droppedItem);
 
-    if (fragmentType != null) {
+    if (droppedFragmentType != null) {
       Player player = event.getPlayer();
-      fragmentManager.unequipFragment(player);
-      player.sendMessage(miniMessage.deserialize(
-        "<red>Your " + fragmentType.getDisplayName() + " abilities have been withdrawn!</red>"
-      ));
+
+      // Only unequip if the dropped fragment matches the currently equipped one
+      FragmentType equippedFragmentType = fragmentManager.getEquippedFragment(player);
+      if (equippedFragmentType == droppedFragmentType) {
+        fragmentManager.unequipFragment(player);
+        player.sendMessage(miniMessage.deserialize(
+          "<red>Your " + droppedFragmentType.getDisplayName() + " abilities have been withdrawn!</red>"
+        ));
+      }
     }
   }
 
