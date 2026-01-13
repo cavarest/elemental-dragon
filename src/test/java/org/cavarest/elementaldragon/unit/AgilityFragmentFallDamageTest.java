@@ -20,29 +20,36 @@ class AgilityFragmentFallDamageTest {
   // ===== Agility Fragment Fall Damage Protection Tests =====
 
   @Test
-  @DisplayName("Agility Fragment has dashingPlayers set for fall damage tracking")
-  void testAgilityFragmentHasDashingPlayersTracking() {
+  @DisplayName("Agility Fragment has metadata keys for fall damage tracking")
+  void testAgilityFragmentHasMetadataTracking() {
     // This test guards against the bug where fall damage wasn't prevented during dash
-    // The AgilityFragment must track dashing players to cancel fall damage
+    // The AgilityFragment must use metadata to track dashing players to cancel fall damage
 
-    AgilityFragment fragment = new AgilityFragment(null);
-
-    // Use reflection to check if dashingPlayers field exists
+    // Use reflection to check if metadata key constants exist
     try {
-      java.lang.reflect.Field dashingPlayersField = AgilityFragment.class.getDeclaredField("dashingPlayers");
-      dashingPlayersField.setAccessible(true);
-      Object fieldValue = dashingPlayersField.get(fragment);
+      java.lang.reflect.Field activeKeyField = AgilityFragment.class.getDeclaredField("DRACONIC_SURGE_ACTIVE_KEY");
+      activeKeyField.setAccessible(true);
+      Object activeKeyValue = activeKeyField.get(null);
 
-      assertNotNull(fieldValue,
-        "AgilityFragment must have dashingPlayers field for fall damage tracking");
-      assertTrue(fieldValue instanceof java.util.Set,
-        "dashingPlayers should be a Set for UUID tracking");
+      assertNotNull(activeKeyValue,
+        "AgilityFragment must have DRACONIC_SURGE_ACTIVE_KEY constant for fall damage tracking");
+      assertTrue(activeKeyValue instanceof String,
+        "DRACONIC_SURGE_ACTIVE_KEY should be a String for metadata key");
+
+      java.lang.reflect.Field startTimeKeyField = AgilityFragment.class.getDeclaredField("DRACONIC_SURGE_START_TIME_KEY");
+      startTimeKeyField.setAccessible(true);
+      Object startTimeKeyValue = startTimeKeyField.get(null);
+
+      assertNotNull(startTimeKeyValue,
+        "AgilityFragment must have DRACONIC_SURGE_START_TIME_KEY constant for tracking activation time");
+      assertTrue(startTimeKeyValue instanceof String,
+        "DRACONIC_SURGE_START_TIME_KEY should be a String for metadata key");
 
     } catch (NoSuchFieldException e) {
-      fail("AgilityFragment must have 'dashingPlayers' field for fall damage tracking during Draconic Surge. " +
-           "This field is required to track players who are dashing so their fall damage can be cancelled.");
+      fail("AgilityFragment must have metadata key constants for fall damage tracking during Draconic Surge. " +
+           "These are required to track players who are dashing so their fall damage can be cancelled.");
     } catch (IllegalAccessException e) {
-      fail("Should be able to access dashingPlayers field: " + e.getMessage());
+      fail("Should be able to access metadata key constants: " + e.getMessage());
     }
   }
 
@@ -92,23 +99,22 @@ class AgilityFragmentFallDamageTest {
   }
 
   @Test
-  @DisplayName("AgilityFragment has landing protection duration constant")
-  void testLandingProtectionDuration() {
+  @DisplayName("AgilityFragment has fall protection duration constant (10 seconds)")
+  void testFallProtectionDuration() {
     try {
-      java.lang.reflect.Field protectionField = AgilityFragment.class.getDeclaredField("DRACONIC_SURGE_LANDING_PROTECTION");
+      java.lang.reflect.Field protectionField = AgilityFragment.class.getDeclaredField("DRACONIC_SURGE_FALL_PROTECTION");
       protectionField.setAccessible(true);
       long protectionTicks = protectionField.getLong(null);
 
-      // Landing protection should be about 1 second (20 ticks)
-      assertTrue(protectionTicks > 0,
-        "Landing protection duration must be positive");
-      assertTrue(protectionTicks <= 40,
-        "Landing protection should be reasonable (within 2 seconds)");
+      // Fall protection should be 10 seconds (200 ticks)
+      // This allows players to use Draconic Surge to reach high places and fall without damage
+      assertEquals(200L, protectionTicks,
+        "Fall protection duration should be 200 ticks (10 seconds)");
 
     } catch (NoSuchFieldException e) {
-      fail("AgilityFragment must have DRACONIC_SURGE_LANDING_PROTECTION constant for fall damage immunity after dash");
+      fail("AgilityFragment must have DRACONIC_SURGE_FALL_PROTECTION constant for fall damage immunity during Draconic Surge");
     } catch (IllegalAccessException e) {
-      fail("Should be able to access DRACONIC_SURGE_LANDING_PROTECTION: " + e.getMessage());
+      fail("Should be able to access DRACONIC_SURGE_FALL_PROTECTION: " + e.getMessage());
     }
   }
 

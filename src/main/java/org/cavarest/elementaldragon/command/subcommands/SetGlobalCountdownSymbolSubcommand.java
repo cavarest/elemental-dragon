@@ -1,6 +1,7 @@
 package org.cavarest.elementaldragon.command.subcommands;
 
 import org.bukkit.command.CommandSender;
+import org.cavarest.elementaldragon.ElementalDragon;
 import org.cavarest.elementaldragon.command.base.AbstractSubcommand;
 import org.cavarest.elementaldragon.hud.ProgressBarRenderer;
 import org.cavarest.elementaldragon.hud.ProgressBarRenderer.ProgressVariant;
@@ -13,7 +14,7 @@ import java.util.stream.Collectors;
 
 /**
  * Subcommand for setting the global countdown progress bar style.
- * This sets the default style for players who haven't set their own preference.
+ * This sets the style for all players.
  * Handles switching between TILES, MOON, CLOCK, SHADE, BLOCK1-4, and TRIANGLE variants.
  * Also supports configurable width for some variants.
  *
@@ -21,21 +22,24 @@ import java.util.stream.Collectors;
  * <ul>
  *   <li>{@code /ed setglobalcountdownsym <style> [width]} - Set global progress bar style</li>
  * </ul>
- *
- * <p>Note: Players can override the global style using {@code /<type> setcountdownsym}</p>
  */
 public class SetGlobalCountdownSymbolSubcommand extends AbstractSubcommand {
 
+    private final ElementalDragon plugin;
+
     /**
      * Creates a new set global countdown symbol subcommand.
+     *
+     * @param plugin The plugin instance (for HUD updates)
      */
-    public SetGlobalCountdownSymbolSubcommand() {
+    public SetGlobalCountdownSymbolSubcommand(ElementalDragon plugin) {
         super(
             "setglobalcountdownsym",
             "Set global countdown progress bar style",
             "/ed setglobalcountdownsym <style> [width]",
             "elementaldragon.admin"
         );
+        this.plugin = plugin;
     }
 
     @Override
@@ -49,7 +53,6 @@ public class SetGlobalCountdownSymbolSubcommand extends AbstractSubcommand {
         if (args.length < 1) {
             sendError(sender, "Usage: /ed setglobalcountdownsym <style> [width]");
             sendError(sender, "Available styles: " + availableStyles);
-            sendInfo(sender, "Players can override this with /<type> setcountdownsym");
             return true;
         }
 
@@ -144,7 +147,11 @@ public class SetGlobalCountdownSymbolSubcommand extends AbstractSubcommand {
 
         ProgressBarRenderer.setCurrentVariant(variant);
         sendInfo(sender, "Global progress bar will now use " + styleArg + " variant.");
-        sendInfo(sender, "Players can override this with /<type> setcountdownsym");
+
+        // Update all player HUDs to show new symbol style
+        if (plugin.getHudManager() != null) {
+            plugin.getHudManager().updateAllPlayerHuds();
+        }
 
         return true;
     }
@@ -162,9 +169,6 @@ public class SetGlobalCountdownSymbolSubcommand extends AbstractSubcommand {
         sender.sendMessage(net.kyori.adventure.text.Component.text(
             "═══════════════════════════════════════════════════════",
             net.kyori.adventure.text.format.NamedTextColor.GOLD));
-        sender.sendMessage(net.kyori.adventure.text.Component.text(
-            "Players can override this with /<type> setcountdownsym",
-            net.kyori.adventure.text.format.NamedTextColor.GRAY));
 
         // TILES
         sender.sendMessage(net.kyori.adventure.text.Component.text(

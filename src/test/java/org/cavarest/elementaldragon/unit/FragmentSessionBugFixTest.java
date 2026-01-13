@@ -99,13 +99,13 @@ class FragmentSessionBugFixTest {
   @Test
   @DisplayName("Immortal Fragment material is acceptable (no problematic right-click)")
   void testImmortalFragmentMaterialIsAcceptable() {
-    // TOTEM_OF_UNDYING has no problematic default right-click behavior
+    // DIAMOND has no problematic default right-click behavior
     Fragment fragment = createImmortalFragment();
     Material material = fragment.getMaterial();
 
-    // TOTEM is acceptable - it triggers when you die, not on right-click
-    assertEquals(Material.TOTEM_OF_UNDYING, material,
-      "Immortal Fragment should use TOTEM_OF_UNDYING");
+    // DIAMOND is acceptable - it's just a regular item, no special right-click action
+    assertEquals(Material.DIAMOND, material,
+      "Immortal Fragment should use DIAMOND");
   }
 
   // ===== Bug 3: getCommandName() must use canonical names =====

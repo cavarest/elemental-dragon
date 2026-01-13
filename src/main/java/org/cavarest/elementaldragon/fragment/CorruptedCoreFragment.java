@@ -1,6 +1,7 @@
 package org.cavarest.elementaldragon.fragment;
 
 import org.cavarest.elementaldragon.ElementalDragon;
+import org.cavarest.elementaldragon.cooldown.CooldownManager;
 import org.cavarest.elementaldragon.visual.ParticleFX;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -18,6 +19,10 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityTargetEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -38,7 +43,7 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
 
   // Dread Gaze constants (ORIGINAL SPECIFICATION)
   private static final long DREAD_GAZE_COOLDOWN = 180000L; // 3 minutes (original spec)
-  private static final int DREAD_GAZE_DURATION = 1200; // 60 seconds (1200 ticks) (complete freeze)
+  private static final int DREAD_GAZE_DURATION = 200; // 10 seconds (200 ticks) (complete freeze)
   private static final int MAX_AMPLIFIER = 255; // Maximum effect level for complete freeze
 
   // Life Devourer constants (ORIGINAL SPECIFICATION)
@@ -48,7 +53,13 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
 
   // Metadata keys
   private static final String DREAD_GAZE_ACTIVE_KEY = "corrupted_dread_gaze_active";
+  private static final String DREAD_GAZE_START_TIME_KEY = "corrupted_dread_gaze_start_time";
   private static final String LIFE_DEVOURER_ACTIVE_KEY = "corrupted_life_devourer_active";
+  private static final String LIFE_DEVOURER_START_TIME_KEY = "corrupted_life_devourer_start_time";
+
+  // Debuff metadata keys (set on VICTIMS when Dread Gaze hits them)
+  private static final String DREAD_GAZE_DEBUFF_KEY = "corrupted_dread_gaze_debuff";
+  private static final String DREAD_GAZE_DEBUFF_START_KEY = "corrupted_dread_gaze_debuff_start_time";
 
   // Fragment metadata (Single Source of Truth)
   // Using NETHER_STAR instead of HEAVY_CORE to avoid default right-click block placement behavior
@@ -116,7 +127,7 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
   @Override
   protected String getAbilitiesDescription() {
     return "Active Abilities:\n" +
-      "1. Dread Gaze - Blind nearby enemies for 5s (60s cooldown)\n" +
+      "1. Dread Gaze - Blind nearby enemies for 10s (60s cooldown)\n" +
       "2. Life Devourer - Drain health from enemies, 50% stolen (90s cooldown)\n" +
       "Passive: Night Vision when equipped, invisible to creepers";
   }
@@ -166,6 +177,20 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
 
     // Remove passive effects
     removePassiveEffects(player);
+
+    // Clear any active ability states (unstages READY TO STRIKE and other abilities)
+    if (player.hasMetadata(DREAD_GAZE_ACTIVE_KEY)) {
+      player.removeMetadata(DREAD_GAZE_ACTIVE_KEY, plugin);
+    }
+    if (player.hasMetadata(DREAD_GAZE_START_TIME_KEY)) {
+      player.removeMetadata(DREAD_GAZE_START_TIME_KEY, plugin);
+    }
+    if (player.hasMetadata(LIFE_DEVOURER_ACTIVE_KEY)) {
+      player.removeMetadata(LIFE_DEVOURER_ACTIVE_KEY, plugin);
+    }
+    if (player.hasMetadata(LIFE_DEVOURER_START_TIME_KEY)) {
+      player.removeMetadata(LIFE_DEVOURER_START_TIME_KEY, plugin);
+    }
 
     // Play deactivation sound
     playDeactivationSound(player);
@@ -225,9 +250,14 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
   private void executeDreadGaze(Player player) {
     // No cooldown check needed - FragmentManager.useFragmentAbility() already checked
 
+    // Clear cooldown that FragmentManager set - we'll set it when target is hit instead
+    CooldownManager cooldownManager = plugin.getCooldownManager();
+    cooldownManager.setCooldown(player, FragmentType.CORRUPTED.getElement(), 1, 0);
+
     Location center = player.getLocation();
 
-    // Mark player as having Dread Gaze ready (next hit will freeze target)
+    // Mark player as having Dread Gaze active (but NOT start time yet)
+    // Start time will be set when target is hit, enabling READY TO STRIKE display
     player.setMetadata(
       DREAD_GAZE_ACTIVE_KEY,
       new org.bukkit.metadata.FixedMetadataValue(plugin, true)
@@ -240,32 +270,14 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
     // Show void aura around player
     showVoidAura(player);
 
-    // Cooldown is set by FragmentManager.useFragmentAbility()
+    // NOTE: Cooldown is NOT set here - it will be set when the target is hit
+    // This allows "READY TO STRIKE" state to persist indefinitely until a hit occurs
 
     // Send feedback message
     player.sendMessage(
-      Component.text("Dread Gaze ready! Your next hit will freeze the target completely!",
+      Component.text("Dread Gaze activated! Your next hit will freeze the target completely!",
         NamedTextColor.DARK_PURPLE)
     );
-
-    // Schedule auto-expiration after duration (100 ticks = 5 seconds)
-    new BukkitRunnable() {
-      @Override
-      public void run() {
-        if (player.isDead() || !player.isValid()) {
-          cancel();
-          return;
-        }
-
-        // Remove the active metadata if not consumed
-        if (player.hasMetadata(DREAD_GAZE_ACTIVE_KEY)) {
-          player.removeMetadata(DREAD_GAZE_ACTIVE_KEY, plugin);
-          player.sendMessage(
-            Component.text("Dread Gaze has expired.", NamedTextColor.GRAY)
-          );
-        }
-      }
-    }.runTaskLater(plugin, DREAD_GAZE_DURATION);
   }
 
   /**
@@ -288,6 +300,12 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
       new org.bukkit.metadata.FixedMetadataValue(plugin, true)
     );
 
+    // Store activation timestamp for HUD countdown
+    player.setMetadata(
+      LIFE_DEVOURER_START_TIME_KEY,
+      new org.bukkit.metadata.FixedMetadataValue(plugin, System.currentTimeMillis())
+    );
+
     // Play activation sound
     playAbilitySound(center, Sound.ENTITY_WITHER_SPAWN, 1.0f, 0.8f);
 
@@ -308,13 +326,16 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
           return;
         }
 
-        // Remove the active metadata
+        // Remove the active metadata and start time
         if (player.hasMetadata(LIFE_DEVOURER_ACTIVE_KEY)) {
           player.removeMetadata(LIFE_DEVOURER_ACTIVE_KEY, plugin);
-          player.sendMessage(
-            Component.text("Life Devourer has expired.", NamedTextColor.GRAY)
-          );
         }
+        if (player.hasMetadata(LIFE_DEVOURER_START_TIME_KEY)) {
+          player.removeMetadata(LIFE_DEVOURER_START_TIME_KEY, plugin);
+        }
+        player.sendMessage(
+          Component.text("Life Devourer has expired.", NamedTextColor.GRAY)
+        );
       }
     }.runTaskLater(plugin, LIFE_DEVOURER_DURATION);
 
@@ -514,6 +535,26 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
 
     LivingEntity victim = (LivingEntity) event.getEntity();
 
+    // Check if start time already set (prevents multiple hits from extending duration)
+    if (attacker.hasMetadata(DREAD_GAZE_START_TIME_KEY)) {
+      return;
+    }
+
+    // Set start time NOW (when target is hit) for countdown display
+    // This transitions from READY TO STRIKE to ACTIVE state
+    attacker.setMetadata(
+      DREAD_GAZE_START_TIME_KEY,
+      new org.bukkit.metadata.FixedMetadataValue(plugin, System.currentTimeMillis())
+    );
+
+    // Set cooldown NOW (when target is hit, not when activated)
+    // This is a 3-minute cooldown for the Dread Gaze ability
+    CooldownManager cooldownManager = plugin.getCooldownManager();
+    cooldownManager.setCooldown(attacker, FragmentType.CORRUPTED.getElement(), 1, (int) DREAD_GAZE_COOLDOWN);
+
+    // Remove the Dread Gaze active state (it's been consumed)
+    attacker.removeMetadata(DREAD_GAZE_ACTIVE_KEY, plugin);
+
     // Apply complete freeze effects (all at max level for complete action prevention)
     victim.addPotionEffect(
       new PotionEffect(
@@ -556,8 +597,32 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
       )
     );
 
-    // Remove Dread Gaze active metadata (consume single use)
-    attacker.removeMetadata(DREAD_GAZE_ACTIVE_KEY, plugin);
+    // Mark victim with debuff metadata for HUD display
+    victim.setMetadata(
+      DREAD_GAZE_DEBUFF_KEY,
+      new org.bukkit.metadata.FixedMetadataValue(plugin, true)
+    );
+    victim.setMetadata(
+      DREAD_GAZE_DEBUFF_START_KEY,
+      new org.bukkit.metadata.FixedMetadataValue(plugin, System.currentTimeMillis())
+    );
+
+    // Schedule debuff removal after duration
+    new BukkitRunnable() {
+      @Override
+      public void run() {
+        // Clean up victim's debuff metadata
+        if (victim.isValid() && !victim.isDead()) {
+          victim.removeMetadata(DREAD_GAZE_DEBUFF_KEY, plugin);
+          victim.removeMetadata(DREAD_GAZE_DEBUFF_START_KEY, plugin);
+        }
+
+        // Clean up attacker's start time metadata (for HUD display)
+        if (attacker.isValid() && !attacker.isDead()) {
+          attacker.removeMetadata(DREAD_GAZE_START_TIME_KEY, plugin);
+        }
+      }
+    }.runTaskLater(plugin, DREAD_GAZE_DURATION);
 
     // Show dark void particles around victim
     victim.getWorld().spawnParticle(
@@ -598,9 +663,12 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
    * - Active for 20 seconds after activation
    * - Triggers on ANY damage dealt by player (not limited by range or entity type)
    *
+   * Uses HIGHEST priority to ensure we process the event before it might be cancelled.
+   * Uses getDamage() instead of getFinalDamage() to get the original damage value.
+   *
    * @param event The entity damage event
    */
-  @EventHandler(priority = EventPriority.HIGH)
+  @EventHandler(priority = EventPriority.HIGHEST)
   public void onEntityDamageByEntityForLifeDevourer(EntityDamageByEntityEvent event) {
     // Check if damager is a Player
     if (!(event.getDamager() instanceof Player)) {
@@ -620,24 +688,34 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
       return;
     }
 
-    // Get damage dealt
-    double damage = event.getFinalDamage();
+    // Get the ORIGINAL damage (before event cancellation/modification)
+    // Using getDamage() instead of getFinalDamage() ensures we still heal even if event is cancelled
+    double damage = event.getDamage();
+
+    // Skip if damage is 0 or less
+    if (damage <= 0) {
+      return;
+    }
 
     // Calculate life steal (50% of damage)
     double healing = damage * LIFE_DEVOURER_STEAL_PERCENT;
 
-    // Get victim name for the message
-    String victimName = event.getEntity().getName();
-
     // Apply healing to player
     double currentHealth = attacker.getHealth();
     double maxHealth = attacker.getMaxHealth();
+    double actualHealing = Math.min(healing, maxHealth - currentHealth);
     double newHealth = Math.min(maxHealth, currentHealth + healing);
     attacker.setHealth(newHealth);
 
-    // Send dragonic life transfer message with victim name
+    // Get victim name for the message
+    String victimName = event.getEntity().getName();
+
+    // Format healing amount to 1 decimal place
+    String healingAmount = String.format("%.1f", actualHealing);
+
+    // Send dragonic life transfer message with healing amount
     attacker.sendMessage(
-      Component.text("The ancient dragon drains the life force from " + victimName + " and bestows it upon you! 👁️💫",
+      Component.text("The ancient dragon drains " + healingAmount + "❤ from " + victimName + " and bestows it upon you! 👁️💫",
         NamedTextColor.DARK_PURPLE)
     );
 
@@ -767,5 +845,84 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
    */
   public ElementalDragon getPlugin() {
     return plugin;
+  }
+
+  // ===== Dread Gaze Freeze Event Handlers (Issue 3) =====
+
+  /**
+   * Prevent frozen players from moving.
+   * Allows looking around but blocks all movement.
+   */
+  @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+  public void onPlayerMoveWhileFrozen(PlayerMoveEvent event) {
+    Player player = event.getPlayer();
+
+    // Check if player is frozen by Dread Gaze (checks VICTIM's debuff metadata)
+    if (!player.hasMetadata(DREAD_GAZE_DEBUFF_KEY)) {
+      return;
+    }
+
+    // Allow looking around (head rotation) but cancel movement
+    Location from = event.getFrom();
+    Location to = event.getTo();
+
+    // Check if position changed (ignore rotation changes)
+    if (from.getX() != to.getX() || from.getY() != to.getY() || from.getZ() != to.getZ()) {
+      event.setCancelled(true);
+    }
+  }
+
+  /**
+   * Prevent frozen players from placing blocks.
+   */
+  @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+  public void onBlockPlaceWhileFrozen(org.bukkit.event.block.BlockPlaceEvent event) {
+    Player player = event.getPlayer();
+
+    // Check if player is frozen by Dread Gaze (checks VICTIM's debuff metadata)
+    if (player.hasMetadata(DREAD_GAZE_DEBUFF_KEY)) {
+      event.setCancelled(true);
+      player.sendMessage(
+        Component.text("⛶ You cannot place blocks while frozen by Dread Gaze!", NamedTextColor.DARK_PURPLE)
+      );
+    }
+  }
+
+  /**
+   * Prevent frozen players from breaking blocks.
+   */
+  @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+  public void onBlockBreakWhileFrozen(org.bukkit.event.block.BlockBreakEvent event) {
+    Player player = event.getPlayer();
+
+    // Check if player is frozen by Dread Gaze (checks VICTIM's debuff metadata)
+    if (player.hasMetadata(DREAD_GAZE_DEBUFF_KEY)) {
+      event.setCancelled(true);
+      player.sendMessage(
+        Component.text("⛶ You cannot break blocks while frozen by Dread Gaze!", NamedTextColor.DARK_PURPLE)
+      );
+    }
+  }
+
+  /**
+   * Prevent frozen players from interacting with blocks/items.
+   */
+  @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+  public void onPlayerInteractWhileFrozen(org.bukkit.event.player.PlayerInteractEvent event) {
+    Player player = event.getPlayer();
+
+    // Check if player is frozen by Dread Gaze (checks VICTIM's debuff metadata)
+    if (player.hasMetadata(DREAD_GAZE_DEBUFF_KEY)) {
+      // Cancel all interactions (right-click actions)
+      if (event.getAction() == org.bukkit.event.block.Action.RIGHT_CLICK_AIR ||
+          event.getAction() == org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK ||
+          event.getAction() == org.bukkit.event.block.Action.LEFT_CLICK_AIR ||
+          event.getAction() == org.bukkit.event.block.Action.LEFT_CLICK_BLOCK) {
+        event.setCancelled(true);
+        player.sendMessage(
+          Component.text("⛶ You cannot interact while frozen by Dread Gaze!", NamedTextColor.DARK_PURPLE)
+        );
+      }
+    }
   }
 }

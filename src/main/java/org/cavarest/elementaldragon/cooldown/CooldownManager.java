@@ -365,6 +365,30 @@ public class CooldownManager implements Listener {
   }
 
   /**
+   * Get the formatted cooldown display string for an ability.
+   * Returns the effective cooldown duration in a human-readable format.
+   * Used by HudManager to display dynamic duration information.
+   *
+   * @param element The element name
+   * @param abilityNum The ability number
+   * @return Formatted duration string (e.g., "60s", "instant", or the duration in seconds)
+   */
+  public String getCooldownDisplay(String element, int abilityNum) {
+    if (element == null) {
+      return "unknown";
+    }
+
+    int cooldown = globalCooldowns.getOrDefault(makeKey(element, abilityNum), -1);
+
+    // Handle special cases
+    if (cooldown <= 0) {
+      return "instant"; // 0 seconds or negative means no cooldown/instant
+    }
+
+    return cooldown + "s"; // Format: "60s", "30s", etc.
+  }
+
+  /**
    * Get all global cooldown configurations.
    * Returns a map of element:ability -> default duration (seconds).
    */

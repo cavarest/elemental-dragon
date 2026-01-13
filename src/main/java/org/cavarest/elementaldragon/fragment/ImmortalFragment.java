@@ -55,7 +55,7 @@ public class ImmortalFragment extends AbstractFragment implements Listener {
   private static final Color GOLD_COLOR = Color.fromRGB(255, 215, 0);
 
   // Fragment metadata (Single Source of Truth)
-  private static final Material MATERIAL = Material.TOTEM_OF_UNDYING;
+  private static final Material MATERIAL = Material.DIAMOND;
   private static final NamedTextColor THEME_COLOR = NamedTextColor.GREEN;
   private static final String ELEMENT_NAME = "EARTH";
 
@@ -71,7 +71,9 @@ public class ImmortalFragment extends AbstractFragment implements Listener {
 
   // Metadata keys
   private static final String DRACONIC_REFLEX_ACTIVE_KEY = "immortal_draconic_reflex_active";
+  private static final String DRACONIC_REFLEX_START_TIME_KEY = "immortal_draconic_reflex_start_time";
   private static final String ESSENCE_REBIRTH_ACTIVATED_KEY = "immortal_essence_rebirth_activated";
+  private static final String ESSENCE_REBIRTH_START_TIME_KEY = "immortal_essence_rebirth_start_time";
 
   private final ElementalDragon plugin;
   private final Random random;
@@ -250,6 +252,12 @@ public class ImmortalFragment extends AbstractFragment implements Listener {
       new org.bukkit.metadata.FixedMetadataValue(plugin, true)
     );
 
+    // Store activation timestamp for HUD countdown
+    player.setMetadata(
+      DRACONIC_REFLEX_START_TIME_KEY,
+      new org.bukkit.metadata.FixedMetadataValue(plugin, System.currentTimeMillis())
+    );
+
     // Play activation sound
     playAbilitySound(center, Sound.BLOCK_ANVIL_LAND, 1.5f, 0.8f);
     playAbilitySound(center, Sound.ENTITY_GUARDIAN_HURT, 1.0f, 0.5f);
@@ -273,9 +281,12 @@ public class ImmortalFragment extends AbstractFragment implements Listener {
           return;
         }
 
-        // Remove the active metadata
+        // Remove the active metadata and start time
         if (player.hasMetadata(DRACONIC_REFLEX_ACTIVE_KEY)) {
           player.removeMetadata(DRACONIC_REFLEX_ACTIVE_KEY, plugin);
+        }
+        if (player.hasMetadata(DRACONIC_REFLEX_START_TIME_KEY)) {
+          player.removeMetadata(DRACONIC_REFLEX_START_TIME_KEY, plugin);
         }
 
         // Play expiration sound
@@ -307,6 +318,12 @@ public class ImmortalFragment extends AbstractFragment implements Listener {
       new org.bukkit.metadata.FixedMetadataValue(plugin, true)
     );
 
+    // Store activation timestamp for HUD countdown
+    player.setMetadata(
+      ESSENCE_REBIRTH_START_TIME_KEY,
+      new org.bukkit.metadata.FixedMetadataValue(plugin, System.currentTimeMillis())
+    );
+
     // Play activation sound
     Location center = player.getLocation();
     playAbilitySound(center, Sound.BLOCK_ENCHANTMENT_TABLE_USE, 1.5f, 1.2f);
@@ -331,13 +348,16 @@ public class ImmortalFragment extends AbstractFragment implements Listener {
           return;
         }
 
-        // Remove protection if still active (wasn't consumed by death prevention)
+        // Remove protection and start time if still active (wasn't consumed by death prevention)
         if (player.hasMetadata(ESSENCE_REBIRTH_ACTIVATED_KEY)) {
           player.removeMetadata(ESSENCE_REBIRTH_ACTIVATED_KEY, plugin);
-          player.sendMessage(
-            Component.text("Essence Rebirth protection has expired.", NamedTextColor.GRAY)
-          );
         }
+        if (player.hasMetadata(ESSENCE_REBIRTH_START_TIME_KEY)) {
+          player.removeMetadata(ESSENCE_REBIRTH_START_TIME_KEY, plugin);
+        }
+        player.sendMessage(
+          Component.text("Essence Rebirth protection has expired.", NamedTextColor.GRAY)
+        );
       }
     }.runTaskLater(plugin, ESSENCE_REBIRTH_DURATION);
   }
@@ -457,16 +477,16 @@ public class ImmortalFragment extends AbstractFragment implements Listener {
   }
 
   /**
-   * Event handler for Essence Rebirth fatal damage prevention.
+   * Event handler for Essence Rebirth fatal damage prevention AND passive totem effect.
    * Original Specification:
-   * - Grants second life if reduced to 0 hearts
-   * - Active for 30 seconds after activation
+   * - Grants second life if reduced to 0 hearts (active ability: 30-second window)
+   * - Passive: Immortal Fragment acts as a permanent Totem of Undying when equipped
    * - Retains all active potion effects
    * - Plays totem animation/sound effects
    *
    * @param event The entity damage event
    */
-  @EventHandler(priority = org.bukkit.event.EventPriority.HIGH)
+  @EventHandler(priority = org.bukkit.event.EventPriority.HIGHEST)
   public void onEntityDamageForEssenceRebirth(EntityDamageEvent event) {
     if (!(event.getEntity() instanceof Player)) {
       return;
@@ -474,8 +494,15 @@ public class ImmortalFragment extends AbstractFragment implements Listener {
 
     Player player = (Player) event.getEntity();
 
-    // Check if player has Essence Rebirth active (30-second protection window)
-    if (!player.hasMetadata(ESSENCE_REBIRTH_ACTIVATED_KEY)) {
+    // Check if player has Immortal Fragment equipped (passive totem effect)
+    FragmentManager fragmentManager = plugin.getFragmentManager();
+    boolean hasImmortalEquipped = fragmentManager.getEquippedFragment(player) == FragmentType.IMMORTAL;
+
+    // Check if player has Essence Rebirth active (30-second protection window from active ability)
+    boolean hasEssenceRebirthActive = player.hasMetadata(ESSENCE_REBIRTH_ACTIVATED_KEY);
+
+    // Skip if neither passive nor active protection is available
+    if (!hasImmortalEquipped && !hasEssenceRebirthActive) {
       return;
     }
 
@@ -485,11 +512,26 @@ public class ImmortalFragment extends AbstractFragment implements Listener {
       // Cancel fatal damage
       event.setCancelled(true);
 
-      // Restore to full health (20.0 = 10 hearts)
-      player.setHealth(20.0);
+      // Restore to full health (20.0 = 10 hearts, or max health if boosted)
+      double maxHealth = player.getAttribute(Attribute.MAX_HEALTH) != null
+        ? player.getAttribute(Attribute.MAX_HEALTH).getValue()
+        : 20.0;
+      player.setHealth(maxHealth);
 
-      // Remove Essence Rebirth protection (consumed - single use within 30-second window)
-      player.removeMetadata(ESSENCE_REBIRTH_ACTIVATED_KEY, plugin);
+      // Notify player they were saved by the passive
+      if (hasImmortalEquipped && !hasEssenceRebirthActive) {
+        player.sendMessage(
+          Component.text("Immortal Fragment saved you!", NamedTextColor.GOLD)
+        );
+      }
+
+      // Remove active Essence Rebirth protection (if active ability was used)
+      if (hasEssenceRebirthActive) {
+        player.removeMetadata(ESSENCE_REBIRTH_ACTIVATED_KEY, plugin);
+        player.sendMessage(
+          Component.text("Essence Rebirth saved you from death!", NamedTextColor.GOLD)
+        );
+      }
 
       // Play totem sound effect (same as Totem of Undying)
       player.playSound(player.getLocation(), Sound.ITEM_TOTEM_USE, 1.0f, 1.0f);
@@ -515,11 +557,6 @@ public class ImmortalFragment extends AbstractFragment implements Listener {
         1.0,
         0.1,
         new Particle.DustOptions(GOLD_COLOR, 2.0f)
-      );
-
-      // Notify player
-      player.sendMessage(
-        Component.text("Essence Rebirth saved you from death!", NamedTextColor.GOLD)
       );
 
       // Note: All active potion effects are automatically retained (no action needed)
@@ -616,6 +653,19 @@ public class ImmortalFragment extends AbstractFragment implements Listener {
       // Then reset base max health
       player.getAttribute(Attribute.MAX_HEALTH).setBaseValue(20.0);
     }
+  }
+
+  /**
+   * Event handler for player respawn.
+   * The passive totem protection works every time (no cooldown between uses).
+   * Note: Diamond has no special vanilla death behavior, so no special handling needed.
+   *
+   * @param event The player respawn event
+   */
+  @EventHandler
+  public void onPlayerRespawn(PlayerRespawnEvent event) {
+    // No special handling needed - DIAMOND material has no vanilla death behavior
+    // The fragment will simply be dropped on death like any other item
   }
 
   /**

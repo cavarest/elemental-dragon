@@ -1,6 +1,9 @@
 package org.cavarest.elementaldragon.command.subcommands;
 
+import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
+import org.cavarest.elementaldragon.ElementalDragon;
 import org.cavarest.elementaldragon.command.base.AbstractSubcommand;
 import org.cavarest.elementaldragon.command.display.GlobalCooldownFormatter;
 import org.cavarest.elementaldragon.command.util.ElementValidator;
@@ -27,6 +30,7 @@ public class GlobalCooldownSubcommand extends AbstractSubcommand {
     private final CooldownManager cooldownManager;
     private final GlobalCooldownFormatter formatter;
     private final ElementValidator elementValidator;
+    private final ElementalDragon plugin;
 
     /**
      * Creates a new global cooldown subcommand.
@@ -34,11 +38,13 @@ public class GlobalCooldownSubcommand extends AbstractSubcommand {
      * @param cooldownManager the cooldown manager
      * @param formatter the formatter for displaying global cooldowns
      * @param elementValidator the validator for element names
+     * @param plugin the plugin instance (for HUD updates)
      */
     public GlobalCooldownSubcommand(
         CooldownManager cooldownManager,
         GlobalCooldownFormatter formatter,
-        ElementValidator elementValidator
+        ElementValidator elementValidator,
+        ElementalDragon plugin
     ) {
         super(
             "globalcooldown",
@@ -49,6 +55,7 @@ public class GlobalCooldownSubcommand extends AbstractSubcommand {
         this.cooldownManager = cooldownManager;
         this.formatter = formatter;
         this.elementValidator = elementValidator;
+        this.plugin = plugin;
     }
 
     @Override
@@ -126,6 +133,11 @@ public class GlobalCooldownSubcommand extends AbstractSubcommand {
 
         // Adjust active player cooldowns (including clearing when seconds=0)
         cooldownManager.adjustActiveCooldowns(element, abilityNum, seconds);
+
+        // Update all player HUDs to show new duration display
+        if (plugin.getHudManager() != null) {
+            plugin.getHudManager().updateAllPlayerHuds();
+        }
 
         if (seconds == 0) {
             sendSuccess(sender, "DISABLED global cooldown for " + element + " ability " +

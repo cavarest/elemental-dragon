@@ -23,6 +23,8 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerItemHeldEvent;
 import org.bukkit.event.player.PlayerSwapHandItemsEvent;
+import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.plugin.Plugin;
 import me.catcoder.sidebar.ProtocolSidebar;
 import me.catcoder.sidebar.Sidebar;
@@ -36,12 +38,15 @@ import java.util.*;
  *
  * FORMAT: [Icon] /command [#] [ProgressBar] Status
  * - Ready: ⚡ /lightning 1  █ Ready
+ * - Active: 👁 /corrupt 2  █ ACTIVE (18s)
  * - Cooldown: 🔥 /fire 1    █ In 1m 1s
  *
  * Displays:
  * - Lightning ability (if dragon egg in offhand)
  * - Fragment Ability 1 (if fragment equipped)
  * - Fragment Ability 2 (if fragment equipped)
+ *
+ * Active abilities with durations show countdown in the format "ACTIVE (Xs)".
  */
 public class HudManager implements Listener {
 
@@ -57,45 +62,95 @@ public class HudManager implements Listener {
   // MiniMessage instance for styled text
   private final MiniMessage miniMessage = MiniMessage.miniMessage();
 
+  // Active ability duration mappings (ability key -> duration in seconds)
+  private static final Map<String, ActiveAbilityInfo> ACTIVE_ABILITY_INFO = new HashMap<>();
+
+  static {
+    // Dread Gaze: 10 seconds
+    ACTIVE_ABILITY_INFO.put("corrupt:1", new ActiveAbilityInfo(
+      "corrupted_dread_gaze_active", 10
+    ));
+    // Life Devourer: 20 seconds
+    ACTIVE_ABILITY_INFO.put("corrupt:2", new ActiveAbilityInfo(
+      "corrupted_life_devourer_active", 20
+    ));
+    // Draconic Reflex: 15 seconds
+    ACTIVE_ABILITY_INFO.put("immortal:1", new ActiveAbilityInfo(
+      "immortal_draconic_reflex_active", 15
+    ));
+    // Essence Rebirth: 30 seconds
+    ACTIVE_ABILITY_INFO.put("immortal:2", new ActiveAbilityInfo(
+      "immortal_essence_rebirth_activated", 30
+    ));
+  }
+
   // Ability name mappings
   private static final Map<String, AbilityInfo> ABILITY_INFO = new HashMap<>();
 
   static {
     // Lightning
     ABILITY_INFO.put(CooldownManager.LIGHTNING + ":0", new AbilityInfo(
-      "⚡", CooldownManager.LIGHTNING, 0, "/lightning 1", "Lightning Strike", NamedTextColor.LIGHT_PURPLE, "light_purple"
+      "⚡", CooldownManager.LIGHTNING, 0, "/lightning 1", "Lightning Strike", NamedTextColor.LIGHT_PURPLE, "light_purple", "instant"
     ));
 
     // Burning Fragment
     ABILITY_INFO.put(CooldownManager.FIRE + ":1", new AbilityInfo(
-      "🔥", CooldownManager.FIRE, 1, "/fire 1", "Dragon's Wrath", NamedTextColor.RED, "red"
+      "🔥", CooldownManager.FIRE, 1, "/fire 1", "Dragon's Wrath", NamedTextColor.RED, "red", "instant"
     ));
     ABILITY_INFO.put(CooldownManager.FIRE + ":2", new AbilityInfo(
-      "🔥", CooldownManager.FIRE, 2, "/fire 2", "Infernal Dominion", NamedTextColor.RED, "red"
+      "🔥", CooldownManager.FIRE, 2, "/fire 2", "Infernal Dominion", NamedTextColor.RED, "red", "10s"
     ));
 
     // Agility Fragment
     ABILITY_INFO.put(CooldownManager.AGILE + ":1", new AbilityInfo(
-      "💨", CooldownManager.AGILE, 1, "/agile 1", "Draconic Surge", NamedTextColor.AQUA, "aqua"
+      "💨", CooldownManager.AGILE, 1, "/agile 1", "Draconic Surge", NamedTextColor.AQUA, "aqua", "1s"
     ));
     ABILITY_INFO.put(CooldownManager.AGILE + ":2", new AbilityInfo(
-      "💨", CooldownManager.AGILE, 2, "/agile 2", "Wing Burst", NamedTextColor.AQUA, "aqua"
+      "💨", CooldownManager.AGILE, 2, "/agile 2", "Wing Burst", NamedTextColor.AQUA, "aqua", "10s"
     ));
 
     // Immortal Fragment
     ABILITY_INFO.put(CooldownManager.IMMORTAL + ":1", new AbilityInfo(
-      "🛡️", CooldownManager.IMMORTAL, 1, "/immortal 1", "Draconic Reflex", NamedTextColor.GREEN, "green"
+      "🛡️", CooldownManager.IMMORTAL, 1, "/immortal 1", "Draconic Reflex", NamedTextColor.GREEN, "green", "15s"
     ));
     ABILITY_INFO.put(CooldownManager.IMMORTAL + ":2", new AbilityInfo(
-      "🛡️", CooldownManager.IMMORTAL, 2, "/immortal 2", "Essence Rebirth", NamedTextColor.GREEN, "green"
+      "🛡️", CooldownManager.IMMORTAL, 2, "/immortal 2", "Essence Rebirth", NamedTextColor.GREEN, "green", "30s"
     ));
 
     // Corrupted Core - using single-width eye emoji (without variation selector)
     ABILITY_INFO.put(CooldownManager.CORRUPT + ":1", new AbilityInfo(
-      "👁", CooldownManager.CORRUPT, 1, "/corrupt 1", "Dread Gaze", NamedTextColor.DARK_PURPLE, "dark_purple"
+      "👁", CooldownManager.CORRUPT, 1, "/corrupt 1", "Dread Gaze", NamedTextColor.DARK_PURPLE, "dark_purple", "10s"
     ));
     ABILITY_INFO.put(CooldownManager.CORRUPT + ":2", new AbilityInfo(
-      "👁", CooldownManager.CORRUPT, 2, "/corrupt 2", "Life Devourer", NamedTextColor.DARK_PURPLE, "dark_purple"
+      "👁", CooldownManager.CORRUPT, 2, "/corrupt 2", "Life Devourer", NamedTextColor.DARK_PURPLE, "dark_purple", "20s"
+    ));
+  }
+
+  // Fragment display mappings (icon and color)
+  private static final Map<FragmentType, FragmentDisplayInfo> FRAGMENT_DISPLAY_INFO = new HashMap<>();
+
+  static {
+    FRAGMENT_DISPLAY_INFO.put(FragmentType.BURNING, new FragmentDisplayInfo(
+      "🔥", NamedTextColor.RED, "red"
+    ));
+    FRAGMENT_DISPLAY_INFO.put(FragmentType.AGILITY, new FragmentDisplayInfo(
+      "💨", NamedTextColor.AQUA, "aqua"
+    ));
+    FRAGMENT_DISPLAY_INFO.put(FragmentType.IMMORTAL, new FragmentDisplayInfo(
+      "🛡️", NamedTextColor.GREEN, "green"
+    ));
+    FRAGMENT_DISPLAY_INFO.put(FragmentType.CORRUPTED, new FragmentDisplayInfo(
+      "👁", NamedTextColor.DARK_PURPLE, "dark_purple"
+    ));
+  }
+
+  // Debuff duration mappings (debuff key -> duration in seconds)
+  private static final Map<String, DebuffInfo> DEBUFF_INFO = new HashMap<>();
+
+  static {
+    // Dread Gaze Freeze: 10 seconds
+    DEBUFF_INFO.put("corrupted_dread_gaze_debuff", new DebuffInfo(
+      "Dread Gaze Freeze", 10, "👁", NamedTextColor.DARK_PURPLE, "dark_purple"
     ));
   }
 
@@ -135,6 +190,27 @@ public class HudManager implements Listener {
   @EventHandler
   public void onPlayerQuit(PlayerQuitEvent event) {
     clearPlayerSidebar(event.getPlayer());
+  }
+
+  /**
+   * Handle player death - clear their HUD.
+   * When a player dies, they lose their items (dragon egg, fragments).
+   * The HUD should be cleared to reflect the empty inventory.
+   */
+  @EventHandler
+  public void onPlayerDeath(PlayerDeathEvent event) {
+    clearPlayerSidebar(event.getEntity());
+  }
+
+  /**
+   * Handle player respawn - update their HUD.
+   * After respawning, check if player has items (dragon egg, fragments) in offhand.
+   * This handles keepInventory game rule or if player picks up items after respawn.
+   */
+  @EventHandler
+  public void onPlayerRespawn(PlayerRespawnEvent event) {
+    // Update HUD after respawn to check if player has items
+    scheduleHudUpdate(event.getPlayer());
   }
 
   /**
@@ -228,6 +304,10 @@ public class HudManager implements Listener {
    * Shows sidebar with text-based progress bars for each ability.
    * Uses ProtocolSidebar's updatable lines for dynamic content.
    *
+   * Layout:
+   * - ACTIVE abilities section (if any) with reverse progress bars
+   * - Cooldown/Ready abilities section with normal progress bars
+   *
    * @param player The player
    */
   public void updatePlayerHud(Player player) {
@@ -253,8 +333,21 @@ public class HudManager implements Listener {
       abilityKeys.add(element + ":2");
     }
 
+    // Separate into active, inactive abilities AND debuffs
+    List<String> activeKeys = new ArrayList<>();
+    List<String> inactiveKeys = new ArrayList<>();
+    List<String> debuffKeys = getActiveDebuffs(player);
+
+    for (String abilityKey : abilityKeys) {
+      if (isActiveAbility(player, abilityKey)) {
+        activeKeys.add(abilityKey);
+      } else {
+        inactiveKeys.add(abilityKey);
+      }
+    }
+
     // Update or create sidebar
-    if (!abilityKeys.isEmpty()) {
+    if (!abilityKeys.isEmpty() || !debuffKeys.isEmpty()) {
       try {
         Sidebar<Component> sidebar = playerSidebars.get(playerId);
         List<SidebarLine<Component>> currentLines = playerLines.get(playerId);
@@ -281,8 +374,89 @@ public class HudManager implements Listener {
           }
         }
 
-        // Add updatable lines for each ability
-        for (String abilityKey : abilityKeys) {
+        // Add fragment display at the top (if a fragment is equipped)
+        if (equippedFragment != null) {
+          Component fragmentComponent = buildFragmentLine(equippedFragment);
+          SidebarLine<Component> fragmentLine = sidebar.addLine(fragmentComponent);
+          currentLines.add(fragmentLine);
+
+          // Add spacer after fragment display
+          SidebarLine<Component> fragmentSpacer = sidebar.addLine(Component.empty());
+          currentLines.add(fragmentSpacer);
+        }
+
+        // Add DEBUFFS section if player has active debuffs
+        if (!debuffKeys.isEmpty()) {
+          SidebarLine<Component> debuffHeader = sidebar.addLine(
+            Component.text("═══ ⚠ DEBUFFS ⚠ ═══", NamedTextColor.RED)
+          );
+          currentLines.add(debuffHeader);
+
+          SidebarLine<Component> debuffSpacer = sidebar.addLine(Component.empty());
+          currentLines.add(debuffSpacer);
+
+          // Add updatable lines for each debuff
+          for (String debuffKey : debuffKeys) {
+            SidebarLine<Component> line = sidebar.addUpdatableLine(p -> {
+              Component debuffText = buildDebuffLine(p, debuffKey);
+              return debuffText;
+            });
+            currentLines.add(line);
+          }
+
+          SidebarLine<Component> debuffDivider = sidebar.addLine(
+            Component.text("─────────────────────────────", NamedTextColor.GRAY)
+          );
+          currentLines.add(debuffDivider);
+        }
+
+        // Add ACTIVE section header if there are active abilities
+        if (!activeKeys.isEmpty()) {
+          SidebarLine<Component> spacer1 = sidebar.addLine(Component.empty());
+          currentLines.add(spacer1);
+
+          SidebarLine<Component> activeHeader = sidebar.addLine(
+            Component.text("═══ ✨ ACTIVE ABILITIES ✨ ═══", NamedTextColor.GOLD)
+          );
+          currentLines.add(activeHeader);
+
+          SidebarLine<Component> spacer2 = sidebar.addLine(Component.empty());
+          currentLines.add(spacer2);
+        }
+
+        // Add updatable lines for each ACTIVE ability
+        for (String abilityKey : activeKeys) {
+          SidebarLine<Component> line = sidebar.addUpdatableLine(p -> {
+            Component abilityText = buildAbilityLineForUpdater(p, abilityKey);
+            return abilityText;
+          });
+          currentLines.add(line);
+        }
+
+        // Add AVAILABLE section header if there are inactive abilities
+        if (!inactiveKeys.isEmpty()) {
+          // Add spacing before available section if there were active abilities
+          if (!activeKeys.isEmpty()) {
+            SidebarLine<Component> dividerLine = sidebar.addLine(
+              Component.text("─────────────────────────────", NamedTextColor.GRAY)
+            );
+            currentLines.add(dividerLine);
+          }
+
+          SidebarLine<Component> spacer3 = sidebar.addLine(Component.empty());
+          currentLines.add(spacer3);
+
+          SidebarLine<Component> availableHeader = sidebar.addLine(
+            Component.text("═══ ⚔ AVAILABLE ABILITIES ⚔ ═══", NamedTextColor.AQUA)
+          );
+          currentLines.add(availableHeader);
+
+          SidebarLine<Component> spacer4 = sidebar.addLine(Component.empty());
+          currentLines.add(spacer4);
+        }
+
+        // Add updatable lines for each AVAILABLE ability (cooldown or ready)
+        for (String abilityKey : inactiveKeys) {
           SidebarLine<Component> line = sidebar.addUpdatableLine(p -> {
             Component abilityText = buildAbilityLineForUpdater(p, abilityKey);
             return abilityText;
@@ -313,13 +487,70 @@ public class HudManager implements Listener {
   }
 
   /**
+   * Build the fragment display line with MiniMessage styling.
+   * Format:
+   *   🔥 FRAGMENT NAME
+   *   Passive Description (width-matched ~15-20 chars)
+   *
+   * @param fragmentType The equipped fragment type
+   * @return Component for fragment display
+   */
+  private Component buildFragmentLine(FragmentType fragmentType) {
+    FragmentDisplayInfo info = FRAGMENT_DISPLAY_INFO.get(fragmentType);
+    if (info == null) {
+      return Component.empty();
+    }
+
+    // Get passive description - width-matched for alignment
+    String passiveDescription = getWidthMatchedPassiveDescription(fragmentType);
+
+    // Use MiniMessage with <newline> tag for proper line breaks
+    String miniMessageString = String.format(
+      "<%s>%s</%s> <gold>%s</gold><newline><gray>%s</gray>",
+      info.colorName,              // Icon color
+      info.icon,                    // Icon
+      info.colorName,              // Icon color (closing)
+      fragmentType.getDisplayName().toUpperCase(), // Fragment name
+      passiveDescription           // Passive description
+    );
+
+    return miniMessage.deserialize(miniMessageString);
+  }
+
+  /**
+   * Get width-matched passive description for fragment type.
+   * All descriptions are approximately 15-20 characters for better alignment.
+   *
+   * @param fragmentType The fragment type
+   * @return Width-matched passive description
+   */
+  private String getWidthMatchedPassiveDescription(FragmentType fragmentType) {
+    switch (fragmentType) {
+      case BURNING:
+        return "100% Fire Immunity"; // 20 chars
+      case AGILITY:
+        return "30% Speed Boost"; // 17 chars
+      case IMMORTAL:
+        return "Resists Death"; // 15 chars
+      case CORRUPTED:
+        return "See in Darkness"; // 18 chars
+      default:
+        return fragmentType.getPassiveBonus();
+    }
+  }
+
+  /**
    * Build a single ability line with MiniMessage styling.
    * Format: [Icon] /command [#]  [ProgressBar] Status
-   * Example: ⚡ /lightning 1  █ Ready
+   *
+   * Active: 👁 /corrupt 2  █ ACTIVE (18s)
+   * Ready:  ⚡ /lightning 1  █ Ready
+   * Cooldown: 🔥 /fire 1    █ In 1m 1s
    *
    * Uses MiniMessage for styling:
    * - Command has shadow: <shadow:#000000FF>/command</shadow>
    * - Ready text has bold and shadow: <bold><shadow>Ready</shadow></bold>
+   * - Active text shows remaining duration with glow effect
    * - Cooldown numbers are underlined: In <underlined>30</underlined>s
    * - Colors transition based on progress
    */
@@ -329,49 +560,123 @@ public class HudManager implements Listener {
       return null;
     }
 
-    // Get cooldown and calculate progress
-    int cooldown = getCooldownForAbility(player, info.element, info.number);
-    float progress = calculateProgress(info, cooldown);
-    boolean isReady = cooldown <= 0;
+    // Get dynamic duration display from CooldownManager
+    // This reflects the current global cooldown setting
+    String durationText = getDynamicDurationDisplay(info.element, info.number);
 
-    // Progress bar - single vertical block for 100%
-    String progressBar = buildProgressBar(player, progress);
-    String barColor = getProgressBarColorMiniMessage(progress, isReady);
+    // Format ability name: hide "(instant)" for instant abilities
+    String abilityNameDisplay;
+    if ("instant".equals(durationText)) {
+      abilityNameDisplay = info.abilityName; // No duration shown
+    } else {
+      abilityNameDisplay = String.format("%s(%s)", info.abilityName, durationText);
+    }
 
-    // Build the line using MiniMessage
-    // Format: [Icon] /command [#] [ProgressBar] Status
-    // Example: ⚡ /lightning 1  █ Ready
-    // Example: 🔥 /fire 1       █ In 1m 1s
+    // Check if ability is currently active
+    boolean isActive = isActiveAbility(player, abilityKey);
+
+    // Special case for Dread Gaze: check if it's awaiting a hit
+    boolean isAwaitingHit = false;
+    if ("corrupt:1".equals(abilityKey)) {
+      isAwaitingHit = player.hasMetadata("corrupted_dread_gaze_active") &&
+                       !player.hasMetadata("corrupted_dread_gaze_active_start_time");
+    }
+
     String miniMessageString;
 
-    if (isReady) {
-      // Ready state - green with bold and shadow
+    if (isAwaitingHit) {
+      // READY TO STRIKE state - show awaiting hit message
+      String barColor = "#FF00FF"; // Magenta for special state
       miniMessageString = String.format(
-        "<%s><shadow:#000000FF>%s</shadow> <shadow:#000000FF>%s</shadow>  <%s><bold><shadow:#000000FF>Ready</shadow></bold></%s>",
-        info.colorName,    // Icon color
-        info.icon,         // Icon with shadow
-        info.command,      // Command with shadow
-        barColor,         // Progress bar and Ready color
-        barColor          // Ready text color
+        "<%s><shadow:#000000FF>%s</shadow> <gray>%s</gray>  <%s><bold><dark_purple>READY TO STRIKE</dark_purple></bold></%s>",
+        info.colorName,       // Icon color
+        info.icon,            // Icon with shadow
+        abilityNameDisplay,   // Ability name (with or without duration)
+        barColor,            // State color
+        barColor             // Overall color
+      );
+    } else if (isActive) {
+      // ACTIVE state - show countdown with reverse progress bar
+      int remainingSeconds = getActiveAbilityRemainingDuration(player, abilityKey);
+      ActiveAbilityInfo activeInfo = ACTIVE_ABILITY_INFO.get(abilityKey);
+
+      // Reverse progress: starts at 1.0, decreases to 0
+      float reverseProgress = activeInfo != null && activeInfo.durationSeconds > 0
+        ? (float) remainingSeconds / activeInfo.durationSeconds
+        : 0.5f;
+
+      // Clamp to valid range
+      reverseProgress = Math.max(0.0f, Math.min(1.0f, reverseProgress));
+
+      String progressBar = buildProgressBar(player, reverseProgress);
+      String barColor = "#FF00FF"; // Magenta/pink for active abilities
+
+      // Format: [Icon] Ability Name (Duration)  [ProgressBar] ACTIVE (Xs)
+      miniMessageString = String.format(
+        "<%s><shadow:#000000FF>%s</shadow> %s  <%s><bold>ACTIVE</bold> (%ds)</%s>",
+        info.colorName,       // Icon color
+        info.icon,            // Icon with shadow
+        abilityNameDisplay,   // Ability name (with or without duration)
+        barColor,            // Progress bar and Active color
+        remainingSeconds,    // Remaining seconds
+        barColor             // Overall color
       );
     } else {
-      // Cooldown state - "In" is white, countdown is colored based on progress
-      String cooldownText = formatCooldownShort(cooldown);
+      // Not active - check cooldown
+      int cooldown = getCooldownForAbility(player, info.element, info.number);
+      float progress = calculateProgress(info, cooldown);
+      boolean isReady = cooldown <= 0;
 
-      miniMessageString = String.format(
-        "<%s><shadow:#000000FF>%s</shadow> <shadow:#000000FF>%s</shadow>  %s <white>In</white> <%s>%s</%s>",
-        info.colorName,    // Icon color
-        info.icon,         // Icon with shadow
-        info.command,      // Command with shadow
-        progressBar,       // Progress bar (e.g., "█")
-        barColor,         // Cooldown countdown color
-        cooldownText,     // Countdown (e.g., "1m 10s")
-        barColor          // Overall color
-      );
+      // Progress bar - single vertical block for 100%
+      String progressBar = buildProgressBar(player, progress);
+      String barColor = getProgressBarColorMiniMessage(progress, isReady);
+
+      if (isReady) {
+        // Ready state - green with bold and shadow
+        miniMessageString = String.format(
+          "<%s><shadow:#000000FF>%s</shadow> %s  <%s><bold><shadow:#000000FF>Ready</shadow></bold></%s>",
+          info.colorName,    // Icon color
+          info.icon,         // Icon with shadow
+          abilityNameDisplay, // Ability name (with or without duration)
+          barColor,         // Progress bar and Ready color
+          barColor          // Ready text color
+        );
+      } else {
+        // Cooldown state - "In" is white, countdown is colored based on progress
+        String cooldownText = formatCooldownShort(cooldown);
+
+        miniMessageString = String.format(
+          "<%s><shadow:#000000FF>%s</shadow> %s %s <white>In</white> <%s>%s</%s>",
+          info.colorName,    // Icon color
+          info.icon,         // Icon with shadow
+          abilityNameDisplay, // Ability name (with or without duration)
+          progressBar,       // Progress bar (e.g., "█")
+          barColor,         // Cooldown countdown color
+          cooldownText,     // Countdown (e.g., "1m 10s")
+          barColor          // Overall color
+        );
+      }
     }
 
     // Parse the MiniMessage string into a Component
     return miniMessage.deserialize(miniMessageString);
+  }
+
+  /**
+   * Get the dynamic duration display for an ability.
+   * Queries CooldownManager for the current global cooldown setting.
+   *
+   * @param element The element name
+   * @param abilityNum The ability number
+   * @return Formatted duration string (e.g., "60s", "instant")
+   */
+  private String getDynamicDurationDisplay(String element, int abilityNum) {
+    if (cooldownManager == null) {
+      return "unknown";
+    }
+
+    // Use CooldownManager to get the current effective cooldown display
+    return cooldownManager.getCooldownDisplay(element, abilityNum);
   }
 
   /**
@@ -524,11 +829,65 @@ public class HudManager implements Listener {
       return false;
     }
 
-    Ability lightning = abilityManager.getAbility(1);
-    plugin.getLogger().info("[HUD DEBUG] hasLightningAbility: lightning=" + lightning);
-    boolean result = lightning != null && lightning.hasRequiredItem(player);
-    plugin.getLogger().info("[HUD DEBUG] hasLightningAbility: result=" + result);
-    return result;
+    // Check if player has dragon egg in offhand
+    org.bukkit.inventory.ItemStack offhand = player.getInventory().getItemInOffHand();
+    return offhand != null && offhand.getType() == org.bukkit.Material.DRAGON_EGG;
+  }
+
+  /**
+   * Check if an ability is currently active for a player.
+   * Checks metadata to determine if the ability is active.
+   *
+   * @param player The player
+   * @param abilityKey The ability key (e.g., "corrupt:2")
+   * @return true if the ability is active
+   */
+  private boolean isActiveAbility(Player player, String abilityKey) {
+    ActiveAbilityInfo info = ACTIVE_ABILITY_INFO.get(abilityKey);
+    if (info == null) {
+      return false;
+    }
+
+    // Check if player has the active metadata set
+    return player.hasMetadata(info.metadataKey);
+  }
+
+  /**
+   * Get the remaining duration for an active ability.
+   * Uses activation timestamp metadata if available for accurate countdown.
+   *
+   * @param player The player
+   * @param abilityKey The ability key (e.g., "corrupt:2")
+   * @return Remaining duration in seconds, or 0 if not active
+   */
+  private int getActiveAbilityRemainingDuration(Player player, String abilityKey) {
+    ActiveAbilityInfo info = ACTIVE_ABILITY_INFO.get(abilityKey);
+    if (info == null) {
+      return 0;
+    }
+
+    // Check if player has the active metadata set
+    if (!player.hasMetadata(info.metadataKey)) {
+      return 0;
+    }
+
+    // Try to get activation timestamp from metadata
+    String startTimeKey = info.metadataKey + "_start_time";
+    if (player.hasMetadata(startTimeKey)) {
+      try {
+        long startTime = player.getMetadata(startTimeKey).get(0).asLong();
+        long elapsedMillis = System.currentTimeMillis() - startTime;
+        int elapsedSeconds = (int) (elapsedMillis / 1000);
+        int remaining = info.durationSeconds - elapsedSeconds;
+        return Math.max(0, remaining);
+      } catch (Exception e) {
+        // If timestamp is invalid, return full duration
+        return info.durationSeconds;
+      }
+    }
+
+    // No timestamp available - return full duration as fallback
+    return info.durationSeconds;
   }
 
   /**
@@ -541,6 +900,94 @@ public class HudManager implements Listener {
       case IMMORTAL: return CooldownManager.IMMORTAL;
       case CORRUPTED: return CooldownManager.CORRUPT;
       default: return "unknown";
+    }
+  }
+
+  /**
+   * Get list of active debuffs for a player.
+   * Checks metadata for debuff markers.
+   *
+   * @param player The player
+   * @return List of active debuff keys
+   */
+  private List<String> getActiveDebuffs(Player player) {
+    List<String> debuffs = new ArrayList<>();
+
+    for (String debuffKey : DEBUFF_INFO.keySet()) {
+      if (player.hasMetadata(debuffKey)) {
+        debuffs.add(debuffKey);
+      }
+    }
+
+    return debuffs;
+  }
+
+  /**
+   * Build a debuff line showing remaining duration.
+   * Format: [Icon] Debuff Name  [ProgressBar] (Xs)
+   *
+   * @param player The player
+   * @param debuffKey The debuff metadata key
+   * @return Component for debuff display
+   */
+  private Component buildDebuffLine(Player player, String debuffKey) {
+    DebuffInfo info = DEBUFF_INFO.get(debuffKey);
+    if (info == null) {
+      return Component.empty();
+    }
+
+    // Get remaining duration
+    int remainingSeconds = getDebuffRemainingDuration(player, debuffKey);
+    if (remainingSeconds <= 0) {
+      return Component.empty(); // Shouldn't happen if metadata is correct
+    }
+
+    // Reverse progress: starts at 1.0, decreases to 0
+    float reverseProgress = (float) remainingSeconds / info.durationSeconds;
+    reverseProgress = Math.max(0.0f, Math.min(1.0f, reverseProgress));
+
+    String progressBar = buildProgressBar(player, reverseProgress);
+    String barColor = "#FF00FF"; // Magenta for debuffs
+
+    // Format: [Icon] Debuff Name  [ProgressBar] (Xs)
+    String miniMessageString = String.format(
+      "<%s><shadow:#000000FF>%s</shadow> <%s>%s</%s>  <%s>(%ds)</%s>",
+      info.colorName,  // Icon color
+      info.icon,          // Icon
+      info.colorName,  // Name color
+      info.name,          // Debuff name
+      barColor,          // Progress bar color
+      barColor,          // Countdown color
+      remainingSeconds,  // Remaining seconds
+      barColor           // Overall color
+    );
+
+    return miniMessage.deserialize(miniMessageString);
+  }
+
+  /**
+   * Get remaining duration for a debuff.
+   *
+   * @param player The player
+   * @param debuffKey The debuff metadata key
+   * @return Remaining duration in seconds
+   */
+  private int getDebuffRemainingDuration(Player player, String debuffKey) {
+    String startTimeKey = debuffKey + "_start_time";
+    if (!player.hasMetadata(startTimeKey)) {
+      return 0;
+    }
+
+    try {
+      long startTime = player.getMetadata(startTimeKey).get(0).asLong();
+      long elapsedMillis = System.currentTimeMillis() - startTime;
+      int elapsedSeconds = (int) (elapsedMillis / 1000);
+
+      DebuffInfo info = DEBUFF_INFO.get(debuffKey);
+      int remaining = info.durationSeconds - elapsedSeconds;
+      return Math.max(0, remaining);
+    } catch (Exception e) {
+      return 0;
     }
   }
 
@@ -579,6 +1026,16 @@ public class HudManager implements Listener {
   }
 
   /**
+   * Update HUDs for all online players.
+   * Called when global settings change (cooldowns, symbols, etc.)
+   */
+  public void updateAllPlayerHuds() {
+    for (Player player : Bukkit.getOnlinePlayers()) {
+      updatePlayerHud(player);
+    }
+  }
+
+  /**
    * Ability information holder.
    */
   private static class AbilityInfo {
@@ -589,14 +1046,66 @@ public class HudManager implements Listener {
     final String abilityName;
     final NamedTextColor color;
     final String colorName; // MiniMessage color name (e.g., "light_purple", "red")
+    final String durationDisplay; // Duration text to display (e.g., "15s", "instant")
 
     AbilityInfo(String icon, String element, int number, String command,
-                String abilityName, NamedTextColor color, String colorName) {
+                String abilityName, NamedTextColor color, String colorName, String durationDisplay) {
       this.icon = icon;
       this.element = element;
       this.number = number;
       this.command = command;
       this.abilityName = abilityName;
+      this.color = color;
+      this.colorName = colorName;
+      this.durationDisplay = durationDisplay;
+    }
+  }
+
+  /**
+   * Active ability information holder.
+   * Contains metadata key and duration for abilities with active states.
+   */
+  private static class ActiveAbilityInfo {
+    final String metadataKey;      // Metadata key to check if ability is active
+    final int durationSeconds;      // Duration in seconds
+
+    ActiveAbilityInfo(String metadataKey, int durationSeconds) {
+      this.metadataKey = metadataKey;
+      this.durationSeconds = durationSeconds;
+    }
+  }
+
+  /**
+   * Fragment display information holder.
+   * Contains icon and color for displaying equipped fragment on HUD.
+   */
+  private static class FragmentDisplayInfo {
+    final String icon;              // Icon emoji for the fragment
+    final NamedTextColor color;     // Named text color
+    final String colorName;         // MiniMessage color name
+
+    FragmentDisplayInfo(String icon, NamedTextColor color, String colorName) {
+      this.icon = icon;
+      this.color = color;
+      this.colorName = colorName;
+    }
+  }
+
+  /**
+   * Debuff information holder.
+   * Contains name, duration, icon, and color for displaying debuffs on HUD.
+   */
+  private static class DebuffInfo {
+    final String name;             // Debuff name (e.g., "Dread Gaze Freeze")
+    final int durationSeconds;     // Duration in seconds
+    final String icon;             // Icon emoji for the debuff
+    final NamedTextColor color;    // Named text color
+    final String colorName;        // MiniMessage color name
+
+    DebuffInfo(String name, int durationSeconds, String icon, NamedTextColor color, String colorName) {
+      this.name = name;
+      this.durationSeconds = durationSeconds;
+      this.icon = icon;
       this.color = color;
       this.colorName = colorName;
     }

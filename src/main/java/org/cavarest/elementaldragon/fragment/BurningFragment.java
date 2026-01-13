@@ -396,33 +396,54 @@ public class BurningFragment extends AbstractFragment implements Listener {
           return;
         }
 
-        // Damage nearby players (ORIGINAL SPEC: all players except wielder)
+        // Damage nearby living entities (hostile mobs, players, etc.)
         for (Entity entity : player.getWorld().getNearbyEntities(
           center, INFERNAL_DOMINION_RADIUS, INFERNAL_DOMINION_RADIUS, INFERNAL_DOMINION_RADIUS
         )) {
-          // Original specification: affects all PLAYERS in 10 block radius
-          if (!(entity instanceof Player)) {
+          // Affects all living entities (players, hostile mobs, animals)
+          if (!(entity instanceof LivingEntity)) {
             continue;
           }
 
-          Player targetPlayer = (Player) entity;
+          LivingEntity target = (LivingEntity) entity;
 
           // Skip the wielder (wielder is not affected)
-          if (targetPlayer.getUniqueId().equals(player.getUniqueId())) {
+          if (target instanceof Player && target.getUniqueId().equals(player.getUniqueId())) {
             continue;
           }
 
           // Apply fire ticks (visual effect)
-          targetPlayer.setFireTicks(20); // 1 second of fire (20 ticks)
+          target.setFireTicks(20); // 1 second of fire (20 ticks)
 
-          // Apply damage (1 heart per second = 2.0 damage per second)
+          // Create a custom damage event that bypasses armor
+          // 1 heart per second = 2.0 damage per second
           // Running every 10 ticks (0.5 seconds) = 1.0 damage per interval
-          targetPlayer.damage(INFERNAL_DOMINION_DAMAGE_PER_TICK, player);
+          org.bukkit.event.entity.EntityDamageEvent damageEvent = new org.bukkit.event.entity.EntityDamageEvent(
+            target,
+            org.bukkit.event.entity.EntityDamageEvent.DamageCause.CUSTOM,
+            INFERNAL_DOMINION_DAMAGE_PER_TICK
+          );
 
-          // Visual feedback for affected player
-          targetPlayer.getWorld().spawnParticle(
+          // Set armor modifier to 0 to bypass armor
+          if (damageEvent.getDamage(org.bukkit.event.entity.EntityDamageEvent.DamageModifier.ARMOR) > 0) {
+            damageEvent.setDamage(org.bukkit.event.entity.EntityDamageEvent.DamageModifier.ARMOR, 0);
+          }
+
+          // Fire the event through the plugin manager so other abilities can react
+          plugin.getServer().getPluginManager().callEvent(damageEvent);
+
+          // If event wasn't cancelled, apply the damage
+          if (!damageEvent.isCancelled()) {
+            double finalDamage = damageEvent.getFinalDamage();
+            double currentHealth = target.getHealth();
+            double newHealth = Math.max(0, currentHealth - finalDamage);
+            target.setHealth(newHealth);
+          }
+
+          // Visual feedback for affected entity
+          target.getWorld().spawnParticle(
             Particle.FLAME,
-            targetPlayer.getLocation().add(0, 1, 0),
+            target.getLocation().add(0, 1, 0),
             10,
             0.3,
             0.5,
@@ -638,7 +659,10 @@ public class BurningFragment extends AbstractFragment implements Listener {
 
   /**
    * Event handler for Dragon's Wrath fireball damage.
-   * Applies armor-ignoring damage to direct hit target.
+   * Applies TRUE damage that ignores armor but still fires damage events.
+   *
+   * Uses EntityDamageEvent with DamageModifier.ARMOR set to 0 to bypass armor
+   * while still allowing other plugins/abilities to react to the damage.
    */
   @EventHandler
   public void onFireballDamage(EntityDamageByEntityEvent event) {
@@ -657,16 +681,34 @@ public class BurningFragment extends AbstractFragment implements Listener {
     double customDamage = fireball.getPersistentDataContainer().get(
       damageKey, org.bukkit.persistence.PersistentDataType.DOUBLE);
 
-    // Apply armor-ignoring damage
-    // Set damage type to MAGIC which bypasses armor
-    event.setCancelled(true);
-
     if (event.getEntity() instanceof LivingEntity) {
       LivingEntity target = (LivingEntity) event.getEntity();
 
-      // Apply damage that ignores armor by using damage() with custom DamageCause
-      // MAGIC damage bypasses armor in Minecraft
-      target.damage(customDamage, fireball);
+      // Cancel the original fireball damage event
+      event.setCancelled(true);
+
+      // Create a custom damage event that bypasses armor
+      org.bukkit.event.entity.EntityDamageEvent damageEvent = new org.bukkit.event.entity.EntityDamageEvent(
+        target,
+        org.bukkit.event.entity.EntityDamageEvent.DamageCause.CUSTOM,
+        customDamage
+      );
+
+      // Set armor modifier to 0 to bypass armor
+      if (damageEvent.getDamage(org.bukkit.event.entity.EntityDamageEvent.DamageModifier.ARMOR) > 0) {
+        damageEvent.setDamage(org.bukkit.event.entity.EntityDamageEvent.DamageModifier.ARMOR, 0);
+      }
+
+      // Fire the event through the plugin manager so other abilities can react
+      plugin.getServer().getPluginManager().callEvent(damageEvent);
+
+      // If event wasn't cancelled, apply the damage
+      if (!damageEvent.isCancelled()) {
+        double finalDamage = damageEvent.getFinalDamage();
+        double currentHealth = target.getHealth();
+        double newHealth = Math.max(0, currentHealth - finalDamage);
+        target.setHealth(newHealth);
+      }
 
       // Apply fire ticks
       target.setFireTicks(40); // 2 seconds of fire
@@ -709,32 +751,52 @@ public class BurningFragment extends AbstractFragment implements Listener {
       shooter = (Player) fireball.getShooter();
     }
 
-    // Apply AOE damage to all PLAYERS within radius (original spec: all players)
+    // Apply AOE damage to all living entities within radius
     for (Entity entity : fireball.getWorld().getNearbyEntities(
         impactLoc, aoeRadius, aoeRadius, aoeRadius)) {
 
-      // Original specification: affects all PLAYERS in 5 block radius
-      if (!(entity instanceof Player)) {
+      // Affects all living entities (players, hostile mobs, animals)
+      if (!(entity instanceof LivingEntity)) {
         continue;
       }
 
-      Player targetPlayer = (Player) entity;
+      LivingEntity target = (LivingEntity) entity;
 
       // Skip the shooter (wielder is not affected)
-      if (shooter != null && targetPlayer.getUniqueId().equals(shooter.getUniqueId())) {
+      if (shooter != null && target instanceof Player && target.getUniqueId().equals(shooter.getUniqueId())) {
         continue;
       }
 
-      // Apply armor-ignoring damage (MAGIC damage type bypasses armor)
-      targetPlayer.damage(damage, fireball);
+      // Create a custom damage event that bypasses armor
+      org.bukkit.event.entity.EntityDamageEvent damageEvent = new org.bukkit.event.entity.EntityDamageEvent(
+        target,
+        org.bukkit.event.entity.EntityDamageEvent.DamageCause.CUSTOM,
+        damage
+      );
+
+      // Set armor modifier to 0 to bypass armor
+      if (damageEvent.getDamage(org.bukkit.event.entity.EntityDamageEvent.DamageModifier.ARMOR) > 0) {
+        damageEvent.setDamage(org.bukkit.event.entity.EntityDamageEvent.DamageModifier.ARMOR, 0);
+      }
+
+      // Fire the event through the plugin manager so other abilities can react
+      plugin.getServer().getPluginManager().callEvent(damageEvent);
+
+      // If event wasn't cancelled, apply the damage
+      if (!damageEvent.isCancelled()) {
+        double finalDamage = damageEvent.getFinalDamage();
+        double currentHealth = target.getHealth();
+        double newHealth = Math.max(0, currentHealth - finalDamage);
+        target.setHealth(newHealth);
+      }
 
       // Apply fire ticks
-      targetPlayer.setFireTicks(40); // 2 seconds of fire
+      target.setFireTicks(40); // 2 seconds of fire
 
       // Visual feedback for AOE hit
-      targetPlayer.getWorld().spawnParticle(
+      target.getWorld().spawnParticle(
         Particle.FLAME,
-        targetPlayer.getLocation().add(0, 1, 0),
+        target.getLocation().add(0, 1, 0),
         20,
         0.5,
         0.5,
@@ -742,13 +804,16 @@ public class BurningFragment extends AbstractFragment implements Listener {
         0.1
       );
 
-      // Sound feedback
-      targetPlayer.playSound(
-        targetPlayer.getLocation(),
-        Sound.ENTITY_PLAYER_HURT_ON_FIRE,
-        1.0f,
-        1.0f
-      );
+      // Sound feedback (for players only)
+      if (target instanceof Player) {
+        Player targetPlayer = (Player) target;
+        targetPlayer.playSound(
+          targetPlayer.getLocation(),
+          Sound.ENTITY_PLAYER_HURT_ON_FIRE,
+          1.0f,
+          1.0f
+        );
+      }
     }
 
     // Show impact explosion particles

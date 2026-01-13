@@ -147,6 +147,11 @@ public class ElementalDragon extends JavaPlugin {
       org.cavarest.elementaldragon.fragment.FragmentItemListener fragmentItemListener =
         new org.cavarest.elementaldragon.fragment.FragmentItemListener(this, fragmentManager);
       getServer().getPluginManager().registerEvents(fragmentItemListener, this);
+
+      // Register listener for drop detection and unequip
+      org.cavarest.elementaldragon.listener.FragmentItemListener dropListener =
+        new org.cavarest.elementaldragon.listener.FragmentItemListener(this, fragmentManager);
+      getServer().getPluginManager().registerEvents(dropListener, this);
     }
 
     // Register crafting listener for Heavy Core validation in fragment recipes

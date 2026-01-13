@@ -12,21 +12,18 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityPickupItemEvent;
-import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 /**
- * Listener for fragment item interactions and inventory restrictions.
- * Enforces the rule: Players can only have ONE fragment item at a time.
- * This prevents duplicate fragments in inventory, chests, ender chests, shulkers, etc.
+ * Listener for fragment item interactions.
+ * - Right-click to equip fragment to offhand
+ * - Prevents duplicate fragment pickup (player can only carry one of each type)
+ * - Fragments can be stored in containers without restriction
  */
 public class FragmentItemListener implements Listener {
 
@@ -155,43 +152,13 @@ public class FragmentItemListener implements Listener {
     }
   }
 
-  /**
-   * Prevent players from storing DUPLICATES of the same fragment type in containers.
-   * Players can store different fragment types in the same container.
-   * Players cannot store multiple copies of the same fragment type.
-   */
-  @EventHandler(priority = EventPriority.HIGH)
-  public void onInventoryClick(InventoryClickEvent event) {
-    if (!(event.getWhoClicked() instanceof Player)) {
-      return;
-    }
-
-    Player player = (Player) event.getWhoClicked();
-    ItemStack clickedItem = event.getCurrentItem();
-    ItemStack cursorItem = event.getCursor();
-
-    // Check if player is trying to place a fragment into a container
-    if (event.getInventory().getType() != InventoryType.PLAYER &&
-        event.getInventory().getType() != InventoryType.CRAFTING) {
-
-      // Check cursor (item being placed)
-      FragmentType cursorType = getFragmentType(cursorItem);
-      if (cursorType != null) {
-        // Count how many of this SAME type are already in the container
-        int containerCount = countFragmentType(event.getInventory().getContents(), cursorType);
-        if (containerCount > 0) {
-          event.setCancelled(true);
-          player.sendMessage(miniMessage.deserialize(
-            "<red>⚠️ This container already has a <white>" + cursorType.getDisplayName() + "</white>!</red>\n" +
-            "<gray>Only ONE of each fragment type can be stored per container.</gray>"
-          ));
-        }
-      }
-    }
-  }
+  // Drop detection handled by listener.FragmentItemListener
+  // Container duplicate restriction removed per user feedback Issue 7.
+  // Fragments can now be stored freely in containers (chests, shulkers, etc.)
 
   /**
    * Count how many items of a specific fragment type exist in an inventory.
+   * Used to prevent duplicate fragment pickup.
    *
    * @param contents The inventory contents
    * @param targetType The fragment type to count
@@ -202,44 +169,10 @@ public class FragmentItemListener implements Listener {
     for (ItemStack item : contents) {
       FragmentType type = getFragmentType(item);
       if (type == targetType) {
-        count += item.getAmount();  // Count stack size
+        count += item.getAmount();
       }
     }
     return count;
-  }
-
-  /**
-   * Get the fragment type in a player's inventory (DEPRECATED - use countFragmentType).
-   *
-   * @param player The player
-   * @return The fragment type in inventory, or null if none found
-   */
-  @Deprecated
-  private FragmentType getFragmentInInventory(Player player) {
-    for (ItemStack item : player.getInventory().getContents()) {
-      FragmentType type = getFragmentType(item);
-      if (type != null) {
-        return type;
-      }
-    }
-    return null;
-  }
-
-  /**
-   * Get the fragment type in a container's contents (DEPRECATED - use countFragmentType).
-   *
-   * @param contents The container contents
-   * @return The fragment type in container, or null if none found
-   */
-  @Deprecated
-  private FragmentType getFragmentInContainer(ItemStack[] contents) {
-    for (ItemStack item : contents) {
-      FragmentType type = getFragmentType(item);
-      if (type != null) {
-        return type;
-      }
-    }
-    return null;
   }
 
   /**
