@@ -418,6 +418,7 @@ public class BurningFragment extends AbstractFragment implements Listener {
           // Create a custom damage event that bypasses armor
           // 1 heart per second = 2.0 damage per second
           // Running every 10 ticks (0.5 seconds) = 1.0 damage per interval
+          @SuppressWarnings("removal")
           org.bukkit.event.entity.EntityDamageEvent damageEvent = new org.bukkit.event.entity.EntityDamageEvent(
             target,
             org.bukkit.event.entity.EntityDamageEvent.DamageCause.CUSTOM,
@@ -688,6 +689,7 @@ public class BurningFragment extends AbstractFragment implements Listener {
       event.setCancelled(true);
 
       // Create a custom damage event that bypasses armor
+      @SuppressWarnings("removal")
       org.bukkit.event.entity.EntityDamageEvent damageEvent = new org.bukkit.event.entity.EntityDamageEvent(
         target,
         org.bukkit.event.entity.EntityDamageEvent.DamageCause.CUSTOM,
@@ -768,6 +770,7 @@ public class BurningFragment extends AbstractFragment implements Listener {
       }
 
       // Create a custom damage event that bypasses armor
+      @SuppressWarnings("removal")
       org.bukkit.event.entity.EntityDamageEvent damageEvent = new org.bukkit.event.entity.EntityDamageEvent(
         target,
         org.bukkit.event.entity.EntityDamageEvent.DamageCause.CUSTOM,
