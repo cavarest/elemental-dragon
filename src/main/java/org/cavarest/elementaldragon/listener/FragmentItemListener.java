@@ -4,9 +4,12 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.ItemDespawnEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Item;
 import org.cavarest.elementaldragon.ElementalDragon;
 import org.cavarest.elementaldragon.fragment.FragmentManager;
 import org.cavarest.elementaldragon.fragment.FragmentType;
@@ -18,6 +21,7 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 /**
  * Listener for fragment item restrictions:
  * 1. Detects when fragments leave player inventory (drop, despawn) and unequips them
+ * 2. Protects fragments from destruction (fire, lava, cactus, etc.)
  *
  * Note: Container restrictions removed per Issue 7 - fragments can now be stored freely.
  */
@@ -68,6 +72,28 @@ public class FragmentItemListener implements Listener {
       // Find the owner and unequip
       // Note: We can't easily track who owned the item, so we just log it
       plugin.getLogger().info("A " + fragmentType.getDisplayName() + " has despawned");
+    }
+  }
+
+  // ===== Fragment Protection =====
+
+  /**
+   * Protect fragments from destruction by fire, lava, cactus, and other damage sources.
+   * Fragments are indestructible when dropped in the world.
+   */
+  @EventHandler(priority = EventPriority.HIGH)
+  public void onItemDamage(EntityDamageEvent event) {
+    // Only check dropped items
+    if (!(event.getEntity() instanceof Item itemEntity)) {
+      return;
+    }
+
+    ItemStack item = itemEntity.getItemStack();
+    FragmentType fragmentType = getFragmentType(item);
+
+    if (fragmentType != null) {
+      // Cancel any damage to fragment items (fire, lava, cactus, etc.)
+      event.setCancelled(true);
     }
   }
 
