@@ -80,9 +80,10 @@ public class ElementalDragonCommand implements CommandExecutor, TabCompleter {
         this.globalCooldownSubcommand = new GlobalCooldownSubcommand(
             cooldownManager,
             globalCooldownFormatter,
-            elementValidator
+            elementValidator,
+            plugin
         );
-        this.setCountdownSymbolSubcommand = new SetGlobalCountdownSymbolSubcommand();
+        this.setCountdownSymbolSubcommand = new SetGlobalCountdownSymbolSubcommand(plugin);
     }
 
     @Override

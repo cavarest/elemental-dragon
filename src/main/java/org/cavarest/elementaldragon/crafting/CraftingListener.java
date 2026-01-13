@@ -146,13 +146,11 @@ public class CraftingListener implements Listener {
       event.getInventory().setResult(null);
       int current = craftedCountManager.getCraftedCount(player, resultFragmentType);
       int max = craftedCountManager.getMaxCraftableCount(resultFragmentType);
-      player.sendMessage(Component.text(
-        "⚠️ Crafting limit reached for " + resultFragmentType.getDisplayName() + "!",
-        NamedTextColor.RED
+      player.sendMessage(miniMessage.deserialize(
+        "<red>⚠️ Crafting limit reached for " + resultFragmentType.getDisplayName() + "!</red>"
       ));
-      player.sendMessage(Component.text(
-        "You have crafted " + current + "/" + max + " maximum.",
-        NamedTextColor.GRAY
+      player.sendMessage(miniMessage.deserialize(
+        "<gray>You have crafted " + current + "/" + max + " maximum.</gray>"
       ));
       return;
     }
@@ -169,13 +167,11 @@ public class CraftingListener implements Listener {
     if (!ElementalItems.isHeavyCore(centerItem)) {
       // Center item is not a Heavy Core - cancel the craft
       event.getInventory().setResult(null);
-      player.sendMessage(Component.text(
-        "⚠️ Invalid recipe! Center item must be a vanilla Heavy Core.",
-        NamedTextColor.RED
+      player.sendMessage(miniMessage.deserialize(
+        "<red>⚠️ Invalid recipe! Center item must be a vanilla Heavy Core.</red>"
       ));
-      player.sendMessage(Component.text(
-        "Heavy Core is a vanilla Minecraft item found in ancient cities.",
-        NamedTextColor.GRAY
+      player.sendMessage(miniMessage.deserialize(
+        "<gray>Heavy Core is a vanilla Minecraft item found in ancient cities.</gray>"
       ));
     }
   }

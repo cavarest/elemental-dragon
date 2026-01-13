@@ -2,6 +2,7 @@ package org.cavarest.elementaldragon.unit;
 
 import net.kyori.adventure.text.Component;
 import org.bukkit.command.CommandSender;
+import org.cavarest.elementaldragon.ElementalDragon;
 import org.cavarest.elementaldragon.command.subcommands.SetGlobalCountdownSymbolSubcommand;
 import org.cavarest.elementaldragon.hud.ProgressBarRenderer;
 import org.junit.jupiter.api.AfterEach;
@@ -25,6 +26,9 @@ public class SetGlobalCountdownSymbolSubcommandTest {
     @Mock
     private CommandSender sender;
 
+    @Mock
+    private ElementalDragon plugin;
+
     private SetGlobalCountdownSymbolSubcommand subcommand;
 
     private ProgressBarRenderer.ProgressVariant originalVariant;
@@ -32,7 +36,7 @@ public class SetGlobalCountdownSymbolSubcommandTest {
     @BeforeEach
     public void setUp() {
         MockitoAnnotations.openMocks(this);
-        subcommand = new SetGlobalCountdownSymbolSubcommand();
+        subcommand = new SetGlobalCountdownSymbolSubcommand(plugin);
         // Save original variant to restore after tests
         originalVariant = ProgressBarRenderer.getCurrentVariant();
     }
@@ -378,19 +382,19 @@ public class SetGlobalCountdownSymbolSubcommandTest {
     }
 
     @Test
-    @DisplayName("execute includes override reminder")
-    public void testExecuteSendsOverrideReminder() {
+    @DisplayName("execute includes update confirmation")
+    public void testExecuteSendsUpdateConfirmation() {
         subcommand.execute(sender, new String[]{"TILES"});
 
         ArgumentCaptor<Component> captor = ArgumentCaptor.forClass(Component.class);
         verify(sender, atLeastOnce()).sendMessage(captor.capture());
 
         List<Component> messages = captor.getAllValues();
-        boolean foundReminder = messages.stream()
-            .anyMatch(msg -> msg.toString().toLowerCase().contains("override") ||
-                           msg.toString().toLowerCase().contains("player"));
+        boolean foundConfirmation = messages.stream()
+            .anyMatch(msg -> msg.toString().toLowerCase().contains("global") ||
+                           msg.toString().toLowerCase().contains("set"));
 
-        assertTrue(foundReminder, "Should send override reminder");
+        assertTrue(foundConfirmation, "Should send confirmation message");
     }
 
     @Test

@@ -13,8 +13,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -30,6 +29,7 @@ public class ChronicleCommand implements CommandExecutor, TabCompleter {
 
   private final ElementalDragon plugin;
   private final ChronicleManager chronicleManager;
+  private final MiniMessage miniMessage = MiniMessage.miniMessage();
 
   /**
    * Create a new ChronicleCommand.
@@ -58,8 +58,7 @@ public class ChronicleCommand implements CommandExecutor, TabCompleter {
     // Check permission
     if (!player.hasPermission("elementaldragon.chronicle")) {
       player.sendMessage(
-        Component.text("You do not have permission to use this command!",
-          NamedTextColor.RED)
+        miniMessage.deserialize("<red>You do not have permission to use this command!</red>")
       );
       return true;
     }
@@ -82,7 +81,7 @@ public class ChronicleCommand implements CommandExecutor, TabCompleter {
       case "page":
         if (args.length < 2) {
           player.sendMessage(
-            Component.text("Usage: /chronicle page <1-7>", NamedTextColor.RED)
+            miniMessage.deserialize("<red>Usage: /chronicle page &lt;1-7&gt;</red>")
           );
           return true;
         }
@@ -91,7 +90,7 @@ public class ChronicleCommand implements CommandExecutor, TabCompleter {
           jumpToPage(player, pageNumber);
         } catch (NumberFormatException e) {
           player.sendMessage(
-            Component.text("Invalid page number! Use 1-7.", NamedTextColor.RED)
+            miniMessage.deserialize("<red>Invalid page number! Use 1-7.</red>")
           );
         }
         return true;
@@ -106,8 +105,7 @@ public class ChronicleCommand implements CommandExecutor, TabCompleter {
 
       default:
         player.sendMessage(
-          Component.text("Unknown subcommand. Use /chronicle help for usage.",
-            NamedTextColor.RED)
+          miniMessage.deserialize("<red>Unknown subcommand. Use /chronicle help for usage.</red>")
         );
         return true;
     }
@@ -123,8 +121,7 @@ public class ChronicleCommand implements CommandExecutor, TabCompleter {
     player.openBook(book);
 
     player.sendMessage(
-      Component.text("Opening the Chronicle of the Fallen Dragons...",
-        NamedTextColor.GRAY)
+      miniMessage.deserialize("<gray>Opening the Chronicle of the Fallen Dragons...</gray>")
     );
   }
 
@@ -154,25 +151,21 @@ public class ChronicleCommand implements CommandExecutor, TabCompleter {
     for (LorePage page : LorePage.values()) {
       if (discoveredPages.contains(page)) {
         // Add discovered page
-        Component pageContent = Component.text()
-          .append(Component.text(page.getTitle() + "\n\n",
-            NamedTextColor.DARK_PURPLE,
-            TextDecoration.BOLD))
-          .append(Component.text(page.getContent(), NamedTextColor.BLACK))
-          .build();
+        Component pageContent = miniMessage.deserialize(
+          "<bold><dark_purple>" + page.getTitle() + "</dark_purple></bold><newline><newline>" +
+          "<black>" + page.getContent() + "</black>"
+        );
 
         meta.addPages(pageContent);
       } else {
         // Add locked page placeholder
         String progress = chronicleManager.getProgress(player, page);
-        Component lockedContent = Component.text()
-          .append(Component.text("Page " + page.getPageNumber() + "\n\n",
-            NamedTextColor.DARK_GRAY,
-            TextDecoration.BOLD))
-          .append(Component.text("??? LOCKED ???\n\n", NamedTextColor.DARK_RED))
-          .append(Component.text(getUnlockHint(page) + "\n\n", NamedTextColor.GRAY))
-          .append(Component.text("Progress: " + progress, NamedTextColor.YELLOW))
-          .build();
+        Component lockedContent = miniMessage.deserialize(
+          "<bold><dark_gray>Page " + page.getPageNumber() + "</dark_gray></bold><newline><newline>" +
+          "<dark_red>??? LOCKED ???</dark_red><newline><newline>" +
+          "<gray>" + getUnlockHint(page) + "</gray><newline><newline>" +
+          "<yellow>Progress: " + progress + "</yellow>"
+        );
 
         meta.addPages(lockedContent);
       }
@@ -219,56 +212,50 @@ public class ChronicleCommand implements CommandExecutor, TabCompleter {
    */
   private void showProgress(Player player) {
     player.sendMessage(
-      Component.text("═══════════════════════════════════", NamedTextColor.DARK_PURPLE)
+      miniMessage.deserialize("<dark_purple>═══════════════════════════════════</dark_purple>")
     );
     player.sendMessage(
-      Component.text("Chronicle of the Fallen Dragons", NamedTextColor.GOLD,
-        TextDecoration.BOLD)
+      miniMessage.deserialize("<bold><gold>Chronicle of the Fallen Dragons</gold></bold>")
     );
     player.sendMessage(
-      Component.text("Discovery Progress", NamedTextColor.YELLOW)
+      miniMessage.deserialize("<yellow>Discovery Progress</yellow>")
     );
     player.sendMessage(
-      Component.text("═══════════════════════════════════", NamedTextColor.DARK_PURPLE)
+      miniMessage.deserialize("<dark_purple>═══════════════════════════════════</dark_purple>")
     );
 
     int discovered = chronicleManager.getDiscoveredCount(player);
     int total = chronicleManager.getTotalPageCount();
 
     player.sendMessage(
-      Component.text("Pages Discovered: " + discovered + "/" + total,
-        NamedTextColor.AQUA)
+      miniMessage.deserialize("<aqua>Pages Discovered: " + discovered + "/" + total + "</aqua>")
     );
-    player.sendMessage(Component.text(""));
+    player.sendMessage(Component.empty());
 
     // Show each page status
     for (LorePage page : LorePage.values()) {
       boolean isDiscovered = chronicleManager.hasDiscovered(player, page);
       String progress = chronicleManager.getProgress(player, page);
 
-      Component statusIcon = isDiscovered ?
-        Component.text("✓", NamedTextColor.GREEN) :
-        Component.text("✗", NamedTextColor.RED);
+      String statusIcon = isDiscovered ? "<green>✓</green>" : "<red>✗</red>";
+      String titleColor = isDiscovered ? "yellow" : "dark_gray";
 
-      Component pageLine = Component.text()
-        .append(statusIcon)
-        .append(Component.text(" Page " + page.getPageNumber() + ": ",
-          NamedTextColor.GRAY))
-        .append(Component.text(page.getTitle(),
-          isDiscovered ? NamedTextColor.YELLOW : NamedTextColor.DARK_GRAY))
-        .build();
-
-      player.sendMessage(pageLine);
+      player.sendMessage(
+        miniMessage.deserialize(
+          statusIcon + " <gray>Page " + page.getPageNumber() + ": </gray>" +
+          "<" + titleColor + ">" + page.getTitle() + "</" + titleColor + ">"
+        )
+      );
 
       if (!isDiscovered) {
         player.sendMessage(
-          Component.text("  Progress: " + progress, NamedTextColor.DARK_GRAY)
+          miniMessage.deserialize("<dark_gray>  Progress: " + progress + "</dark_gray>")
         );
       }
     }
 
     player.sendMessage(
-      Component.text("═══════════════════════════════════", NamedTextColor.DARK_PURPLE)
+      miniMessage.deserialize("<dark_purple>═══════════════════════════════════</dark_purple>")
     );
 
     // Show ability usage stats
@@ -281,9 +268,9 @@ public class ChronicleCommand implements CommandExecutor, TabCompleter {
    * @param player The player
    */
   private void showAbilityStats(Player player) {
-    player.sendMessage(Component.text(""));
+    player.sendMessage(Component.empty());
     player.sendMessage(
-      Component.text("Ability Usage Statistics:", NamedTextColor.GOLD)
+      miniMessage.deserialize("<gold>Ability Usage Statistics:</gold>")
     );
 
     for (FragmentType fragmentType : FragmentType.values()) {
@@ -292,16 +279,13 @@ public class ChronicleCommand implements CommandExecutor, TabCompleter {
 
       if (ability1Count > 0 || ability2Count > 0) {
         player.sendMessage(
-          Component.text("  " + fragmentType.getDisplayName() + ":",
-            NamedTextColor.YELLOW)
+          miniMessage.deserialize("<yellow>  " + fragmentType.getDisplayName() + ":</yellow>")
         );
         player.sendMessage(
-          Component.text("    Ability 1: " + ability1Count + " uses",
-            NamedTextColor.GRAY)
+          miniMessage.deserialize("<gray>    Ability 1: " + ability1Count + " uses</gray>")
         );
         player.sendMessage(
-          Component.text("    Ability 2: " + ability2Count + " uses",
-            NamedTextColor.GRAY)
+          miniMessage.deserialize("<gray>    Ability 2: " + ability2Count + " uses</gray>")
         );
       }
     }
@@ -318,22 +302,20 @@ public class ChronicleCommand implements CommandExecutor, TabCompleter {
 
     if (page == null) {
       player.sendMessage(
-        Component.text("Invalid page number! Use 1-7.", NamedTextColor.RED)
+        miniMessage.deserialize("<red>Invalid page number! Use 1-7.</red>")
       );
       return;
     }
 
     if (!chronicleManager.hasDiscovered(player, page)) {
       player.sendMessage(
-        Component.text("You haven't discovered page " + pageNumber + " yet!",
-          NamedTextColor.RED)
+        miniMessage.deserialize("<red>You haven't discovered page " + pageNumber + " yet!</red>")
       );
       player.sendMessage(
-        Component.text(getUnlockHint(page), NamedTextColor.GRAY)
+        miniMessage.deserialize("<gray>" + getUnlockHint(page) + "</gray>")
       );
       player.sendMessage(
-        Component.text("Progress: " + chronicleManager.getProgress(player, page),
-          NamedTextColor.YELLOW)
+        miniMessage.deserialize("<yellow>Progress: " + chronicleManager.getProgress(player, page) + "</yellow>")
       );
       return;
     }
@@ -343,8 +325,7 @@ public class ChronicleCommand implements CommandExecutor, TabCompleter {
     player.openBook(book);
 
     player.sendMessage(
-      Component.text("Opening Chronicle to Page " + pageNumber + "...",
-        NamedTextColor.GRAY)
+      miniMessage.deserialize("<gray>Opening Chronicle to Page " + pageNumber + "...</gray>")
     );
   }
 
@@ -356,8 +337,7 @@ public class ChronicleCommand implements CommandExecutor, TabCompleter {
   private void giveChronicleBook(Player player) {
     if (!player.hasPermission("elementaldragon.chronicle.get")) {
       player.sendMessage(
-        Component.text("You do not have permission to get a chronicle book!",
-          NamedTextColor.RED)
+        miniMessage.deserialize("<red>You do not have permission to get a chronicle book!</red>")
       );
       return;
     }
@@ -366,8 +346,7 @@ public class ChronicleCommand implements CommandExecutor, TabCompleter {
     player.getInventory().addItem(book);
 
     player.sendMessage(
-      Component.text("The Chronicle of the Fallen Dragons has been added to your inventory!",
-        NamedTextColor.GREEN)
+      miniMessage.deserialize("<green>The Chronicle of the Fallen Dragons has been added to your inventory!</green>")
     );
   }
 
@@ -378,33 +357,28 @@ public class ChronicleCommand implements CommandExecutor, TabCompleter {
    */
   private void showHelp(Player player) {
     player.sendMessage(
-      Component.text("═══════════════════════════════════", NamedTextColor.DARK_PURPLE)
+      miniMessage.deserialize("<dark_purple>═══════════════════════════════════</dark_purple>")
     );
     player.sendMessage(
-      Component.text("Chronicle Command Help", NamedTextColor.GOLD,
-        TextDecoration.BOLD)
+      miniMessage.deserialize("<bold><gold>Chronicle Command Help</gold></bold>")
     );
     player.sendMessage(
-      Component.text("═══════════════════════════════════", NamedTextColor.DARK_PURPLE)
+      miniMessage.deserialize("<dark_purple>═══════════════════════════════════</dark_purple>")
     );
     player.sendMessage(
-      Component.text("/chronicle", NamedTextColor.YELLOW)
-        .append(Component.text(" - Open the chronicle book", NamedTextColor.GRAY))
+      miniMessage.deserialize("<yellow>/chronicle</yellow><gray> - Open the chronicle book</gray>")
     );
     player.sendMessage(
-      Component.text("/chronicle status", NamedTextColor.YELLOW)
-        .append(Component.text(" - Show discovery progress", NamedTextColor.GRAY))
+      miniMessage.deserialize("<yellow>/chronicle status</yellow><gray> - Show discovery progress</gray>")
     );
     player.sendMessage(
-      Component.text("/chronicle page <1-7>", NamedTextColor.YELLOW)
-        .append(Component.text(" - Jump to specific page", NamedTextColor.GRAY))
+      miniMessage.deserialize("<yellow>/chronicle page &lt;1-7&gt;</yellow><gray> - Jump to specific page</gray>")
     );
     player.sendMessage(
-      Component.text("/chronicle get", NamedTextColor.YELLOW)
-        .append(Component.text(" - Get chronicle book item", NamedTextColor.GRAY))
+      miniMessage.deserialize("<yellow>/chronicle get</yellow><gray> - Get chronicle book item</gray>")
     );
     player.sendMessage(
-      Component.text("═══════════════════════════════════", NamedTextColor.DARK_PURPLE)
+      miniMessage.deserialize("<dark_purple>═══════════════════════════════════</dark_purple>")
     );
   }
 

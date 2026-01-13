@@ -39,9 +39,13 @@ public class AgilityFragment extends AbstractFragment implements Listener {
   // Draconic Surge constants (ORIGINAL SPECIFICATION)
   private static final long DRACONIC_SURGE_COOLDOWN = 45000L; // 45 seconds (original spec)
   private static final double DRACONIC_SURGE_DISTANCE = 20.0; // 20 blocks (original spec)
-  private static final int DRACONIC_SURGE_DURATION = 30; // 1.5 seconds = 30 ticks (original spec)
-  private static final double DRACONIC_SURGE_VELOCITY = DRACONIC_SURGE_DISTANCE / DRACONIC_SURGE_DURATION; // ~0.667 blocks/tick
-  private static final int DRACONIC_SURGE_LANDING_PROTECTION = 20; // 1 second (20 ticks) invulnerability after dash
+  private static final int DRACONIC_SURGE_DURATION = 20; // 1 second = 20 ticks (user spec)
+  private static final double DRACONIC_SURGE_VELOCITY = DRACONIC_SURGE_DISTANCE / DRACONIC_SURGE_DURATION; // 1.0 blocks/tick
+  private static final int DRACONIC_SURGE_FALL_PROTECTION = 200; // 10 seconds (200 ticks) of fall damage protection
+
+  // Metadata keys for tracking Draconic Surge state
+  private static final String DRACONIC_SURGE_ACTIVE_KEY = "agile_draconic_surge_active";
+  private static final String DRACONIC_SURGE_START_TIME_KEY = "agile_draconic_surge_start_time";
 
   // Wing Burst constants (ORIGINAL SPECIFICATION)
   private static final long WING_BURST_COOLDOWN = 120000L; // 2 minutes (original spec)
@@ -72,9 +76,6 @@ public class AgilityFragment extends AbstractFragment implements Listener {
   );
 
   private final ElementalDragon plugin;
-
-  // Track players currently dashing or landing (for invulnerability)
-  private final java.util.Set<java.util.UUID> dashingPlayers = new java.util.HashSet<>();
 
   /**
    * Create a new Agility Fragment.
@@ -224,7 +225,7 @@ public class AgilityFragment extends AbstractFragment implements Listener {
    * Execute Draconic Surge - dash player 20 blocks in direction they are looking.
    * Original Specification:
    * - Dashes player 20 blocks in direction they are looking
-   * - Completes within 1.5 seconds (30 ticks)
+   * - Completes within 1 second (20 ticks)
    * - Negates damage while flying and during landing
    * - Cooldown: 45 seconds
    *
@@ -239,8 +240,10 @@ public class AgilityFragment extends AbstractFragment implements Listener {
     Vector direction = playerLocation.getDirection().normalize();
     Vector dashVelocity = direction.multiply(DRACONIC_SURGE_VELOCITY);
 
-    // Mark player as dashing (for invulnerability)
-    dashingPlayers.add(player.getUniqueId());
+    // Mark player as having fall damage protection (10 seconds)
+    // This prevents fall damage even if player disconnects and reconnects
+    player.setMetadata(DRACONIC_SURGE_ACTIVE_KEY, new org.bukkit.metadata.FixedMetadataValue(plugin, true));
+    player.setMetadata(DRACONIC_SURGE_START_TIME_KEY, new org.bukkit.metadata.FixedMetadataValue(plugin, System.currentTimeMillis()));
 
     // Play activation sound
     playAbilitySound(
@@ -250,30 +253,20 @@ public class AgilityFragment extends AbstractFragment implements Listener {
       1.5f
     );
 
-    // Apply continuous velocity over 30 ticks (1.5 seconds)
+    // Apply continuous velocity over DRACONIC_SURGE_DURATION ticks (1 second)
     new BukkitRunnable() {
       private int ticks = 0;
 
       @Override
       public void run() {
         if (ticks >= DRACONIC_SURGE_DURATION) {
-          // Dash complete - start landing protection period
+          // Dash complete - fall damage protection continues separately
           cancel();
-
-          // Schedule landing protection removal (1 second after dash)
-          new BukkitRunnable() {
-            @Override
-            public void run() {
-              dashingPlayers.remove(player.getUniqueId());
-            }
-          }.runTaskLater(plugin, DRACONIC_SURGE_LANDING_PROTECTION);
-
           return;
         }
 
         if (player.isDead() || !player.isValid()) {
           cancel();
-          dashingPlayers.remove(player.getUniqueId());
           return;
         }
 
@@ -295,10 +288,23 @@ public class AgilityFragment extends AbstractFragment implements Listener {
       }
     }.runTaskTimer(plugin, 0L, 1L);
 
+    // Schedule removal of fall damage protection after 10 seconds
+    new BukkitRunnable() {
+      @Override
+      public void run() {
+        if (player.hasMetadata(DRACONIC_SURGE_ACTIVE_KEY)) {
+          player.removeMetadata(DRACONIC_SURGE_ACTIVE_KEY, plugin);
+        }
+        if (player.hasMetadata(DRACONIC_SURGE_START_TIME_KEY)) {
+          player.removeMetadata(DRACONIC_SURGE_START_TIME_KEY, plugin);
+        }
+      }
+    }.runTaskLater(plugin, DRACONIC_SURGE_FALL_PROTECTION);
+
     // Cooldown is set by FragmentManager.useFragmentAbility()
 
     player.sendMessage(
-      Component.text("Draconic Surge activated! You dash forward at incredible speed!",
+      Component.text("Draconic Surge activated! Fall damage protected for 10 seconds!",
         NamedTextColor.GREEN)
     );
 
@@ -332,26 +338,26 @@ public class AgilityFragment extends AbstractFragment implements Listener {
     // Play activation sound
     playAbilitySound(center, Sound.ENTITY_PHANTOM_FLAP, 2.0f, 1.5f);
 
-    // Find all players in radius and calculate their knockback vectors
-    java.util.Map<java.util.UUID, Vector> affectedPlayers = new java.util.HashMap<>();
+    // Find all living entities in radius and calculate their knockback vectors
+    java.util.Map<java.util.UUID, Vector> affectedEntities = new java.util.HashMap<>();
 
     for (Entity entity : player.getWorld().getNearbyEntities(
         center, WING_BURST_RADIUS, WING_BURST_RADIUS, WING_BURST_RADIUS)) {
 
-      // Only affect players (original spec: all players in 8 block radius)
-      if (!(entity instanceof Player)) {
+      // Affects all living entities (players, hostile mobs, animals)
+      if (!(entity instanceof LivingEntity)) {
         continue;
       }
 
-      Player targetPlayer = (Player) entity;
+      LivingEntity target = (LivingEntity) entity;
 
       // Skip the wielder (wielder is not affected)
-      if (targetPlayer.getUniqueId().equals(player.getUniqueId())) {
+      if (target instanceof Player && target.getUniqueId().equals(player.getUniqueId())) {
         continue;
       }
 
       // Calculate knockback direction (away from wielder, horizontal only)
-      Location targetLoc = targetPlayer.getLocation();
+      Location targetLoc = target.getLocation();
       Vector knockbackDirection = targetLoc.toVector()
         .subtract(center.toVector())
         .setY(0) // Horizontal only (no vertical component)
@@ -361,24 +367,26 @@ public class AgilityFragment extends AbstractFragment implements Listener {
       Vector velocity = knockbackDirection.multiply(WING_BURST_VELOCITY);
 
       // Store for continuous application
-      affectedPlayers.put(targetPlayer.getUniqueId(), velocity);
+      affectedEntities.put(target.getUniqueId(), velocity);
 
-      // Apply slow falling immediately (200 ticks = 10 seconds)
-      targetPlayer.addPotionEffect(
-        new PotionEffect(
-          PotionEffectType.SLOW_FALLING,
-          WING_BURST_FALL_SLOW_DURATION,
-          0,
-          false,
-          false,
-          false
-        )
-      );
+      // Apply slow falling to players only (200 ticks = 10 seconds)
+      if (target instanceof Player) {
+        ((Player) target).addPotionEffect(
+          new PotionEffect(
+            PotionEffectType.SLOW_FALLING,
+            WING_BURST_FALL_SLOW_DURATION,
+            0,
+            false,
+            false,
+            false
+          )
+        );
+      }
 
-      // Visual feedback for affected player
-      targetPlayer.getWorld().spawnParticle(
+      // Visual feedback for affected entity
+      target.getWorld().spawnParticle(
         Particle.CLOUD,
-        targetPlayer.getLocation().add(0, 1, 0),
+        target.getLocation().add(0, 1, 0),
         10,
         0.3,
         0.5,
@@ -401,22 +409,29 @@ public class AgilityFragment extends AbstractFragment implements Listener {
           return;
         }
 
-        // Apply velocity to all affected players
-        for (java.util.UUID uuid : affectedPlayers.keySet()) {
-          Player targetPlayer = plugin.getServer().getPlayer(uuid);
+        // Apply velocity to all affected entities
+        for (java.util.UUID uuid : affectedEntities.keySet()) {
+          // Find the living entity by UUID in the player's world
+          LivingEntity target = null;
+          for (Entity entity : player.getWorld().getEntities()) {
+            if (entity.getUniqueId().equals(uuid) && entity instanceof LivingEntity) {
+              target = (LivingEntity) entity;
+              break;
+            }
+          }
 
-          // Skip if player is no longer online or valid
-          if (targetPlayer == null || targetPlayer.isDead() || !targetPlayer.isValid()) {
+          // Skip if entity is no longer valid or dead
+          if (target == null || target.isDead() || !target.isValid()) {
             continue;
           }
 
           // Apply knockback velocity
-          targetPlayer.setVelocity(affectedPlayers.get(uuid));
+          target.setVelocity(affectedEntities.get(uuid));
 
           // Show wind trail particles
-          targetPlayer.getWorld().spawnParticle(
+          target.getWorld().spawnParticle(
             Particle.CLOUD,
-            targetPlayer.getLocation().add(0, 0.5, 0),
+            target.getLocation().add(0, 0.5, 0),
             2,
             0.2,
             0.2,
@@ -432,7 +447,7 @@ public class AgilityFragment extends AbstractFragment implements Listener {
     // Cooldown is set by FragmentManager.useFragmentAbility()
 
     player.sendMessage(
-      Component.text("Wing Burst activated! " + affectedPlayers.size() + " players knocked back!",
+      Component.text("Wing Burst activated! " + affectedEntities.size() + " entities knocked back!",
         NamedTextColor.GREEN)
     );
 
@@ -603,7 +618,7 @@ public class AgilityFragment extends AbstractFragment implements Listener {
 
   /**
    * Event handler for damage negation and reduction.
-   * - Negates ALL damage during Draconic Surge dash and landing
+   * - Negates ALL fall damage during Draconic Surge (10 seconds protection)
    * - Reduces fall damage during Wing Burst (slow falling effect)
    * - Passive: 50% fall damage reduction when Agility Fragment equipped
    */
@@ -615,11 +630,20 @@ public class AgilityFragment extends AbstractFragment implements Listener {
 
     Player player = (Player) event.getEntity();
 
-    // Check if player is currently dashing or landing (Draconic Surge)
-    if (dashingPlayers.contains(player.getUniqueId())) {
-      // Negate ALL damage while dashing or landing (original spec requirement)
-      event.setCancelled(true);
-      return;
+    // Check if player has Draconic Surge fall damage protection active
+    if (player.hasMetadata(DRACONIC_SURGE_ACTIVE_KEY)) {
+      // Check if the protection is still within the 10 second window
+      if (player.hasMetadata(DRACONIC_SURGE_START_TIME_KEY)) {
+        long startTime = player.getMetadata(DRACONIC_SURGE_START_TIME_KEY).get(0).asLong();
+        long elapsed = (System.currentTimeMillis() - startTime) / 50; // Convert to ticks
+        if (elapsed < DRACONIC_SURGE_FALL_PROTECTION) {
+          // Negate ALL fall damage while protection is active
+          if (event.getCause() == EntityDamageEvent.DamageCause.FALL) {
+            event.setCancelled(true);
+            return;
+          }
+        }
+      }
     }
 
     // Check if this is fall damage

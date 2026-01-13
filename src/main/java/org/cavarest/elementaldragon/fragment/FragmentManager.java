@@ -228,6 +228,8 @@ public class FragmentManager implements Listener {
 
   /**
    * Get the currently equipped fragment for a player.
+   * Verifies the fragment item is still in the player's inventory (Issue 6 fix).
+   * If the fragment is no longer in inventory, clears the equipped state.
    *
    * @param player The player
    * @return The equipped fragment type, or null if none equipped
@@ -236,7 +238,24 @@ public class FragmentManager implements Listener {
     if (player == null) {
       return null;
     }
-    return equippedFragments.get(player.getUniqueId());
+
+    UUID playerId = player.getUniqueId();
+    FragmentType cachedFragment = equippedFragments.get(playerId);
+
+    // If no cached fragment, return null
+    if (cachedFragment == null) {
+      return null;
+    }
+
+    // Verify the fragment item is still in the player's inventory (Issue 6 fix)
+    if (!hasFragmentItem(player, cachedFragment)) {
+      // Fragment no longer in inventory - clear cache and return null
+      equippedFragments.remove(playerId);
+      return null;
+    }
+
+    // Item verified in inventory - return cached fragment type
+    return cachedFragment;
   }
 
   /**

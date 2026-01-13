@@ -7,7 +7,7 @@ import org.bukkit.entity.Player;
 import org.cavarest.elementaldragon.ElementalDragon;
 import org.cavarest.elementaldragon.fragment.FragmentManager;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 
 /**
  * Command to withdraw/unequip the currently equipped fragment's abilities.
@@ -23,6 +23,7 @@ public class WithdrawabilityCommand implements CommandExecutor {
 
   private final ElementalDragon plugin;
   private final FragmentManager fragmentManager;
+  private final MiniMessage miniMessage = MiniMessage.miniMessage();
 
   public WithdrawabilityCommand(ElementalDragon plugin, FragmentManager fragmentManager) {
     this.plugin = plugin;
@@ -33,9 +34,8 @@ public class WithdrawabilityCommand implements CommandExecutor {
   public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
     // Only players can use this command
     if (!(sender instanceof Player)) {
-      sender.sendMessage(Component.text(
-        "This command can only be used by players.",
-        NamedTextColor.RED
+      sender.sendMessage(miniMessage.deserialize(
+        "<red>This command can only be used by players.</red>"
       ));
       return true;
     }
@@ -44,9 +44,8 @@ public class WithdrawabilityCommand implements CommandExecutor {
 
     // Check if player has a fragment equipped
     if (!fragmentManager.hasFragmentEquipped(player)) {
-      player.sendMessage(Component.text(
-        "You don't have any fragment abilities equipped.",
-        NamedTextColor.GRAY
+      player.sendMessage(miniMessage.deserialize(
+        "<gray>You don't have any fragment abilities equipped.</gray>"
       ));
       return true;
     }
@@ -54,13 +53,11 @@ public class WithdrawabilityCommand implements CommandExecutor {
     // Unequip the fragment (removes abilities, keeps item)
     fragmentManager.unequipFragment(player);
 
-    player.sendMessage(Component.text(
-      "Your fragment abilities have been withdrawn.",
-      NamedTextColor.YELLOW
+    player.sendMessage(miniMessage.deserialize(
+      "<yellow>Your fragment abilities have been withdrawn.</yellow>"
     ));
-    player.sendMessage(Component.text(
-      "The fragment item remains in your inventory.",
-      NamedTextColor.GRAY
+    player.sendMessage(miniMessage.deserialize(
+      "<gray>The fragment item remains in your inventory.</gray>"
     ));
 
     return true;
