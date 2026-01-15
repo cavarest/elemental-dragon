@@ -33,7 +33,7 @@ exclude = [
   "https://papermc.io/javadocs/*",
 
   # Exclude GitHub Pages URLs (not deployed yet)
-  "https://cavarest.github.io/elemental-dragon/*",
+  "https://cavarest.github.io/*",
 
   # Exclude LICENSE file (doesn't exist)
   "https://github.com/cavarest/elemental-dragon/blob/main/LICENSE",
