@@ -51,7 +51,6 @@ cd papermc-plugin-dragon-egg
 ### Getting Started
 
 - [Testing](testing/) - Unit testing and manual testing procedures
-- [Client Integration](client-integration/) - Testing with real Minecraft clients
 - [Testing Frameworks](frameworks/) - PILAF and other testing frameworks
 - [HeadlessMC Testing](headlessmc/) - Automated testing without GUI
 

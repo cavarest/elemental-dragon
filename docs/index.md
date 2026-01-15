@@ -75,13 +75,7 @@ Server administration, deployment, and configuration.
 ### [Development]({% link dev/index.md %})
 Developer documentation and contribution guidelines.
 
-- [Client Integration]({% link dev/client-integration.md %}) - Testing with real Minecraft clients
-- [Testing Frameworks]({% link dev/frameworks.md %}) - PILAF and other testing frameworks
-- [HeadlessMC Testing]({% link dev/headlessmc.md %}) - Automated testing without GUI
 - [Testing Guide]({% link dev/testing.md %}) - Comprehensive testing documentation
-
-### [Archive]({% link archive/index.md %})
-Historical documentation and implementation notes.
 
 ## Command Reference
 
