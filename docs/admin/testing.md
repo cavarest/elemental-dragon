@@ -57,14 +57,14 @@ If `./test-plugin.sh` doesn't work, follow these manual steps:
 
 #### Step 1: Build Plugin
 ```bash
-cd /Users/mulgogi/src/augustus/papermc-plugin-dragon-egg
+cd /Users/mulgogi/src/augustus/elemental-dragon
 mvn clean package
 ```
 
 **Expected Output**:
 ```
 [INFO] BUILD SUCCESS
-[INFO] Building jar: /Users/mulgogi/src/augustus/papermc-plugin-dragon-egg/target/DragonEggLightning-1.0.0.jar
+[INFO] Building jar: /Users/mulgogi/src/augustus/elemental-dragon/target/DragonEggLightning-1.0.0.jar
 ```
 
 #### Step 2: Start Paper Server

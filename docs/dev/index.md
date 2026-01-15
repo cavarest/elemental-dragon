@@ -23,8 +23,8 @@ Elemental Dragon is a **PaperMC plugin** (Java 21) that demonstrates professiona
 
 ```bash
 # Clone repository
-git clone https://github.com/cavarest/papermc-plugin-dragon-egg.git
-cd papermc-plugin-dragon-egg
+git clone https://github.com/cavarest/elemental-dragon.git
+cd elemental-dragon
 
 # Build plugin
 ./build.sh
@@ -277,7 +277,7 @@ docker exec papermc-elementaldragon rcon-cli plugins
 - **PaperMC API**: [https://papermc.io/javadocs/](https://papermc.io/javadocs/)
 - **Bukkit Wiki**: [https://bukkit.fandom.com/wiki/](https://bukkit.fandom.com/wiki/)
 - **Minecraft Wiki**: [https://minecraft.fandom.com/](https://minecraft.fandom.com/)
-- **Project Repository**: [github.com/cavarest/papermc-plugin-dragon-egg](https://github.com/cavarest/papermc-plugin-dragon-egg)
+- **Project Repository**: [github.com/cavarest/elemental-dragon](https://github.com/cavarest/elemental-dragon)
 
 ---
 

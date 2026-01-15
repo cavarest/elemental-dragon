@@ -13,6 +13,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 # Cancel in-progress runs for the same branch
 concurrency:
@@ -53,7 +54,7 @@ jobs:
       - name: Run Lychee link checker
         uses: lycheeverse/lychee-action@v1
         with:
-          args: "--verbose --no-progress 'docs/_site/**/*.html' --cache --max-cache-age 1d --exclude 'https://cavarest.github.io/papermc-plugin-dragon-egg/*'"
+          args: "--verbose --no-progress 'docs/_site/**/*.html' --cache --max-cache-age 1d --exclude 'https://cavarest.github.io/elemental-dragon/*'"
           fail: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

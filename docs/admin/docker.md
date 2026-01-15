@@ -76,8 +76,8 @@ The Elemental Dragon plugin uses a containerized development environment based o
 
 ```bash
 # Clone repository
-git clone https://github.com/cavarest/papermc-plugin-dragon-egg.git
-cd papermc-plugin-dragon-egg
+git clone https://github.com/cavarest/elemental-dragon.git
+cd elemental-dragon
 
 # Build plugin JAR
 ./build.sh
@@ -668,7 +668,7 @@ Then restart container to reload plugin.
 ### File Structure
 
 ```
-papermc-plugin-dragon-egg/
+elemental-dragon/
 ├── Dockerfile              # Image definition
 ├── docker-compose.yml      # Container orchestration
 ├── entrypoint.sh           # Offline UUID generation

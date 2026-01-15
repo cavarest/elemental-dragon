@@ -91,8 +91,8 @@ See [Commands Reference](commands/) for complete documentation.
 
 ```bash
 # Clone and build
-git clone https://github.com/cavarest/papermc-plugin-dragon-egg.git
-cd papermc-plugin-dragon-egg
+git clone https://github.com/cavarest/elemental-dragon.git
+cd elemental-dragon
 ./build.sh
 
 # Start development server

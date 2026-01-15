@@ -9,8 +9,8 @@
 
 **Master the elements with dragon-powered abilities!**
 
-[![Download Latest Release](https://img.shields.io/badge/Download-Latest%20Release-ff6b6b?style=for-the-badge&logo=github)](https://github.com/cavarest/papermc-plugin-dragon-egg/releases/latest)
-[![GitHub Stars](https://img.shields.io/github/stars/cavarest/papermc-plugin-dragon-egg?style=social)](https://github.com/cavarest/papermc-plugin-dragon-egg)
+[![Download Latest Release](https://img.shields.io/badge/Download-Latest%20Release-ff6b6b?style=for-the-badge&logo=github)](https://github.com/cavarest/elemental-dragon/releases/latest)
+[![GitHub Stars](https://img.shields.io/github/stars/cavarest/elemental-dragon?style=social)](https://github.com/cavarest/elemental-dragon)
 
 </div>
 
@@ -510,7 +510,7 @@ Look for messages like:
 
 ## Support
 
-- **GitHub Issues**: [Report bugs or request features](https://github.com/cavarest/papermc-plugin-dragon-egg/issues)
+- **GitHub Issues**: [Report bugs or request features](https://github.com/cavarest/elemental-dragon/issues)
 - **Documentation**: See `/chronicle` in-game for lore and guides
 
 ---
@@ -523,6 +523,6 @@ Look for messages like:
 
 **Master the elements. Conquer the dragon within.** 🐉
 
-[Download Latest Release](https://github.com/cavarest/papermc-plugin-dragon-egg/releases/latest) | [Quick Start](#quick-start-5-minutes)
+[Download Latest Release](https://github.com/cavarest/elemental-dragon/releases/latest) | [Quick Start](#quick-start-5-minutes)
 
 </div>
