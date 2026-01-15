@@ -10,17 +10,18 @@ jobs:
   link_checker:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - uses: ruby/setup-ruby@v1
       with:
-        ruby-version: '3.3'
+        ruby-version: '3.4'
         bundler-cache: true
+        working-directory: docs
 
-    - name: Build site
+    - name: Build site (without baseurl for link checking)
       env:
         JEKYLL_ENV: production
-      run: bundle exec jekyll build --trace
+      run: bundle exec jekyll build --baseurl "" --trace
       working-directory: docs
 
     - name: Restore lychee cache
@@ -44,13 +45,13 @@ jobs:
       uses: lycheeverse/lychee-action@v2
       with:
         # Check the built HTML site for rendered links
-        # Set base URL to _site directory for Jekyll baseurl resolution
+        # Build without baseurl for local link checking
         args: >-
           --verbose
           --no-progress
           --config lychee.toml
-          --root-dir "$(pwd)/_site"
-          --base-url file://${{ github.workspace }}/docs/_site
+          --exclude "file://.*"
+          --exclude "https://cavarest.github.io/.*"
           '_site/**/*.html'
         fail: true
         output: link-check-results.md
