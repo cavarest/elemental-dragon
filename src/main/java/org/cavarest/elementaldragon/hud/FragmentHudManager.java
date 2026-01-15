@@ -151,9 +151,9 @@ public class FragmentHudManager {
       case AGILITY:
         return "💨";
       case IMMORTAL:
-        return "🛡️";
+        return "🔰";
       case CORRUPTED:
-        return "👁️";
+        return "👁";
       default:
         return "◆";
     }

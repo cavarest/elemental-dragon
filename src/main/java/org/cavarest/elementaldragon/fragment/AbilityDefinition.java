@@ -96,7 +96,7 @@ public class AbilityDefinition {
 
     /**
      * Gets the action emoji for this ability.
-     * @return Action emoji (e.g., "☄️", "🦅", "🛡️"), or empty string if none
+     * @return Action emoji (e.g., "☄", "🦅", "🔰"), or empty string if none
      */
     public String getActionEmoji() {
         return actionEmoji;

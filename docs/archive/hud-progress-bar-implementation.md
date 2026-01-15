@@ -57,7 +57,7 @@ Progress bar color changes based on percentage completion:
 
 ### **Alignment System**
 All elements vertically align regardless of command length:
-- **Icon**: Colored emoji (⚡🔥💨🛡️👁️)
+- **Icon**: Colored emoji (⚡🔥💨🛡️👁)
 - **Command**: Yellow text (padded for alignment)
 - **Number**: White number (1 or 2)
 - **Padding**: Dynamic spacing based on command length
@@ -70,7 +70,7 @@ All elements vertically align regardless of command length:
 🔥 /fire 1       ████████████████▏ Ready
 💨 /agile 1      ████████████████▏ Ready
 🛡️ /immortal 1   ████████████████▏ Ready
-👁️ /corrupt 1    ████████████████▏ Ready
+👁 /corrupt 1    ████████████████▏ Ready
 ```
 All progress bars start at the same column position.
 
@@ -195,7 +195,7 @@ All abilities from the original implementation are still supported:
 | Burning Fragment | 🔥 | Red | `/fire` | 1, 2 |
 | Agility Fragment | 💨 | Aqua | `/agile` | 1, 2 |
 | Immortal Fragment | 🛡️ | Green | `/immortal` | 1, 2 |
-| Corrupted Core | 👁️ | Dark Purple | `/corrupt` | 1, 2 |
+| Corrupted Core | 👁 | Dark Purple | `/corrupt` | 1, 2 |
 
 ---
 

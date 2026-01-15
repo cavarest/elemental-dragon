@@ -93,7 +93,7 @@ Connect to the server (localhost:25565) and run these commands:
 - ✅ Sidebar shows "Elemental Dragon" title in gold
 - ✅ Ability lines stack vertically within sidebar
 - ✅ Text-based progress bars display correctly (█████▏ vs ░░░░░▏)
-- ✅ Icons display correctly at start of each line (⚡🔥💨🛡️👁️)
+- ✅ Icons display correctly at start of each line (⚡🔥💨🛡️👁)
 
 ### **Cooldown Updates**
 - ✅ Progress bar fills as cooldown decreases

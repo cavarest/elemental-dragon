@@ -21,6 +21,7 @@ export ADMIN_USERNAME
 RESET=false
 CLEAN=false
 BLOCKING=false
+WIPE_WORLD=false
 
 for arg in "$@"; do
     case $arg in
@@ -33,12 +34,16 @@ for arg in "$@"; do
         -b|--blocking)
             BLOCKING=true
             ;;
+        -w|--wipe-world)
+            WIPE_WORLD=true
+            ;;
         -h|--help)
             echo "Usage: $0 [OPTIONS]"
             echo ""
             echo "Options:"
             echo "  -r, --rebuild    Rebuild Docker image and restart server"
             echo "  -c, --clean      Clean build (Gradle clean + fresh Docker image)"
+            echo "  -w, --wipe-world Clear world data before starting (preserves config)"
             echo "  -b, --blocking   Start in blocking mode (logs shown directly)"
             echo "  -h, --help       Show this help message"
             echo ""
@@ -53,6 +58,8 @@ for arg in "$@"; do
             echo "  $0 -r -b            # Rebuild and start in blocking mode"
             echo "  $0 -c               # Clean rebuild and start in daemon mode"
             echo "  $0 -c -b            # Clean rebuild and start in blocking mode"
+            echo "  $0 -w               # Wipe world and start in daemon mode"
+            echo "  $0 -w -b            # Wipe world and start in blocking mode"
             exit 0
             ;;
     esac
@@ -78,11 +85,14 @@ else
     echo ""
 fi
 
-# Also check for and stop any other containers using our ports
+# Also check for and stop any other containers actually using our ports
 echo "🔍 Checking for containers using ports 25565/25575..."
-PORT_CONTAINERS=$(docker ps --format "{{.Names}}" | grep -E "papermc|minecraft|elemental|dragon" || true)
+
+# Find containers that are actually binding to our ports (not just matching name patterns)
+PORT_CONTAINERS=$(docker ps --format "{{.Names}}\t{{.Ports}}" | grep -E ":25565->25565|:25575->25575" | awk '{print $1}' || true)
+
 if [ -n "$PORT_CONTAINERS" ]; then
-    echo "⚠️  Found other containers using our ports, stopping them..."
+    echo "⚠️  Found containers using our ports, stopping them..."
     for container in $PORT_CONTAINERS; do
         echo "   Stopping $container..."
         docker stop "$container" 2>/dev/null || true
@@ -91,6 +101,9 @@ if [ -n "$PORT_CONTAINERS" ]; then
     echo "✅ Other containers stopped!"
     echo ""
     sleep 2
+else
+    echo "✅ No other containers using our ports"
+    echo ""
 fi
 
 # Build the JAR file only if it doesn't exist or if source code has changed
@@ -167,6 +180,76 @@ if [ "$RESET" = true ]; then
     echo ""
 fi
 
+# Handle world wiping functionality
+if [ "$WIPE_WORLD" = true ]; then
+    # If full reset was already done, skip world wipe (already handled)
+    if [ "$RESET" = true ]; then
+        echo "ℹ️  Full reset already performed (-c), world data already cleared."
+        echo ""
+    else
+        echo "🗑️  WORLD WIPE MODE: Clearing world data only..."
+        echo ""
+        echo "⚠️  This will delete ALL world data (world, world_nether, world_the_end)"
+        echo "   Server configs, plugins, and player data will be preserved."
+        echo ""
+
+        # Stop the container if it's running
+        if docker ps --format "table {{.Names}}" | grep -q "^${CONTAINER_NAME}$"; then
+            echo "Stopping server to wipe world..."
+            docker-compose down 2>/dev/null || true
+            docker stop ${CONTAINER_NAME:-papermc-elementaldragon} 2>/dev/null || true
+            echo "✅ Server stopped"
+            echo ""
+        fi
+
+        # Check if server-data directory exists
+        if [ ! -d "server-data" ]; then
+            echo "ℹ️  server-data directory not found (fresh server or already wiped)"
+            echo ""
+        else
+            WORLDS_REMOVED=false
+
+            # Remove main world
+            if [ -d "server-data/world" ]; then
+                echo "Removing world/ (Overworld)..."
+                rm -rf server-data/world/
+                WORLDS_REMOVED=true
+            fi
+
+            # Remove nether world
+            if [ -d "server-data/world_nether" ]; then
+                echo "Removing world_nether/ (Nether)..."
+                rm -rf server-data/world_nether/
+                WORLDS_REMOVED=true
+            fi
+
+            # Remove end world
+            if [ -d "server-data/world_the_end" ]; then
+                echo "Removing world_the_end/ (End)..."
+                rm -rf server-data/world_the_end/
+                WORLDS_REMOVED=true
+            fi
+
+            # Also check for region files and session.lock
+            if [ -f "server-data/session.lock" ]; then
+                echo "Removing session.lock..."
+                rm -f server-data/session.lock
+                WORLDS_REMOVED=true
+            fi
+
+            if [ "$WORLDS_REMOVED" = true ]; then
+                echo "✅ World data cleared successfully!"
+            else
+                echo "ℹ️  No world data found to remove (fresh server or already wiped)"
+            fi
+        fi
+
+        echo ""
+        echo "✅ Starting server with fresh world..."
+        echo ""
+    fi
+fi
+
 # Always rebuild Docker image to ensure latest plugin is loaded
 echo "📦 Building Docker image with latest plugin..."
 echo ""
@@ -219,12 +302,13 @@ if [ "$BLOCKING" = true ]; then
     echo ""
 else
     echo "Useful commands:"
-    echo "  View logs:      docker logs -f ${CONTAINER_NAME:-papermc-elementaldragon}"
-    echo "  Server console: docker attach ${CONTAINER_NAME:-papermc-elementaldragon}"
-    echo "  Stop server:    ./stop-server.sh"
-    echo "  Rebuild:        ./start-server.sh -r"
-    echo "  Clean rebuild:  ./start-server.sh -c"
-    echo "  Blocking mode:  ./start-server.sh -b"
+    echo "  View logs:       docker logs -f ${CONTAINER_NAME:-papermc-elementaldragon}"
+    echo "  Server console:  docker attach ${CONTAINER_NAME:-papermc-elementaldragon}"
+    echo "  Stop server:     ./stop-server.sh"
+    echo "  Rebuild:         ./start-server.sh -r"
+    echo "  Clean rebuild:   ./start-server.sh -c"
+    echo "  Wipe world:      ./start-server.sh -w"
+    echo "  Blocking mode:   ./start-server.sh -b"
     echo ""
 fi
 

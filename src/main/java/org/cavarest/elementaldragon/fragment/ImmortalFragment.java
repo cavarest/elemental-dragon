@@ -63,10 +63,10 @@ public class ImmortalFragment extends AbstractFragment implements Listener {
   private final List<AbilityDefinition> abilities = List.of(
     new AbilityDefinition(1, "Draconic Reflex", "damage reduction",
       List.of("reflex", "draconic-reflex"),
-      "A protective shield of ancient dragon energy surrounds you! 🛡️✨", "✨"),
+      "A protective shield of ancient dragon energy surrounds you! 🔰✨", "✨"),
     new AbilityDefinition(2, "Essence Rebirth", "death protection",
       List.of("rebirth", "essence-rebirth"),
-      "The dragon's essence will restore you upon death! 🛡️🐉", "🐉")
+      "The dragon's essence will restore you upon death! 🔰🐉", "🐉")
   );
 
   // Metadata keys

@@ -465,6 +465,45 @@ cd papermc-plugin-dragon-egg
 ./stop-server.sh
 ```
 
+### **Running Tests**
+
+The project includes comprehensive unit tests to ensure code quality and reliability.
+
+```bash
+# Run all tests
+./gradlew test
+
+# Run tests with coverage report
+./gradlew test jacocoTestReport
+
+# Run specific test class
+./gradlew test --tests "*AchievementTest*"
+
+# Run tests for a package
+./gradlew test --tests "org.cavarest.elementaldragon.unit.fragment.*"
+
+# Clean and run tests (force re-run)
+./gradlew clean test
+
+# Run tests in continuous mode (watches for changes)
+./gradlew test --continuous
+```
+
+**View Test Results:**
+- **HTML Test Report**: `build/reports/tests/test/index.html`
+- **Coverage Report**: `build/reports/jacoco/test/html/index.html`
+
+Open in browser:
+```bash
+open build/reports/tests/test/index.html
+open build/reports/jacoco/test/html/index.html
+```
+
+**Current Test Coverage:**
+- **Total Tests**: 741 (all passing ✅)
+- **Overall Coverage**: 29%
+- **High Coverage Areas**: command.util (100%), command.base (100%), Achievement (91%)
+
 ### **Docker Development Setup**
 
 This project uses Docker for development and testing. The setup includes:
@@ -561,6 +600,84 @@ docker exec -it papermc-elementaldragon rcon-cli
 > op list
 > list
 ```
+
+**Server Management Options**
+
+The `start-server.sh` script supports several options for different development workflows:
+
+| Option | Description |
+|--------|-------------|
+| `-r, --rebuild` | Rebuild Docker image and restart server (preserves server data) |
+| `-c, --clean` | Clean build (Gradle clean + fresh Docker image + delete all data) |
+| `-w, --wipe-world` | Clear world data only (preserves configs, plugins, player data) |
+| `-b, --blocking` | Start in blocking mode (logs shown directly, Ctrl+C to stop) |
+| `-h, --help` | Show help message with all options |
+
+**Common Use Cases:**
+
+```bash
+# Normal development start (fastest - uses cached Docker layers)
+./start-server.sh
+
+# Quick restart with rebuilt image (preserves world and configs)
+./start-server.sh -r
+
+# Fresh world for testing (preserves server configuration)
+./start-server.sh -w
+
+# Complete reset (new world, new configs, rebuild everything)
+./start-server.sh -c
+
+# Testing with visible logs
+./start-server.sh -w -b
+
+# Full reset with visible logs
+./start-server.sh -c -b
+
+# Fresh world with rebuild, logs shown
+./start-server.sh -r -w -b
+```
+
+**Option Details:**
+
+**`-r, --rebuild`** (Rebuild Mode)
+- Rebuilds Docker image with latest plugin JAR
+- Deletes all Docker volumes and server data
+- Forces fresh container startup
+- Use after code changes to ensure latest plugin is loaded
+
+**`-c, --clean`** (Clean Mode)
+- Runs Gradle clean build
+- Deletes all Docker volumes and server data
+- Forces complete Docker image rebuild
+- Use when Docker cache might be stale or corrupted
+
+**`-w, --wipe-world`** (World Wipe Mode)
+- Removes only world directories: `world/`, `world_nether/`, `world_the_end/`
+- Removes `session.lock` file
+- **Preserves**: Server configs, plugins, player data, OP settings
+- Use for quick world reset during testing without full reconfiguration
+
+**`-b, --blocking`** (Blocking Mode)
+- Starts server in foreground with logs visible
+- Shows server output directly in terminal
+- Press Ctrl+C to stop server
+- Use for debugging or monitoring server startup
+
+**Combining Options:**
+
+Options can be combined for different scenarios:
+
+- `-c -w`: Full reset (world already cleared by `-c`, skip redundant wipe)
+- `-r -w`: Rebuild image + fresh world
+- `-w -b`: Fresh world + visible logs
+- `-c -b`: Full reset + visible logs
+
+**Port Conflict Detection:**
+
+The script automatically detects and stops containers using ports 25565/25575. The detection checks **actual port bindings**, not container names, so it won't incorrectly stop containers with similar names that use different ports.
+
+If you have other PaperMC servers running on different ports (e.g., ports 35115/35125), they will not be affected.
 
 **Troubleshooting OPS Issues**:
 
@@ -730,10 +847,11 @@ tail -f logs/latest.log | grep -i elementaldragon
 ## 📈 Architecture & Testing
 
 ### **Testing Framework**
-- **🧪 206 Unit Tests**: Complete coverage with JUnit and Mockito
+- **🧪 749 Unit Tests**: Complete coverage with JUnit and Mockito
 - **🔧 Integration Tests**: End-to-end YAML-driven scenarios
 - **🐳 Docker Support**: Containerized development environment
 - **✅ CI/CD**: Automated testing on every commit
+- **📊 29% Coverage**: Focus on testable business logic (Bukkit API limits integration testing)
 
 ### **Code Quality**
 - **SOLID Principles**: Applied throughout codebase

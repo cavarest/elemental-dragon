@@ -12,6 +12,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityPickupItemEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 
@@ -155,6 +156,40 @@ public class FragmentItemListener implements Listener {
   // Drop detection handled by listener.FragmentItemListener
   // Container duplicate restriction removed per user feedback Issue 7.
   // Fragments can now be stored freely in containers (chests, shulkers, etc.)
+
+  /**
+   * Handle fragment drops - automatically unequip if the dropped fragment was equipped.
+   * This ensures passive effects are removed when the player loses the fragment.
+   */
+  @EventHandler(priority = EventPriority.MONITOR)
+  public void onPlayerDropItem(PlayerDropItemEvent event) {
+    Player player = event.getPlayer();
+    ItemStack droppedItem = event.getItemDrop().getItemStack();
+
+    // Check if the dropped item is a fragment
+    FragmentType droppedType = getFragmentType(droppedItem);
+    if (droppedType == null) {
+      return;
+    }
+
+    // Check if this fragment type is currently equipped
+    FragmentType equippedType = fragmentManager.getEquippedFragment(player);
+    if (equippedType == null) {
+      return;
+    }
+
+    // If the dropped fragment matches the equipped fragment, unequip it silently
+    // (we send our own contextual message below)
+    if (droppedType == equippedType) {
+      fragmentManager.unequipFragment(player, true);
+
+      // Inform the player that abilities have been withdrawn
+      player.sendMessage(miniMessage.deserialize(
+        "<yellow>Your <white>" + droppedType.getDisplayName() + "</white> abilities have been withdrawn.</yellow>\n" +
+        "<gray>The fragment item remains on the ground. Pick it up and re-equip to reactivate.</gray>"
+      ));
+    }
+  }
 
   /**
    * Count how many items of a specific fragment type exist in an inventory.

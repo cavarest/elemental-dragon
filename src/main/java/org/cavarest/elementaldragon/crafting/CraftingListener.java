@@ -94,12 +94,12 @@ public class CraftingListener implements Listener {
         );
       case IMMORTAL:
         return String.format(
-          "<green>🛡️ The earth of the ancient dragon acknowledges <yellow>%s</yellow> has forged the <green>Immortal Fragment</green>!",
+          "<green>🔰 The earth of the ancient dragon acknowledges <yellow>%s</yellow> has forged the <green>Immortal Fragment</green>!",
           playerName
         );
       case CORRUPTED:
         return String.format(
-          "<dark_purple>👁️ The void of the ancient dragon acknowledges <yellow>%s</yellow> has forged the <dark_purple>Corrupted Core</dark_purple>!",
+          "<dark_purple>👁 The void of the ancient dragon acknowledges <yellow>%s</yellow> has forged the <dark_purple>Corrupted Core</dark_purple>!",
           playerName
         );
       default:

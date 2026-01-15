@@ -61,6 +61,10 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
   private static final String DREAD_GAZE_DEBUFF_KEY = "corrupted_dread_gaze_debuff";
   private static final String DREAD_GAZE_DEBUFF_START_KEY = "corrupted_dread_gaze_debuff_start_time";
 
+  // Attacker metadata keys (set on ATTACKER when they freeze someone with Dread Gaze)
+  private static final String DREAD_GAZE_FOE_FROZEN_KEY = "corrupted_dread_gaze_foe_frozen";
+  private static final String DREAD_GAZE_FOE_FROZEN_START_KEY = "corrupted_dread_gaze_foe_frozen_start_time";
+
   // Fragment metadata (Single Source of Truth)
   // Using NETHER_STAR instead of HEAVY_CORE to avoid default right-click block placement behavior
   private static final Material MATERIAL = Material.NETHER_STAR;
@@ -71,10 +75,10 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
   private final List<AbilityDefinition> abilities = List.of(
     new AbilityDefinition(1, "Dread Gaze", "blindness & slow",
       List.of("gaze", "dread-gaze"),
-      "Dark energy blinds and slows your foe! 👁️❄️", "❄️"),
+      "Dark energy blinds and slows your foe! 👁❄️", "❄️"),
     new AbilityDefinition(2, "Life Devourer", "health steal",
       List.of("devourer", "life-devourer"),
-      "The void drains life force from your enemy! 👁️🩸", "🩸")
+      "The void drains life force from your enemy! 👁🩸", "🩸")
   );
 
   private final ElementalDragon plugin;
@@ -184,6 +188,12 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
     }
     if (player.hasMetadata(DREAD_GAZE_START_TIME_KEY)) {
       player.removeMetadata(DREAD_GAZE_START_TIME_KEY, plugin);
+    }
+    if (player.hasMetadata(DREAD_GAZE_FOE_FROZEN_KEY)) {
+      player.removeMetadata(DREAD_GAZE_FOE_FROZEN_KEY, plugin);
+    }
+    if (player.hasMetadata(DREAD_GAZE_FOE_FROZEN_START_KEY)) {
+      player.removeMetadata(DREAD_GAZE_FOE_FROZEN_START_KEY, plugin);
     }
     if (player.hasMetadata(LIFE_DEVOURER_ACTIVE_KEY)) {
       player.removeMetadata(LIFE_DEVOURER_ACTIVE_KEY, plugin);
@@ -326,13 +336,17 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
           return;
         }
 
-        // Remove the active metadata and start time
+        // IMPORTANT: Remove the active metadata FIRST (before sending message)
+        // This ensures the HUD immediately transitions from ACTIVE to COOLDOWN state
+        // when the ability expires, preventing display lag.
         if (player.hasMetadata(LIFE_DEVOURER_ACTIVE_KEY)) {
           player.removeMetadata(LIFE_DEVOURER_ACTIVE_KEY, plugin);
         }
         if (player.hasMetadata(LIFE_DEVOURER_START_TIME_KEY)) {
           player.removeMetadata(LIFE_DEVOURER_START_TIME_KEY, plugin);
         }
+
+        // Now send the expiration message (after metadata is cleared)
         player.sendMessage(
           Component.text("Life Devourer has expired.", NamedTextColor.GRAY)
         );
@@ -607,6 +621,22 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
       new org.bukkit.metadata.FixedMetadataValue(plugin, System.currentTimeMillis())
     );
 
+    // Mark attacker with foe frozen metadata for HUD countdown display
+    // This allows the attacker to see how much longer their target remains frozen
+    attacker.setMetadata(
+      DREAD_GAZE_FOE_FROZEN_KEY,
+      new org.bukkit.metadata.FixedMetadataValue(plugin, true)
+    );
+    attacker.setMetadata(
+      DREAD_GAZE_FOE_FROZEN_START_KEY,
+      new org.bukkit.metadata.FixedMetadataValue(plugin, System.currentTimeMillis())
+    );
+
+    // Update HUD to show the foe frozen countdown
+    if (plugin.getHudManager() != null) {
+      plugin.getHudManager().updatePlayerHud(attacker);
+    }
+
     // Schedule debuff removal after duration
     new BukkitRunnable() {
       @Override
@@ -617,9 +647,16 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
           victim.removeMetadata(DREAD_GAZE_DEBUFF_START_KEY, plugin);
         }
 
-        // Clean up attacker's start time metadata (for HUD display)
+        // Clean up attacker's metadata (both READY TO STRIKE and foe frozen)
         if (attacker.isValid() && !attacker.isDead()) {
           attacker.removeMetadata(DREAD_GAZE_START_TIME_KEY, plugin);
+          attacker.removeMetadata(DREAD_GAZE_FOE_FROZEN_KEY, plugin);
+          attacker.removeMetadata(DREAD_GAZE_FOE_FROZEN_START_KEY, plugin);
+
+          // Update HUD to remove the foe frozen countdown
+          if (plugin.getHudManager() != null) {
+            plugin.getHudManager().updatePlayerHud(attacker);
+          }
         }
       }
     }.runTaskLater(plugin, DREAD_GAZE_DURATION);
@@ -645,7 +682,7 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
 
     // Send feedback messages
     attacker.sendMessage(
-      Component.text(victim.getName() + " is completely frozen now! 👁️❄️",
+      Component.text(victim.getName() + " is completely frozen now! 👁❄️",
         NamedTextColor.DARK_PURPLE)
     );
 
@@ -715,7 +752,7 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
 
     // Send dragonic life transfer message with healing amount
     attacker.sendMessage(
-      Component.text("The ancient dragon drains " + healingAmount + "❤ from " + victimName + " and bestows it upon you! 👁️💫",
+      Component.text("The ancient dragon drains " + healingAmount + "❤ from " + victimName + " and bestows it upon you! 👁💫",
         NamedTextColor.DARK_PURPLE)
     );
 

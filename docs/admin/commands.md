@@ -103,14 +103,12 @@ If you cannot run admin commands:
 | Command | Description | Permission |
 |---------|-------------|------------|
 | `/ed give <player-ref> <ingredients\|equipment> <element>` | Give items to players | `elementaldragon.admin` |
-| `/ed info player <player-ref>` | Show player's elemental status | `elementaldragon.admin` |
-| `/ed info list` | List all players' status | `elementaldragon.admin` |
+| `/ed setfragment <player-ref> <element>` | Equip fragment for player | `elementaldragon.admin` |
+| `/ed info <element>` | Show fragment information | `elementaldragon.admin` |
+| `/ed status <player-ref>` | Show player's fragment status | `elementaldragon.admin` |
 | `/ed setcooldown <player> <element> <ability> <seconds>` | Set player cooldown | `elementaldragon.admin` |
 | `/ed clearcooldown <player> [element]` | Clear cooldowns | `elementaldragon.admin` |
-| `/ed getcooldown <player>` | Get player's cooldowns | `elementaldragon.admin` |
 | `/ed setglobalcooldown <element> <ability> <seconds>` | Configure default cooldowns | `elementaldragon.admin` |
-| `/ed getglobalcooldown` | View global cooldown configuration | `elementaldragon.admin` |
-| `/ed setglobalcountdownsym <style> [width]` | Set global HUD countdown progress bar style (players can override) | `elementaldragon.admin` |
 
 ---
 
@@ -145,29 +143,58 @@ If you cannot run admin commands:
 
 ---
 
+## Set Fragment Command
+
+### Equip Player Fragment
+**Syntax**: `/ed setfragment <player-ref> <element>`
+
+Equip a fragment for a player (replaces currently equipped fragment).
+
+**Parameters**:
+- `<player-ref>`: Player selector or name
+- `<element>`: `fire`, `agile`, `immortal`, or `corrupt`
+
+**Examples**:
+```
+/ed setfragment @p immortal          # Equip Immortal Fragment for nearest player
+/ed setfragment PlayerName agile    # Equip Agility Fragment for PlayerName
+/ed setfragment @a corrupt          # Equip Corrupted Core for all players
+```
+
+**Use Case**: Quickly equip a fragment for a player without giving them the item.
+
+---
+
 ## Info Commands
 
-### Player Info
-**Syntax**: `/ed info player <player-ref>`
+### Fragment Info
+**Syntax**: `/ed info <element>`
 
-Shows detailed status for a specific player including:
-- Fragment possession (🔥🩸💨🌑⚡)
-- Currently equipped fragment
-- Active cooldowns
-- Quick action suggestions
+Displays detailed information about a fragment including abilities, cooldowns, and passive bonuses.
 
-**Example**:
+**Parameters**:
+- `<element>`: `fire`, `agile`, `immortal`, `corrupt`, or `lightning`
+
+**Examples**:
 ```
-/ed info player @s
+/ed info fire                         # Show Burning Fragment info
+/ed info corrupt                      # Show Corrupted Core info
+/ed info lightning                    # Show Lightning Strike info
 ```
 
-### List All Players
-**Syntax**: `/ed info list`
+### Player Status
+**Syntax**: `/ed status <player-ref>`
 
-Shows a formatted table of all tracked players with:
-- Fragment possession status
-- Equipped fragments
-- Cooldown status
+Shows player's equipped fragment and cooldown states.
+
+**Parameters**:
+- `<player-ref>`: Player selector or name
+
+**Examples**:
+```
+/ed status @p                         # Show nearest player's status
+/ed status PlayerName                 # Show PlayerName's status
+```
 
 ---
 
@@ -182,21 +209,22 @@ Set cooldown for a specific ability of an element.
 - `<player-ref>`: Player selector or name
 - `<element>`: `lightning`, `fire`, `agile`, `immortal`, or `corrupt`
 - `<ability-num>`: `1`, `2`, or `all` (for both abilities)
-- `<seconds>`: Cooldown duration in seconds
+- `<seconds>`: Cooldown duration in seconds (use 0 to clear cooldown)
 
 **Examples**:
 ```
-/ed setcooldown @p fire 1 30       # Set Fire ability 1 to 30s cooldown
-/ed setcooldown PlayerName agile 2 45   # Set Agility ability 2 to 45s
-/ed setcooldown @s immortal all 60 # Set both Immortal abilities to 60s
+/ed setcooldown @p fire 1 60       # Set Fire ability 1 to 60s cooldown
+/ed setcooldown PlayerName agile 2 120  # Set Agility ability 2 to 2 minutes
+/ed setcooldown @s immortal all 90     # Set both Immortal abilities to 90s
+/ed setcooldown @a corrupt 1 0       # Clear Dread Gaze cooldown for all players
 ```
 
 **Ability Reference**:
-- ⚡ Lightning: Only ability 1
-- 🔥 Fire: 1 = Dragon's Wrath, 2 = Infernal Dominion
-- 💨 Agility: 1 = Draconic Surge, 2 = Wing Burst
-- 🩸 Immortal: 1 = Draconic Reflex, 2 = Essence Rebirth
-- 🌑 Corrupted: 1 = Dread Gaze, 2 = Life Devourer
+- ⚡ Lightning: Lightning Strike (60s cooldown)
+- 🔥 Fire: 1 = Dragon's Wrath (2m), 2 = Infernal Dominion (3m)
+- 💨 Agility: 1 = Draconic Surge (45s), 2 = Wing Burst (2m)
+- 🛡️ Immortal: 1 = Draconic Reflex (2m), 2 = Essence Rebirth (8m)
+- 👁 Corrupted: 1 = Dread Gaze (3m), 2 = Life Devourer (2m)
 
 ### Clear Player Cooldown
 **Syntax**: `/ed clearcooldown <player-ref> [element]`
@@ -206,11 +234,13 @@ Clear cooldowns for a player.
 **Parameters**:
 - `<player-ref>`: Player selector or name
 - `[element]`: Optional - specific element to clear (omit to clear all)
+  - Valid values: `lightning`, `fire`, `agile`, `immortal`, `corrupt`
 
 **Examples**:
 ```
-/ed clearcooldown @p              # Clear all cooldowns
-/ed clearcooldown PlayerName fire # Clear only fire cooldowns
+/ed clearcooldown @p                # Clear all cooldowns
+/ed clearcooldown PlayerName fire   # Clear only fire cooldowns
+/ed clearcooldown @s lightning      # Clear lightning cooldown
 ```
 
 ### Get Player Cooldowns
@@ -231,20 +261,21 @@ Configure the default cooldown duration for an element's ability.
 **Parameters**:
 - `<element>`: `lightning`, `fire`, `agile`, `immortal`, or `corrupt`
 - `<ability-num>`: `1` or `2`
-- `<seconds>`: Default cooldown duration in seconds
+- `<seconds>`: Default cooldown duration in seconds (use 0 to disable cooldown)
 
 **Examples**:
 ```
-/ed setglobalcooldown fire 1 25       # Set Dragon's Wrath default to 25s
-/ed setglobalcooldown immortal 2 300  # Set Essence Rebirth default to 5min
+/ed setglobalcooldown fire 1 60       # Set Dragon's Wrath default to 60s
+/ed setglobalcooldown immortal 2 480  # Set Essence Rebirth default to 8 minutes
+/ed setglobalcooldown corrupt 1 0       # Disable Dread Gaze cooldown entirely
 ```
 
 **Current Defaults**:
-- ⚡ Lightning: 60s
-- 🔥 Fire (Dragon's Wrath): 25s, (Infernal Dominion): 40s
-- 💨 Agility (Draconic Surge): 30s, (Wing Burst): 45s
-- 🩸 Immortal (Draconic Reflex): 90s, (Essence Rebirth): 300s (5 min)
-- 🌑 Corrupted (Dread Gaze): 35s, (Life Devourer): 50s
+- ⚡ Lightning (Lightning Strike): 60s (1 minute)
+- 🔥 Fire (Dragon's Wrath): 2 minutes, (Infernal Dominion): 3 minutes
+- 💨 Agility (Draconic Surge): 45 seconds, (Wing Burst): 2 minutes
+- 🛡️ Immortal (Draconic Reflex): 2 minutes, (Essence Rebirth): 8 minutes
+- 👁 Corrupted (Dread Gaze): 3 minutes, (Life Devourer): 2 minutes
 
 ### View Global Cooldowns
 **Syntax**: `/ed getglobalcooldown`
@@ -258,15 +289,23 @@ Display all global cooldown configurations in a formatted table with emojis.
 ═══════════════════════════════════════
 
   ⚡ Lightning:
-    Ability 1: 60s
+    Ability 1 (Lightning Strike): 60s
 
   🔥 Fire Fragment:
-    Ability 1 (Dragon's Wrath): 25s
-    Ability 2 (Infernal Dominion): 40s
+    Ability 1 (Dragon's Wrath): 2m 0s
+    Ability 2 (Infernal Dominion): 3m 0s
 
   💨 Agility Fragment:
-    Ability 1 (Draconic Surge): 30s
-    Ability 2 (Wing Burst): 45s
+    Ability 1 (Draconic Surge): 45s
+    Ability 2 (Wing Burst): 2m 0s
+
+  🛡️ Immortal Fragment:
+    Ability 1 (Draconic Reflex): 2m 0s
+    Ability 2 (Essence Rebirth): 8m 0s
+
+  👁 Corrupted Core:
+    Ability 1 (Dread Gaze): 3m 0s
+    Ability 2 (Life Devourer): 2m 0s
 ```
 
 ---
@@ -291,6 +330,7 @@ All admin commands require the `elementaldragon.admin` permission (default: op).
 ## Element Names
 
 Valid element names (canonical only):
+- `lightning` - Dragon Egg Lightning Strike
 - `fire` - Burning Fragment
 - `agile` - Agility Fragment
 - `immortal` - Immortal Fragment
