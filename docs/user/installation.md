@@ -22,7 +22,7 @@ permalink: /user/installation/
 ```bash
 # Download the plugin source
 git clone <repository-url>
-cd papermc-plugin-dragon-egg
+cd elemental-dragon
 
 # Build and start server
 chmod +x build.sh start-server.sh

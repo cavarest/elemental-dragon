@@ -23,8 +23,8 @@ exclude = [
   "https://test.test*",
 
   # Exclude GitHub issue URLs that may not exist yet
-  "https://github.com/cavarest/papermc-plugin-dragon-egg/issues/[0-9]+",
-  "https://github.com/cavarest/papermc-plugin-dragon-egg/pull/[0-9]+",
+  "https://github.com/cavarest/elemental-dragon/issues/[0-9]+",
+  "https://github.com/cavarest/elemental-dragon/pull/[0-9]+",
 
   # Exclude unreleased PaperMC versions (may return 404)
   "https://papermc.io/downloads/paper*",
@@ -33,10 +33,10 @@ exclude = [
   "https://papermc.io/javadocs/*",
 
   # Exclude GitHub Pages URLs (not deployed yet)
-  "https://cavarest.github.io/papermc-plugin-dragon-egg/*",
+  "https://cavarest.github.io/elemental-dragon/*",
 
   # Exclude LICENSE file (doesn't exist)
-  "https://github.com/cavarest/papermc-plugin-dragon-egg/blob/main/LICENSE",
+  "https://github.com/cavarest/elemental-dragon/blob/main/LICENSE",
 ]
 
 # Only check links of certain schemes

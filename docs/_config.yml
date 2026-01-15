@@ -8,7 +8,7 @@ description: >-
   Players hold dragon eggs or fragments in their offhand to activate elemental
   abilities with balanced cooldown systems.
 url: https://cavarest.github.io
-baseurl: /papermc-plugin-dragon-egg
+baseurl: /elemental-dragon
 
 # Theme
 theme: just-the-docs
@@ -104,9 +104,9 @@ logo: assets/logo.svg
 # Aux links for the upper right navigation
 aux_links:
   "Elemental Dragon on GitHub":
-    - "https://github.com/cavarest/papermc-plugin-dragon-egg"
+    - "https://github.com/cavarest/elemental-dragon"
   "Report Issue":
-    - "https://github.com/cavarest/papermc-plugin-dragon-egg/issues"
+    - "https://github.com/cavarest/elemental-dragon/issues"
 
 # Aux links configuration
 aux_links_new_tab: true

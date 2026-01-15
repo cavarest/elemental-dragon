@@ -9,9 +9,9 @@
 
 **Transform your server with elemental powers from ancient dragon fragments!**
 
-[![Download Latest Release](https://img.shields.io/badge/Download-Latest%20Release-ff6b6b?style=for-the-badge&logo=github)](https://github.com/cavarest/papermc-plugin-dragon-egg/releases/latest)
-[![GitHub Stars](https://img.shields.io/github/stars/cavarest/papermc-plugin-dragon-egg?style=social)](https://github.com/cavarest/papermc-plugin-dragon-egg)
-[![GitHub Forks](https://img.shields.io/github/forks/cavarest/papermc-plugin-dragon-egg/fork?style=social)](https://github.com/cavarest/papermc-plugin-dragon-egg/fork)
+[![Download Latest Release](https://img.shields.io/badge/Download-Latest%20Release-ff6b6b?style=for-the-badge&logo=github)](https://github.com/cavarest/elemental-dragon/releases/latest)
+[![GitHub Stars](https://img.shields.io/github/stars/cavarest/elemental-dragon?style=social)](https://github.com/cavarest/elemental-dragon)
+[![GitHub Forks](https://img.shields.io/github/forks/cavarest/elemental-dragon/fork?style=social)](https://github.com/cavarest/elemental-dragon/fork)
 
 </div>
 
@@ -447,8 +447,8 @@ Operators can customize cooldowns server-wide or per-player:
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/cavarest/papermc-plugin-dragon-egg.git
-cd papermc-plugin-dragon-egg
+git clone https://github.com/cavarest/elemental-dragon.git
+cd elemental-dragon
 
 # 2. Build plugin JAR
 ./build.sh
@@ -864,7 +864,7 @@ tail -f logs/latest.log | grep -i elementaldragon
 ## 📞 Support & Community
 
 ### **Getting Help**
-- **GitHub Issues**: [Report bugs or request features](https://github.com/cavarest/papermc-plugin-dragon-egg/issues)
+- **GitHub Issues**: [Report bugs or request features](https://github.com/cavarest/elemental-dragon/issues)
 - **Documentation**: Comprehensive guides in `/docs` directory
 - **Community**: Connect with other server administrators
 
@@ -890,11 +890,11 @@ tail -f logs/latest.log | grep -i elementaldragon
 
 **⭐ Star this project if you love Elemental Dragon!** ⭐
 
-[![GitHub Stars](https://img.shields.io/github/stars/cavarest/papermc-plugin-dragon-egg?style=social)](https://github.com/cavarest/papermc-plugin-dragon-egg)
-[![GitHub Forks](https://img.shields.io/github/forks/cavarest/papermc-plugin-dragon-egg/fork?style=social)](https://github.com/cavarest/papermc-plugin-dragon-egg/fork)
+[![GitHub Stars](https://img.shields.io/github/stars/cavarest/elemental-dragon?style=social)](https://github.com/cavarest/elemental-dragon)
+[![GitHub Forks](https://img.shields.io/github/forks/cavarest/elemental-dragon/fork?style=social)](https://github.com/cavarest/elemental-dragon/fork)
 
 **Transform your server today with Elemental Dragon!** ⚡
 
-[Download Latest Release](https://github.com/cavarest/papermc-plugin-dragon-egg/releases/latest) | [User Guide](docs/user/README.md) | [Support](https://github.com/cavarest/papermc-plugin-dragon-egg/issues)
+[Download Latest Release](https://github.com/cavarest/elemental-dragon/releases/latest) | [User Guide](docs/user/README.md) | [Support](https://github.com/cavarest/elemental-dragon/issues)
 
 </div>

@@ -17,9 +17,9 @@ docker rm pilaf-tests mineflayer-bridge pilaf-mineflayer 2>/dev/null || true
 
 # Force remove network if still in use
 echo "Removing network..."
-docker network disconnect -f papermc-plugin-dragon-egg_minecraft-network pilaf-tests 2>/dev/null || true
-docker network disconnect -f papermc-plugin-dragon-egg_minecraft-network mineflayer-bridge 2>/dev/null || true
-docker network disconnect -f papermc-plugin-dragon-egg_minecraft-network papermc-elementaldragon 2>/dev/null || true
+docker network disconnect -f elemental-dragon_minecraft-network pilaf-tests 2>/dev/null || true
+docker network disconnect -f elemental-dragon_minecraft-network mineflayer-bridge 2>/dev/null || true
+docker network disconnect -f elemental-dragon_minecraft-network papermc-elementaldragon 2>/dev/null || true
 
 # Also stop containers from other compose files
 docker-compose -f docker-compose.local.yml down --remove-orphans 2>/dev/null || true

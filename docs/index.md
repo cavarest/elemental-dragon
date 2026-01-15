@@ -19,7 +19,7 @@ Welcome to the Elemental Dragon plugin documentation. This comprehensive PaperMC
 
 Get started in just 5 minutes:
 
-1. **Download** the latest JAR from [releases](https://github.com/cavarest/papermc-plugin-dragon-egg/releases/latest)
+1. **Download** the latest JAR from [releases](https://github.com/cavarest/elemental-dragon/releases/latest)
 2. **Install** by placing in your Paper server's `plugins/` directory
 3. **Restart** your server
 4. **Test** with `/give @p minecraft:dragon_egg` and `/lightning 1`
@@ -111,7 +111,7 @@ Developer documentation and contribution guidelines.
 
 ## Support
 
-- **GitHub Issues**: [Report bugs](https://github.com/cavarest/papermc-plugin-dragon-egg/issues)
+- **GitHub Issues**: [Report bugs](https://github.com/cavarest/elemental-dragon/issues)
 - **Documentation**: Browse guides in navigation menu
 - **Community**: Join discussions on GitHub
 
@@ -121,4 +121,4 @@ MIT License - Free for personal and commercial use
 
 ---
 
-**Ready to transform your server?** [Download the latest release](https://github.com/cavarest/papermc-plugin-dragon-egg/releases/latest)
+**Ready to transform your server?** [Download the latest release](https://github.com/cavarest/elemental-dragon/releases/latest)

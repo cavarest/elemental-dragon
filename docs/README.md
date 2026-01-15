@@ -5,7 +5,7 @@ This directory contains the GitHub Pages documentation site for the Elemental Dr
 ## 🌐 Live Documentation
 
 Once deployed, the documentation will be available at:
-https://cavarest.github.io/papermc-plugin-dragon-egg/
+https://cavarest.github.io/elemental-dragon/
 
 ## 📁 Structure
 
@@ -57,7 +57,7 @@ bundle exec jekyll build
 # Serve locally with live reload
 bundle exec jekyll serve
 
-# The site will be available at http://localhost:4000/papermc-plugin-dragon-egg/
+# The site will be available at http://localhost:4000/elemental-dragon/
 ```
 
 ### Clean
@@ -146,7 +146,7 @@ Key configuration options in `_config.yml`:
 - `title`: Site title
 - `description`: Site description
 - `url`: Base URL (https://cavarest.github.io)
-- `baseurl`: Repository path (/papermc-plugin-dragon-egg)
+- `baseurl`: Repository path (/elemental-dragon)
 - `theme`: Jekyll theme (just-the-docs)
 
 ## 📦 Collections

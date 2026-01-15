@@ -4,7 +4,7 @@ main: org.cavarest.elementaldragon.ElementalDragon
 api-version: '1.21'
 description: Elemental Dragon Plugin - Lightning ability and elemental fragments
 author: Augustus Tse and Octavius Tse
-website: https://github.com/cavarest/papermc-plugin-dragon-egg
+website: https://github.com/cavarest/elemental-dragon
 
 commands:
   lightning:
