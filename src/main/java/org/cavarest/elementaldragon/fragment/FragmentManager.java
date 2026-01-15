@@ -184,6 +184,17 @@ public class FragmentManager implements Listener {
    * @return true if a fragment was unequipped
    */
   public boolean unequipFragment(Player player) {
+    return unequipFragment(player, false);
+  }
+
+  /**
+   * Unequip the current fragment from a player.
+   *
+   * @param player The player
+   * @param silent If true, suppress the unequip message (for drop handler)
+   * @return true if a fragment was unequipped
+   */
+  public boolean unequipFragment(Player player, boolean silent) {
     if (player == null) {
       return false;
     }
@@ -203,9 +214,11 @@ public class FragmentManager implements Listener {
 
     // Note: Cooldown persists even after unequipping (managed by CooldownManager)
 
-    player.sendMessage(miniMessage.deserialize(
-      "<yellow>Unequipped <white>" + equippedType.getDisplayName() + "</white>.</yellow>"
-    ));
+    if (!silent) {
+      player.sendMessage(miniMessage.deserialize(
+        "<yellow>Unequipped <white>" + equippedType.getDisplayName() + "</white>.</yellow>"
+      ));
+    }
 
     // Update HUD after unequipping
     if (plugin != null && plugin.getHudManager() != null) {

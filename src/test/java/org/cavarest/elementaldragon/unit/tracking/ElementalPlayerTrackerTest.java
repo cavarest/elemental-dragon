@@ -440,7 +440,7 @@ public class ElementalPlayerTrackerTest {
         status.hasDarkness = true;
 
         String emojis = status.getStatusEmojis();
-        assertEquals("👁️", emojis);
+        assertEquals("👁", emojis);
     }
 
     @Test

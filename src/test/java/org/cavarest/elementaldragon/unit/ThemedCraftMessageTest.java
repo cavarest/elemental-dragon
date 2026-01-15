@@ -56,7 +56,7 @@ class ThemedCraftMessageTest {
     String message = getThemedCraftMessage("TestPlayer", FragmentType.CORRUPTED);
 
     assertNotNull(message, "Message should not be null");
-    assertTrue(message.contains("👁️"), "Message should contain eye emoji");
+    assertTrue(message.contains("👁"), "Message should contain eye emoji");
     assertTrue(message.contains("TestPlayer"), "Message should contain player name");
     assertTrue(message.contains("Corrupted Core"), "Message should contain fragment name");
     assertTrue(message.contains("<dark_purple>") || message.contains("dark_purple>"),
@@ -103,7 +103,7 @@ class ThemedCraftMessageTest {
         );
       case CORRUPTED:
         return String.format(
-          "<dark_purple>👁️ The void of the ancient dragon acknowledges <yellow>%s</yellow> has forged the <dark_purple>Corrupted Core</dark_purple>!",
+          "<dark_purple>👁 The void of the ancient dragon acknowledges <yellow>%s</yellow> has forged the <dark_purple>Corrupted Core</dark_purple>!",
           playerName
         );
       default:

@@ -1,0 +1,30 @@
+# Dockerfile for PILAF integration test runner
+FROM maven:3.9-eclipse-temurin-21
+
+WORKDIR /app
+
+# Copy PILAF library first and install it
+COPY lib/pilaf ./lib/pilaf/
+RUN cd lib/pilaf && mvn install -DskipTests -Dmaven.javadoc.skip=true -q
+
+# Copy project files
+COPY pom.xml ./
+
+# Download dependencies (PILAF is now in local maven repo)
+RUN mvn dependency:go-offline -q || true
+
+# Copy source code
+COPY src ./src/
+
+# Build test classes
+RUN mvn test-compile -DskipTests -q
+
+# Set environment variables
+ENV RCON_HOST=minecraft
+ENV RCON_PORT=25575
+ENV RCON_PASSWORD=minecraft
+ENV MINEFLAYER_HOST=mineflayer
+ENV MINEFLAYER_PORT=3000
+
+# Run integration tests (pilaf tests only)
+CMD ["mvn", "test", "-Dtest=**/pilaf/*IntegrationTest", "-DfailIfNoTests=false", "-q"]

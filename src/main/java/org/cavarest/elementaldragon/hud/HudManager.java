@@ -68,19 +68,19 @@ public class HudManager implements Listener {
   static {
     // Dread Gaze: 10 seconds
     ACTIVE_ABILITY_INFO.put("corrupt:1", new ActiveAbilityInfo(
-      "corrupted_dread_gaze_active", 10
+      "corrupted_dread_gaze_active", "corrupted_dread_gaze_start_time", 10
     ));
     // Life Devourer: 20 seconds
     ACTIVE_ABILITY_INFO.put("corrupt:2", new ActiveAbilityInfo(
-      "corrupted_life_devourer_active", 20
+      "corrupted_life_devourer_active", "corrupted_life_devourer_start_time", 20
     ));
     // Draconic Reflex: 15 seconds
     ACTIVE_ABILITY_INFO.put("immortal:1", new ActiveAbilityInfo(
-      "immortal_draconic_reflex_active", 15
+      "immortal_draconic_reflex_active", "immortal_draconic_reflex_start_time", 15
     ));
     // Essence Rebirth: 30 seconds
     ACTIVE_ABILITY_INFO.put("immortal:2", new ActiveAbilityInfo(
-      "immortal_essence_rebirth_activated", 30
+      "immortal_essence_rebirth_activated", "immortal_essence_rebirth_start_time", 30
     ));
   }
 
@@ -111,10 +111,10 @@ public class HudManager implements Listener {
 
     // Immortal Fragment
     ABILITY_INFO.put(CooldownManager.IMMORTAL + ":1", new AbilityInfo(
-      "🛡️", CooldownManager.IMMORTAL, 1, "/immortal 1", "Draconic Reflex", NamedTextColor.GREEN, "green", "15s"
+      "🔰", CooldownManager.IMMORTAL, 1, "/immortal 1", "Draconic Reflex", NamedTextColor.GREEN, "green", "15s"
     ));
     ABILITY_INFO.put(CooldownManager.IMMORTAL + ":2", new AbilityInfo(
-      "🛡️", CooldownManager.IMMORTAL, 2, "/immortal 2", "Essence Rebirth", NamedTextColor.GREEN, "green", "30s"
+      "🔰", CooldownManager.IMMORTAL, 2, "/immortal 2", "Essence Rebirth", NamedTextColor.GREEN, "green", "30s"
     ));
 
     // Corrupted Core - using single-width eye emoji (without variation selector)
@@ -137,7 +137,7 @@ public class HudManager implements Listener {
       "💨", NamedTextColor.AQUA, "aqua"
     ));
     FRAGMENT_DISPLAY_INFO.put(FragmentType.IMMORTAL, new FragmentDisplayInfo(
-      "🛡️", NamedTextColor.GREEN, "green"
+      "🔰", NamedTextColor.GREEN, "green"
     ));
     FRAGMENT_DISPLAY_INFO.put(FragmentType.CORRUPTED, new FragmentDisplayInfo(
       "👁", NamedTextColor.DARK_PURPLE, "dark_purple"
@@ -339,7 +339,8 @@ public class HudManager implements Listener {
     List<String> debuffKeys = getActiveDebuffs(player);
 
     for (String abilityKey : abilityKeys) {
-      if (isActiveAbility(player, abilityKey)) {
+      boolean isActive = isActiveAbility(player, abilityKey);
+      if (isActive) {
         activeKeys.add(abilityKey);
       } else {
         inactiveKeys.add(abilityKey);
@@ -376,13 +377,63 @@ public class HudManager implements Listener {
 
         // Add fragment display at the top (if a fragment is equipped)
         if (equippedFragment != null) {
-          Component fragmentComponent = buildFragmentLine(equippedFragment);
-          SidebarLine<Component> fragmentLine = sidebar.addLine(fragmentComponent);
-          currentLines.add(fragmentLine);
+          // Fragment name line
+          FragmentDisplayInfo info = FRAGMENT_DISPLAY_INFO.get(equippedFragment);
+          if (info != null) {
+            String fragmentNameString = String.format(
+              "<%s><shadow:#000000FF>%s</shadow></%s> <gold><bold>%s</bold></gold>",
+              info.colorName,
+              info.icon,
+              info.colorName,
+              equippedFragment.getDisplayName().toUpperCase()
+            );
+            Component fragmentNameComponent = miniMessage.deserialize(fragmentNameString);
+            SidebarLine<Component> fragmentNameLine = sidebar.addLine(fragmentNameComponent);
+            currentLines.add(fragmentNameLine);
 
-          // Add spacer after fragment display
-          SidebarLine<Component> fragmentSpacer = sidebar.addLine(Component.empty());
-          currentLines.add(fragmentSpacer);
+            // Get active potion effects for this fragment
+            List<String> activeBuffs = getActivePotionEffects(player, equippedFragment);
+
+            // Passive description line (or active buffs)
+            String passiveDescription = getWidthMatchedPassiveDescription(equippedFragment);
+            String passiveLineString;
+            if (activeBuffs.isEmpty()) {
+              // No active buffs - show passive description
+              passiveLineString = String.format("<gray>%s</gray>", passiveDescription);
+            } else {
+              // Show active buffs instead of passive description
+              passiveLineString = String.format("<green>✦ %s</green>", String.join(" • ", activeBuffs));
+            }
+            Component passiveLineComponent = miniMessage.deserialize(passiveLineString);
+            SidebarLine<Component> passiveLine = sidebar.addLine(passiveLineComponent);
+            currentLines.add(passiveLine);
+          }
+
+          // Check for Dread Gaze "Foe Frozen" state (attacker has frozen someone)
+          if (player.hasMetadata("corrupted_dread_gaze_foe_frozen")) {
+            int remainingSeconds = getFoeFrozenRemainingDuration(player);
+            if (remainingSeconds > 0) {
+              String foeFrozenString = String.format(
+                "<dark_purple><shadow:#000000FF>👁 Foe Frozen</shadow> (%ds)</dark_purple>",
+                remainingSeconds
+              );
+              Component foeFrozenComponent = miniMessage.deserialize(foeFrozenString);
+              SidebarLine<Component> foeFrozenLine = sidebar.addUpdatableLine(p -> {
+                int updatedRemaining = getFoeFrozenRemainingDuration(p);
+                if (updatedRemaining > 0) {
+                  String updatedString = String.format(
+                    "<dark_purple><shadow:#000000FF>👁 Foe Frozen</shadow> (%ds)</dark_purple>",
+                    updatedRemaining
+                  );
+                  return miniMessage.deserialize(updatedString);
+                }
+                return Component.empty();
+              });
+              currentLines.add(foeFrozenLine);
+            }
+          }
+
+          // No spacer after fragment display - AVAILABLE section will add one
         }
 
         // Add DEBUFFS section if player has active debuffs
@@ -484,37 +535,6 @@ public class HudManager implements Listener {
       // No abilities - remove sidebar
       clearPlayerSidebar(player);
     }
-  }
-
-  /**
-   * Build the fragment display line with MiniMessage styling.
-   * Format:
-   *   🔥 FRAGMENT NAME
-   *   Passive Description (width-matched ~15-20 chars)
-   *
-   * @param fragmentType The equipped fragment type
-   * @return Component for fragment display
-   */
-  private Component buildFragmentLine(FragmentType fragmentType) {
-    FragmentDisplayInfo info = FRAGMENT_DISPLAY_INFO.get(fragmentType);
-    if (info == null) {
-      return Component.empty();
-    }
-
-    // Get passive description - width-matched for alignment
-    String passiveDescription = getWidthMatchedPassiveDescription(fragmentType);
-
-    // Use MiniMessage with <newline> tag for proper line breaks
-    String miniMessageString = String.format(
-      "<%s>%s</%s> <gold>%s</gold><newline><gray>%s</gray>",
-      info.colorName,              // Icon color
-      info.icon,                    // Icon
-      info.colorName,              // Icon color (closing)
-      fragmentType.getDisplayName().toUpperCase(), // Fragment name
-      passiveDescription           // Passive description
-    );
-
-    return miniMessage.deserialize(miniMessageString);
   }
 
   /**
@@ -872,22 +892,97 @@ public class HudManager implements Listener {
     }
 
     // Try to get activation timestamp from metadata
-    String startTimeKey = info.metadataKey + "_start_time";
-    if (player.hasMetadata(startTimeKey)) {
+    if (info.startTimeMetadataKey != null && player.hasMetadata(info.startTimeMetadataKey)) {
       try {
-        long startTime = player.getMetadata(startTimeKey).get(0).asLong();
+        long startTime = player.getMetadata(info.startTimeMetadataKey).get(0).asLong();
         long elapsedMillis = System.currentTimeMillis() - startTime;
         int elapsedSeconds = (int) (elapsedMillis / 1000);
         int remaining = info.durationSeconds - elapsedSeconds;
         return Math.max(0, remaining);
       } catch (Exception e) {
         // If timestamp is invalid, return full duration
+        plugin.getLogger().warning("[HUD] Invalid timestamp for " + abilityKey + ": " + e.getMessage());
         return info.durationSeconds;
       }
     }
 
     // No timestamp available - return full duration as fallback
+    plugin.getLogger().warning("[HUD] No start time metadata found for " + abilityKey + ", using full duration");
     return info.durationSeconds;
+  }
+
+  /**
+   * Get the remaining duration for the Dread Gaze "Foe Frozen" countdown.
+   * This shows the attacker how much longer their target remains frozen.
+   *
+   * @param player The attacker player
+   * @return Remaining duration in seconds, or 0 if no foe is frozen
+   */
+  private int getFoeFrozenRemainingDuration(Player player) {
+    String foeFrozenKey = "corrupted_dread_gaze_foe_frozen";
+    String startTimeKey = "corrupted_dread_gaze_foe_frozen_start_time";
+
+    if (!player.hasMetadata(foeFrozenKey)) {
+      return 0;
+    }
+
+    if (!player.hasMetadata(startTimeKey)) {
+      return 0;
+    }
+
+    try {
+      long startTime = player.getMetadata(startTimeKey).get(0).asLong();
+      long elapsedMillis = System.currentTimeMillis() - startTime;
+      int elapsedSeconds = (int) (elapsedMillis / 1000);
+      // Dread Gaze freeze lasts 10 seconds
+      int remaining = 10 - elapsedSeconds;
+      return Math.max(0, remaining);
+    } catch (Exception e) {
+      plugin.getLogger().warning("[HUD] Invalid foe frozen timestamp: " + e.getMessage());
+      return 0;
+    }
+  }
+
+  /**
+   * Get list of active potion effects for a fragment.
+   * Returns the names of active potion effects that the fragment provides.
+   *
+   * @param player The player
+   * @param fragmentType The fragment type
+   * @return List of active potion effect names
+   */
+  private List<String> getActivePotionEffects(Player player, FragmentType fragmentType) {
+    List<String> buffs = new ArrayList<>();
+
+    // Define potion effects for each fragment type
+    switch (fragmentType) {
+      case BURNING:
+        // Fire Resistance (from Burning Fragment passive)
+        if (player.hasPotionEffect(org.bukkit.potion.PotionEffectType.FIRE_RESISTANCE)) {
+          buffs.add("Fire Immunity");
+        }
+        break;
+      case AGILITY:
+        // Speed (from Agility Fragment passive)
+        if (player.hasPotionEffect(org.bukkit.potion.PotionEffectType.SPEED)) {
+          buffs.add("Speed");
+        }
+        break;
+      case IMMORTAL:
+        // Resistance (from Immortal Fragment passive)
+        if (player.hasPotionEffect(org.bukkit.potion.PotionEffectType.RESISTANCE)) {
+          buffs.add("Resistance");
+        }
+        break;
+      case CORRUPTED:
+        // Night Vision (from Corrupted Core passive)
+        if (player.hasPotionEffect(org.bukkit.potion.PotionEffectType.NIGHT_VISION)) {
+          buffs.add("Night Vision");
+        }
+        break;
+    }
+
+    return buffs;
   }
 
   /**
@@ -1066,11 +1161,13 @@ public class HudManager implements Listener {
    * Contains metadata key and duration for abilities with active states.
    */
   private static class ActiveAbilityInfo {
-    final String metadataKey;      // Metadata key to check if ability is active
-    final int durationSeconds;      // Duration in seconds
+    final String metadataKey;           // Metadata key to check if ability is active
+    final String startTimeMetadataKey;   // Metadata key for start time (for countdown)
+    final int durationSeconds;           // Duration in seconds
 
-    ActiveAbilityInfo(String metadataKey, int durationSeconds) {
+    ActiveAbilityInfo(String metadataKey, String startTimeMetadataKey, int durationSeconds) {
       this.metadataKey = metadataKey;
+      this.startTimeMetadataKey = startTimeMetadataKey;
       this.durationSeconds = durationSeconds;
     }
   }

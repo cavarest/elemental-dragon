@@ -1,29 +1,6 @@
----
-layout: default
-title: Fragment User Guide
-nav_order: 2
-has_children: false
-permalink: /user/fragments/
----
+# Fragments Manual
 
-# Elemental Dragon Fragment User Guide
-
-This guide covers the Elemental Dragon fragment system - powerful items that grant unique elemental abilities.
-
-## Overview
-
-Elemental Dragon provides one dragon egg ability and four fragments. Each fragment grants two active abilities and one passive bonus when equipped.
-
-| Fragment | Element | Material | Command |
-|----------|---------|----------|---------|
-| **Burning Fragment** | Fire | Blaze Powder | `/fire` |
-| **Agility Fragment** | Wind | Phantom Membrane | `/agile` |
-| **Immortal Fragment** | Earth | Diamond | `/immortal` |
-| **Corrupted Core** | Void | Nether Star | `/corrupt` |
-
-**Note**: Dragon Egg (Lightning Strike) is not a fragment. Hold dragon egg in offhand to use.
-
----
+Elemental Dragon plugin provides one dragon egg ability and four fragments. Each fragment grants two active abilities and one passive bonus when equipped.
 
 ## Dragon Egg Ability
 
@@ -41,48 +18,84 @@ Elemental Dragon provides one dragon egg ability and four fragments. Each fragme
 - Maximum Range: 50 blocks
 - Targeting: Crosshair ray-trace with viewing cone fallback
 
-**Usage**
-```
-/lightning 1
-```
+**Behavior Phase 1: Target Selection**
+1. Uses ray-tracing from player's eyes in look direction
+2. Searches for living entities within 50 blocks
+3. If ray-trace finds no target, searches nearest entity in viewing cone
+4. Viewing cone: 90° angle from look direction
 
-**Behavior**
-- Uses ray-tracing from player's eyes in look direction
-- Searches for living entities within 50 blocks
-- If ray-trace finds no target, searches nearest entity in 90° viewing cone
-- First strike hits initial target, then two more strikes at 0.5 second intervals
+**Behavior Phase 2: Strike Sequence**
+1. First strike hits initial target
+2. After 0.5 seconds: second strike hits same target
+3. After 0.5 seconds: third strike hits same target
+4. Total duration: 1 second
+
+**Target Switching**
 - If current target dies during sequence: finds next closest target
+- Switching preserves remaining strike count
+- No new targets: ability ends early
 - Can execute up to 3 strikes on 3 different targets
 
 **Interruption Conditions**
 - Dragon egg removed from offhand: ability stops, cooldown set
 - No valid targets found: ability ends early
 
+**Usage**
+```
+/lightning 1
+```
+
+**Error Messages**
+- "The ancient dragon sees no foe in your sights!" - No target in range
+- "The dragon's power fades without the Dragon Egg in your offhand!" - Egg removed mid-cast
+
+**Feedback Messages**
+- "⚡ Strike 1/3 cascades upon Zombie!" - Strike progress
+- "The dragon's fury shifts to Skeleton!" - Target switched
+- "The ancient dragon's wrath is complete! No more targets!" - Sequence complete
+
+**Technical Notes**
+- Damage: Armor-ignoring (4.0 per strike, 12.0 total)
+- Metadata: None (instant ability, no persistent state)
+- Duration Conversions: 1 second = 20 ticks, cooldowns stored in milliseconds (1 second = 1000ms)
+- Item Material: Dragon Egg (must be in offhand)
+
 ---
 
-## Obtaining Fragments
+## Fragment Overview
 
-### Crafting
+| Fragment | Element | Material | Command |
+|----------|---------|----------|---------|
+| Burning Fragment | Fire | Blaze Powder | `/fire` |
+| Agility Fragment | Wind | Phantom Membrane | `/agile` |
+| Immortal Fragment | Earth | Diamond | `/immortal` |
+| Corrupted Core | Void | Nether Star | `/corrupt` |
 
-All fragments require a **vanilla Heavy Core** (found in Ancient Cities) as the center ingredient.
+**Note**: Dragon Egg (Lightning Strike) is not a fragment. Hold dragon egg in offhand to use.
 
-**Burning Fragment** (2 max per player)
+## Acquisition
+
+### Crafting Recipes
+
+All fragments require a vanilla Heavy Core (obtained from Ancient Cities) as the center ingredient.
+
+**Burning Fragment**
 - Surrounds Heavy Core with fire-related materials
-- Use `/craft` to view recipe
+- Crafting limit: 2 per player
 
-**Agility Fragment** (2 max per player)
+**Agility Fragment**
 - Surrounds Heavy Core with wind-related materials
-- Use `/craft` to view recipe
+- Crafting limit: 2 per player
 
-**Immortal Fragment** (2 max per player)
+**Immortal Fragment**
 - Surrounds Heavy Core with earth-related materials
-- Use `/craft` to view recipe
+- Crafting limit: 2 per player
 
-**Corrupted Core** (1 max per player)
+**Corrupted Core**
 - Surrounds Heavy Core with void-related materials
-- Use `/craft` to view recipe
+- Crafting limit: 1 per player
 
-### Viewing Recipes
+### Recipe Viewing
 
 Use `/craft` to view current recipes and requirements.
 
@@ -132,6 +145,11 @@ Limits enforced during crafting. Attempting to craft beyond limit shows current 
 ```
 /fire 1
 ```
+
+**Technical Notes**
+- Damage: Armor-ignoring damage applied to base health
+- Metadata: None (instant ability)
+- Item Material: Blaze Powder (avoids fire charge right-click behavior)
 
 ### Ability 2: Infernal Dominion
 
@@ -188,6 +206,12 @@ Limits enforced during crafting. Attempting to craft beyond limit shows current 
 ```
 /agile 1
 ```
+
+**Technical Notes**
+- Metadata Keys:
+  - `agile_draconic_surge_active`
+  - `agile_draconic_surge_start_time`
+- Item Material: Phantom Membrane (avoids wind charge right-click behavior)
 
 ### Ability 2: Wing Burst
 
@@ -246,6 +270,13 @@ Limits enforced during crafting. Attempting to craft beyond limit shows current 
 /immortal 1
 ```
 
+**Technical Notes**
+- Damage: 20% dodge chance per damage instance
+- Metadata Keys:
+  - `immortal_draconic_reflex_active`
+  - `immortal_draconic_reflex_start_time`
+- Item Material: Diamond (matches earth theme)
+
 ### Ability 2: Essence Rebirth
 
 **Function**: Enhanced respawn with diamond armor and supplies upon death.
@@ -270,6 +301,11 @@ Limits enforced during crafting. Attempting to craft beyond limit shows current 
 ```
 
 **Note**: Use before entering combat. Ability must be active at moment of death.
+
+**Technical Notes**
+- Metadata Keys:
+  - `immortal_essence_rebirth_activated`
+  - `immortal_essence_rebirth_start_time`
 
 ---
 
@@ -331,6 +367,14 @@ Target receives maximum-level potion effects:
 # Then hit any entity with melee attack
 ```
 
+**Technical Notes**
+- Metadata Keys:
+  - `corrupted_dread_gaze_active` (READY TO STRIKE state on attacker)
+  - `corrupted_dread_gaze_active_start_time` (set when hit)
+  - `corrupted_dread_gaze_debuff` (freeze state on victim)
+  - `corrupted_dread_gaze_debuff_start_time` (freeze start time on victim)
+- Item Material: Nether Star (avoids heavy core block placement)
+
 ### Ability 2: Life Devourer
 
 **Function**: Grants 50% life steal on all damage dealt for 20 seconds.
@@ -351,6 +395,12 @@ Target receives maximum-level potion effects:
 ```
 /corrupt 2
 ```
+
+**Technical Notes**
+- Damage: Healing calculated from pre-mitigation damage
+- Metadata Keys:
+  - `corrupted_life_devourer_active`
+  - `corrupted_life_devourer_start_time`
 
 ---
 
@@ -402,15 +452,123 @@ When a fragment is dropped:
 - Fixed-width formatting prevents UI jitter
 - At 100% completion: Displays "READY" in green
 
+**Duration Conversions**
+- 1 second = 20 ticks
+- 1 minute = 1200 ticks
+- Cooldowns stored in milliseconds (1 second = 1000ms)
+
 ---
 
-## HUD Display
+## Operator Commands
 
-### Requirements
+### Cooldown Management
+
+**Global Cooldown Override**
+```
+/ed setglobalcooldown <element> <ability> <seconds>
+```
+Sets cooldown for all players. Use 0 to disable cooldown entirely.
+
+Elements: `lightning`, `fire`, `agile`, `immortal`, `corrupt`
+Abilities: `1` or `2`
+Seconds: Numeric value (0 to disable)
+
+Examples:
+```
+/ed setglobalcooldown fire 1 30     # Dragon's Wrath: 30 seconds
+/ed setglobalcooldown fire 2 0      # Infernal Dominion: no cooldown
+/ed setglobalcooldown lightning 1 60  # Lightning Strike: 60 seconds (default)
+```
+
+**Player-Specific Cooldown**
+```
+/ed setcooldown <player> <element> <ability> <seconds>
+```
+Sets cooldown for a specific player. Use 0 to clear their cooldown.
+
+Examples:
+```
+/ed setcooldown Steve fire 1 10     # Steve's Dragon's Wrath: 10 seconds
+/ed setcooldown Alex corrupt 1 0    # Clear Alex's Dread Gaze cooldown
+```
+
+**Clear All Cooldowns**
+```
+/ed clearcooldown <player> [element]
+```
+Clears all cooldowns (or specific element) for a player.
+
+Examples:
+```
+/ed clearcooldown Steve              # Clear all Steve's cooldowns
+/ed clearcooldown Alex fire          # Clear Alex's fire cooldowns
+```
+
+### Fragment Management
+
+**Give Fragment to Player**
+```
+/ed give <player> equipment <fragment>
+```
+Gives a fragment to a player's inventory.
+
+Fragments: `fire`, `agile`, `immortal`, `corrupt`
+
+Examples:
+```
+/ed give Steve equipment fire         # Give Burning Fragment
+/ed give Alex equipment corrupt       # Give Corrupted Core
+```
+
+**Set Player's Fragment**
+```
+/ed setfragment <player> <fragment>
+```
+Equips a fragment for a player (replaces currently equipped fragment).
+
+Examples:
+```
+/ed setfragment Steve immortal        # Equip Immortal Fragment
+/ed setfragment Alex agile            # Equip Agility Fragment
+```
+
+### Information Commands
+
+**Fragment Info**
+```
+/ed info <fragment>
+```
+Displays detailed information about a fragment.
+
+Examples:
+```
+/ed info fire                         # Show Burning Fragment info
+/ed info corrupt                      # Show Corrupted Core info
+```
+
+**Player Status**
+```
+/ed status <player>
+```
+Shows player's equipped fragment and cooldown states.
+
+Examples:
+```
+/ed status Steve                      # Show Steve's status
+/ed status Alex                       # Show Alex's status
+```
+
+---
+
+## User Interface Preferences
+
+### HUD Display
+
+**Requirements**
 - Dragon egg in offhand: Shows lightning ability
 - Fragment equipped: Shows fragment info + both abilities
 
-### Format
+**Format**
 ```
 FRAGMENT ICON FRAGMENT NAME
   Passive description (always shown)
@@ -470,7 +628,7 @@ When a player is affected by debuffs (like being frozen by Dread Gaze):
 
 ### Progress Bar Variants
 
-The plugin supports multiple progress bar styles for visual feedback.
+The plugin supports multiple progress bar styles for visual feedback. Players can choose their preferred style.
 
 #### TILES (Default)
 Rainbow gradient Unicode tile progress bar.
@@ -490,6 +648,7 @@ Block shading progression.
 **Animation**: Linear fill left-to-right
 
 Example progression (width 4):
+
 ```
 ░░░░
 ▒░░░
@@ -497,15 +656,11 @@ Example progression (width 4):
 █░░░
 █▒░░
 █▓░░
-█▓▒░
+█▓░░
 ██░░
-██▒░
-██▓░
-███░
-███▒
-███▓
-████
+...
 ```
+
 
 #### BLOCK
 Binary block characters with configurable width.
@@ -520,6 +675,7 @@ Binary block characters with configurable width.
 **Animation**: Binary fill (each position fills completely)
 
 Example progression (BLOCK1, width 6):
+
 ```
 ▏
 ▏▏
@@ -537,6 +693,7 @@ Triangle fill progression.
 **Animation**: Binary fill left-to-right
 
 Example progression (width 6):
+
 ```
 ▹▹▹▹▹▹
 ▸▹▹▹▹▹
@@ -555,6 +712,7 @@ Moon phase emoji progression.
 **Animation**: Full moon to new moon (reversed)
 
 Example progression (width 1):
+
 ```
 🌕
 🌔
@@ -601,107 +759,22 @@ Example progression (width 1):
 - Active ability: Magenta
 - Ready: Green
 
----
+### Configuration
 
-## Operator Commands
-
-### Cooldown Management
-
-**Global Cooldown Override**
-```
-/ed setglobalcooldown <element> <ability> <seconds>
-```
-Sets cooldown for all players. Use 0 to disable cooldown entirely.
-
-Elements: `lightning`, `fire`, `agile`, `immortal`, `corrupt`
-Abilities: `1` or `2`
-Seconds: Numeric value (0 to disable)
-
-**Player-Specific Cooldown**
-```
-/ed setcooldown <player> <element> <ability> <seconds>
-```
-Sets cooldown for a specific player. Use 0 to clear their cooldown.
-
-**Clear All Cooldowns**
-```
-/ed clearcooldown <player> [element]
-```
-Clears all cooldowns (or specific element) for a player.
-
-### Fragment Management
-
-**Give Fragment to Player**
-```
-/ed give <player> equipment <fragment>
-```
-Gives a fragment to a player's inventory.
-
-Fragments: `fire`, `agile`, `immortal`, `corrupt`
-
-**Set Player's Fragment**
-```
-/ed setfragment <player> <fragment>
-```
-Equips a fragment for a player (replaces currently equipped fragment).
-
-### Information Commands
-
-**Fragment Info**
-```
-/ed info <fragment>
-```
-Displays detailed information about a fragment.
-
-**Player Status**
-```
-/ed status <player>
-```
-Shows player's equipped fragment and cooldown states.
+Progress bar style is configured per-server by operators. Default style is TILES (rainbow gradient).
 
 ---
 
-## Command Summary
+## Permissions
 
-### Fragment Commands
-```
-/fire [1|2|equip|status|help]
-/agile [1|2|equip|status|help]
-/immortal [1|2|equip|status|help]
-/corrupt [1|2|equip|status|help]
-/lightning 1
-/withdrawability
-/craft
-```
+**Fragment Usage**
+- `elementaldragon.fragment.burning` - Burning Fragment
+- `elementaldragon.fragment.agile` - Agility Fragment
+- `elementaldragon.fragment.immortal` - Immortal Fragment
+- `elementaldragon.fragment.corrupted` - Corrupted Core
 
-### Operator Commands
-```
-/ed setglobalcooldown <element> <ability> <seconds>
-/ed setcooldown <player> <element> <ability> <seconds>
-/ed clearcooldown <player> [element]
-/ed give <player> equipment <fragment>
-/ed setfragment <player> <fragment>
-/ed info <fragment>
-/ed status <player>
-```
+**Fragment Acquisition**
+- `elementaldragon.craft` - Craft fragments
 
----
-
-## Troubleshooting
-
-### "You don't have any fragment abilities equipped"
-- Make sure you have a fragment in your offhand
-- Right-click while holding a fragment to equip it
-- Or use `/<type> equip` to equip
-
-### "Crafting limit reached"
-- You've already crafted the maximum number of this fragment type
-- Check your crafted count with `/craft`
-
-### "Fragment abilities have been withdrawn"
-- You dropped your equipped fragment on the ground
-- Pick up the fragment and re-equip it
-
-### Dread Gaze "READY TO STRIKE" won't expire
-- This is intentional - Dread Gaze persists until you hit a target
-- Unequip fragment or hit a target to clear the state
+**Administration**
+- `elementaldragon.admin` - All admin commands

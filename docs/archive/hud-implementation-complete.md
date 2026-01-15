@@ -31,7 +31,7 @@ The HUD (Heads-Up Display) system for ability cooldowns has been successfully im
 - 🔥 **Burning Fragment** (abilities 1 & 2)
 - 💨 **Agility Fragment** (abilities 1 & 2)
 - 🛡️ **Immortal Fragment** (abilities 1 & 2)
-- 👁️ **Corrupted Core** (abilities 1 & 2)
+- 👁 **Corrupted Core** (abilities 1 & 2)
 
 **Display Format**:
 - **Ready**: `[Icon] [#] '/command' AbilityName Ready`
@@ -135,10 +135,10 @@ float progress = 1.0f - ((float) currentCooldown / maxCooldown);
 - 🔥 **Fire**: Red boss bar
 - 💨 **Agility**: Blue boss bar
 - 🛡️ **Immortal**: Green boss bar
-- 👁️ **Corrupted**: Purple boss bar
+- 👁 **Corrupted**: Purple boss bar
 
 ### **Text Formatting**
-- **Icon**: Colored emoji (⚡🔥💨🛡️👁️)
+- **Icon**: Colored emoji (⚡🔥💨🛡️👁)
 - **Number**: Gray [1] or [2] for fragment abilities
 - **Command**: Yellow `/command`
 - **Ability Name**: White text

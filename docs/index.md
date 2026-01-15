@@ -40,7 +40,7 @@ Four unique fragments with powerful abilities:
 | **Burning Fragment** 🔥 | Dragon's Wrath, Infernal Dominion | Fire-based destruction |
 | **Agility Fragment** 💨 | Draconic Surge, Wing Burst | Speed and movement |
 | **Immortal Fragment** 🛡️ | Draconic Reflex, Essence Rebirth | Defense and survival |
-| **Corrupted Core** 👁️ | Dread Gaze, Life Devourer | Dark manipulation |
+| **Corrupted Core** 👁 | Dread Gaze, Life Devourer | Dark manipulation |
 
 ### 🔨 Crafting System
 - **Heavy Core**: Vanilla Minecraft item found in Ancient Cities

@@ -184,7 +184,7 @@ public class ElementalPlayerTracker implements Listener {
       if (hasFire) sb.append("🔥");
       if (hasWind) sb.append("💨");
       if (hasBlood) sb.append("🩸");
-      if (hasDarkness) sb.append("👁️");
+      if (hasDarkness) sb.append("👁");
       if (hasLight) sb.append("⚡");
       return sb.length() > 0 ? sb.toString() : "—";
     }
@@ -192,7 +192,7 @@ public class ElementalPlayerTracker implements Listener {
     /**
      * Get a compact status string for table display.
      *
-     * @return Status string like "🔥💨👁️⚡" or "—"
+     * @return Status string like "🔥💨👁⚡" or "—"
      */
     public String getCompactStatus() {
       return getStatusEmojis();

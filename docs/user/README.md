@@ -26,7 +26,7 @@ Elemental Dragon is a PaperMC plugin that transforms your Minecraft server with 
 - Each strike deals **2 hearts of armor-bypassing damage**
 - **60-second cooldown** prevents spam
 
-#### 🔥💨🛡️👁️ Elemental Fragments
+#### 🔥💨🛡️👁 Elemental Fragments
 Four unique fragments, each with **2 powerful abilities**:
 
 | Fragment | Emoji | Ability 1 | Ability 2 |
@@ -34,7 +34,7 @@ Four unique fragments, each with **2 powerful abilities**:
 | **Burning** | 🔥 | Dragon's Wrath (25s) | Infernal Dominion (40s) |
 | **Agility** | 💨 | Draconic Surge (45s) | Wing Burst (2min) |
 | **Immortal** | 🛡️ | Draconic Reflex (2min) | Essence Rebirth (8min) |
-| **Corrupted** | 👁️ | Dread Gaze (3min) | Life Devourer (2min) |
+| **Corrupted** | 👁 | Dread Gaze (3min) | Life Devourer (2min) |
 
 #### 📊 Real-Time HUD
 - See cooldown status for **all abilities at once**
@@ -122,7 +122,7 @@ When you craft a fragment, all players see a themed message:
 - 🔥 Burning: "The flames of the ancient dragon acknowledge {player} has forged the Burning Fragment!"
 - 💨 Agility: "The winds of the ancient dragon acknowledge {player} has forged the Agility Fragment!"
 - 🛡️ Immortal: "The earth of the ancient dragon acknowledges {player} has forged the Immortal Fragment!"
-- 👁️ Corrupted: "The void of the ancient dragon acknowledges {player} has forged the Corrupted Core!"
+- 👁 Corrupted: "The void of the ancient dragon acknowledges {player} has forged the Corrupted Core!"
 
 ### Equipping Fragments
 
@@ -166,7 +166,7 @@ Each fragment has 2 abilities:
 /immortal 2   # Essence Rebirth - Second life if killed (8min cooldown)
 ```
 
-**Corrupted Core (👁️)**
+**Corrupted Core (👁)**
 ```
 /corrupt 1   # Dread Gaze - Complete freeze on next hit (3min cooldown)
 /corrupt 2   # Life Devourer - 50% life steal for 20s (2min cooldown)
