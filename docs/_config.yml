@@ -89,8 +89,7 @@ enable_copy_code_button: true
 
 # Footer content
 footer_content: >-
-  Copyright &copy; 2026 Cavarest. Distributed by the
-  <a href="https://github.com/cavarest/papermc-plugin-dragon-egg/blob/main/LICENSE">MIT license</a>.
+  Copyright &copy; 2026 Cavarest.
 
 # Footer last edit timestamp
 last_edit_timestamp: true
@@ -100,7 +99,7 @@ last_edit_time_format: "%b %e %Y at %I:%M %p"
 color_scheme: light
 
 # Logo
-logo: false
+logo: assets/logo.svg
 
 # Aux links for the upper right navigation
 aux_links:

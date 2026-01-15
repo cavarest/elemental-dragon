@@ -40,6 +40,7 @@ jobs:
           ruby-version: '3.4'
           bundler-cache: true
           cache-version: 0 # Increment this number if you need to re-download cached gems
+          working-directory: docs
 
       - name: Setup Pages
         id: pages
