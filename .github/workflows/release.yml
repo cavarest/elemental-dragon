@@ -55,11 +55,11 @@ jobs:
         CURRENT="${{ steps.current_version.outputs.current }}"
 
         if [[ "${{ inputs.next_version }}" == "major" ]]; then
-          NEXT=$(echo $CURRENT | awk -F. '{$1+=1; $2=0; $3=0} OFS=. print $1"."$2"."$3}')
+          NEXT=$(echo $CURRENT | awk -F. '{$$1+=1; $$2=0; $$3=0} OFS=. print $$1"."$$2"."$$3')
         elif [[ "${{ inputs.next_version }}" == "minor" ]]; then
-          NEXT=$(echo $CURRENT | awk -F. '{$2+=1; $3=0} OFS=. print $1"."$2"."$3}')
+          NEXT=$(echo $CURRENT | awk -F. '{$$2+=1; $$3=0} OFS=. print $$1"."$$2"."$$3')
         elif [[ "${{ inputs.next_version }}" == "patch" ]]; then
-          NEXT=$(echo $CURRENT | awk -F. '{$3+=1} OFS=. print $1"."$2"."$3}')
+          NEXT=$(echo $CURRENT | awk -F. '{$$3+=1} OFS=. print $$1"."$$2"."$$3')
         elif [[ "${{ inputs.next_version }}" == "skip" ]]; then
           NEXT=$CURRENT
         else
