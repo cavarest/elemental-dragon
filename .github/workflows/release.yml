@@ -179,11 +179,17 @@ jobs:
         echo "🎉 Verifying release creation..."
         echo ""
 
-        if gh release view ${{ steps.next_version.outputs.tag }} --json id --jq '.id' 2>/dev/null; then
-          echo "✅ Release ${{ steps.next_version.outputs.tag }} created successfully!"
-          echo ""
-          echo "🔗 https://github.com/${{ github.repository }}/releases/tag/${{ steps.next_version.outputs.tag }}"
-        else
-          echo "❌ Failed to verify release"
-          exit 1
-        fi
+        # Retry a few times to account for GitHub API propagation delay
+        for i in {1..5}; do
+          if gh release view ${{ steps.next_version.outputs.tag }} --json id --jq '.id' 2>/dev/null; then
+            echo "✅ Release ${{ steps.next_version.outputs.tag }} created successfully!"
+            echo ""
+            echo "🔗 https://github.com/${{ github.repository }}/releases/tag/${{ steps.next_version.outputs.tag }}"
+            exit 0
+          fi
+          echo "Attempt $i/5: Release not yet visible, retrying in 3 seconds..."
+          sleep 3
+        done
+
+        echo "❌ Failed to verify release after 5 attempts"
+        exit 1
