@@ -64,23 +64,20 @@ jobs:
     - name: Calculate next version
       id: next_version
       run: |
-        import re
-        from packaging import version
-
         current_version = '${{ steps.current_version.outputs.current }}'
         next_version_input = '${{ inputs.next_version }}'
 
-        # Parse current version
-        v = version.parse(current_version)
-        parts = [v.major, v.minor, v.micro]
+        # Parse current version manually
+        parts = current_version.split('.')
+        major, minor, patch = int(parts[0]), int(parts[1]), int(parts[2])
 
         # Calculate next version
         if next_version_input == 'major':
-            next_ver = f'{parts[0] + 1}.0.0'
+            next_ver = f'{major + 1}.0.0'
         elif next_version_input == 'minor':
-            next_ver = f'{parts[0]}.{parts[1] + 1}.0'
+            next_ver = f'{major}.{minor + 1}.0'
         elif next_version_input == 'patch':
-            next_ver = f'{parts[0]}.{parts[1]}.{parts[2] + 1}'
+            next_ver = f'{major}.{minor}.{patch + 1}'
         elif next_version_input == 'skip':
             next_ver = current_version
         else:
