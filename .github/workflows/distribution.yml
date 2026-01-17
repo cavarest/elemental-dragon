@@ -144,7 +144,7 @@ jobs:
       uses: cloudnode-pro/modrinth-publish@v2
       with:
         token: ${{ secrets.MODRINTH_API_KEY }}
-        project: elemental-dragon
+        project: 66f6mWei
         version: ${{ steps.version_vars.outputs.version }}
         name: ${{ inputs.release_title || format('Elemental Dragon Plugin {0}', steps.version_vars.outputs.version) }}
         changelog: ${{ inputs.release_notes || steps.release_notes.outputs.notes || format('Release {0}', steps.version_vars.outputs.tag) }}
