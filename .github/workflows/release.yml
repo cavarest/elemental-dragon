@@ -180,3 +180,13 @@ jobs:
         echo "🎉 Release ${{ steps.next_version.outputs.tag }} created successfully!"
         echo ""
         echo "🔗 https://github.com/${{ github.repository }}/releases/tag/${{ steps.next_version.outputs.tag }}"
+
+    - name: Distribute to Modrinth and Hangar
+      if: ${{ inputs.next_version != 'skip' }}
+      uses: ./.github/workflows/distribution.yml
+      with:
+        tag: ${{ steps.next_version.outputs.tag }}
+        version: ${{ steps.next_version.outputs.next }}
+        release_title: ${{ inputs.release_title }}
+        release_notes: ${{ inputs.release_notes }}
+      secrets: inherit

@@ -1,0 +1,167 @@
+name: distribution
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: |
+          Git tag to distribute (e.g., v1.2.5).
+          The JAR must already be built and available in build/libs/.
+        required: true
+        type: string
+      modrinth_only:
+        description: 'Only publish to Modrinth (skip Hangar)'
+        required: false
+        type: boolean
+        default: false
+      hangar_only:
+        description: 'Only publish to Hangar (skip Modrinth)'
+        required: false
+        type: boolean
+        default: false
+  workflow_call:
+    inputs:
+      tag:
+        description: 'Git tag to distribute (e.g., v1.2.5)'
+        required: true
+        type: string
+      version:
+        description: 'Version number (e.g., 1.2.5)'
+        required: true
+        type: string
+      release_title:
+        description: 'Title for the releases (optional)'
+        required: false
+        type: string
+      release_notes:
+        description: 'Release notes (optional)'
+        required: false
+        type: string
+      modrinth_only:
+        description: 'Only publish to Modrinth (skip Hangar)'
+        required: false
+        type: boolean
+        default: false
+      hangar_only:
+        description: 'Only publish to Hangar (skip Modrinth)'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  distribute:
+    name: Distribute to Platforms
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+
+    - name: Extract version from tag
+      id: extract_version
+      if: ${{ github.event_name == 'workflow_dispatch' }}
+      run: |
+        TAG="${{ inputs.tag }}"
+        # Remove 'v' prefix if present
+        VERSION="${TAG#v}"
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Extracted version: $VERSION"
+
+    - name: Set version variables
+      id: version_vars
+      run: |
+        if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          VERSION="${{ steps.extract_version.outputs.version }}"
+          TAG="${{ inputs.tag }}"
+        else
+          VERSION="${{ inputs.version }}"
+          TAG="${{ inputs.tag }}"
+        fi
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+    - name: Get GitHub Release notes
+      id: release_notes
+      if: ${{ github.event_name == 'workflow_dispatch' && inputs.release_notes == '' }}
+      run: |
+        TAG="${{ steps.version_vars.outputs.tag }}"
+        echo "Fetching release notes for tag: $TAG"
+
+        # Try to get release notes from GitHub API
+        NOTES=$(gh release view "$TAG" --json body -q '.body' || echo "")
+
+        if [ -z "$NOTES" ]; then
+          NOTES="Release $TAG"
+        fi
+
+        # Save to file for multiline support
+        echo "$NOTES" > /tmp/release_notes.txt
+        echo "notes_file=/tmp/release_notes.txt" >> $GITHUB_OUTPUT
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build plugin if needed
+      run: |
+        JAR_FILE="build/libs/elemental-dragon-${{ steps.version_vars.outputs.version }}.jar"
+        if [ ! -f "$JAR_FILE" ]; then
+          echo "JAR not found, building..."
+          chmod +x build.sh
+          ./build.sh --production
+        else
+          echo "JAR found: $JAR_FILE"
+        fi
+
+    - name: Verify JAR exists
+      run: |
+        JAR_FILE="build/libs/elemental-dragon-${{ steps.version_vars.outputs.version }}.jar"
+        if [ ! -f "$JAR_FILE" ]; then
+          echo "ERROR: JAR file not found: $JAR_FILE"
+          echo "Available files:"
+          ls -la build/libs/ || echo "build/libs/ directory not found"
+          exit 1
+        fi
+        echo "✅ JAR verified: $JAR_FILE"
+
+    - name: Publish to Modrinth
+      if: ${{ inputs.hangar_only != true }}
+      uses: cloudnode-pro/modrinth-publish@v2
+      with:
+        token: ${{ secrets.MODRINTH_API_KEY }}
+        project: elemental-dragon
+        version: ${{ steps.version_vars.outputs.version }}
+        name: ${{ inputs.release_title || format('Elemental Dragon Plugin {0}', steps.version_vars.outputs.version) }}
+        changelog: ${{ inputs.release_notes || steps.release_notes.outputs.notes_file }}
+        loaders: |-
+          paper
+          folia
+        game-versions: |-
+          1.21.x
+        files: build/libs/elemental-dragon-${{ steps.version_vars.outputs.version }}.jar
+
+    - name: Publish to Hangar
+      if: ${{ inputs.modrinth_only != true }}
+      env:
+        HANGER_PAPERMC_API_KEY: ${{ secrets.HANGER_PAPERMC_API_KEY }}
+      run: |
+        ./gradlew publishPluginPublicationToHangar --stacktrace
+
+    - name: Distribution Summary
+      run: |
+        VERSION="${{ steps.version_vars.outputs.version }}"
+        echo "🎉 Distribution complete for v$VERSION!"
+        echo ""
+        echo "📦 Platforms:"
+        if [ "${{ inputs.modrinth_only }}" != "true" ]; then
+          echo "  ✅ Modrinth: https://modrinth.com/plugin/elemental-dragon"
+        fi
+        if [ "${{ inputs.hangar_only }}" != "true" ]; then
+          echo "  ✅ Hangar: https://hangar.papermc.io/ElementalDragon"
+        fi

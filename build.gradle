@@ -1,6 +1,7 @@
 plugins {
     id 'java-library'
     id 'jacoco'
+    id 'io.papermc.hangar-publish-plugin' version '0.1.2'
 }
 
 group = 'org.cavarest'
@@ -132,3 +133,21 @@ tasks.jar {
 // }
 // Then use: id 'com.gradleup.shadow' version '8.1.2'
 // Current setup works but FoliaLib relocation warning will appear
+
+// Hangar publishing configuration
+hangarPublish {
+    publications.register("plugin") {
+        version.set(project.version.toString())
+        id.set("ElementalDragon")
+        channel.set("Release")
+        apiKey.set(System.getenv("HANGER_PAPERMC_API_KEY"))
+
+        platforms {
+            paper {
+                jar.set(tasks.jar.flatMap { it.archiveFile })
+                platformVersions.set(["1.21.x"])
+                // No external plugin dependencies for ElementalDragon
+            }
+        }
+    }
+}
