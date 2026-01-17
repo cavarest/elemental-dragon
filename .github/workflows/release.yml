@@ -17,11 +17,6 @@ on:
         description: 'Release notes (optional, defaults to changelog)'
         required: false
         type: string
-      create_discussion:
-        description: 'Create a GitHub discussion for the release (true/false)'
-        required: false
-        type: boolean
-        default: true
   push:
     tags:
       - 'v*.*.*'
@@ -115,83 +110,19 @@ jobs:
         jar tf "$JAR_FILE" | grep plugin.yml
         echo "✅ Plugin.yml verified"
 
-    - name: Get release notes
-      id: release_notes
-      run: |
-        # Check if custom notes provided
-        if [[ -n "${{ inputs.release_notes }}" ]]; then
-          NOTES="${{ inputs.release_notes }}"
-        else
-          # Generate notes from git log
-          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          if [[ -z "$PREV_TAG" ]]; then
-            NOTES="Initial release of Elemental Dragon plugin"
-          else
-            NOTES="Changes since $PREV_TAG:"$(git log $PREV_TAG..HEAD --oneline | sed 's/^/ - /')
-          fi
-        fi
-
-        # Add header and installation instructions
-        cat > /tmp/notes.txt << 'NOTES_EOF'
-        ## Release ${{ steps.next_version.outputs.tag }}
-
-        $NOTES
-
-        ### Installation
-        1. Download elemental-dragon-*.jar below
-        2. Place in plugins/ directory
-        3. Restart Paper 1.21.8+ server
-
-        ### Quick Start
-        /give @p minecraft:dragon_egg
-        # Move to offhand (F key)
-        /lightning 1
-        NOTES_EOF
-
-        # Read file and set output
-        delimiter="$(openssl rand -hex 8)"
-        echo "notes<<$delimiter" >> $GITHUB_OUTPUT
-        cat /tmp/notes.txt >> $GITHUB_OUTPUT
-        echo "$delimiter" >> $GITHUB_OUTPUT
-
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ steps.next_version.outputs.tag }}
         name: ${{ inputs.release_title || format('Elemental Dragon Plugin {0}', steps.next_version.outputs.next) }}
-        body: ${{ steps.release_notes.outputs.notes }}
+        body: ${{ inputs.release_notes }}
         draft: false
         prerelease: false
         files: |
           build/libs/elemental-dragon-*.jar
-        generate_release_notes: false
+        generate_release_notes: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Create GitHub Discussion (Announcement)
-      if: ${{ inputs.create_discussion }}
-      uses: peter-evans/create-discussion@v3
-      with:
-        title: ${{ inputs.release_title || format('Elemental Dragon Plugin {0} Released!', steps.next_version.outputs.next) }}
-        body: |
-          **Elemental Dragon Plugin ${{ steps.next_version.outputs.next }} has been released!** :rocket:
-
-          ${{ steps.release_notes.outputs.notes }}
-
-          **Download**: https://github.com/${{ github.repository }}/releases/tag/${{ steps.next_version.outputs.tag }}
-        category: Announcements
-        repository-discussions: true
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Repository dispatch (release-passed event)
-      uses: peter-evans/repository-dispatch@v3
-      if: ${{ inputs.create_discussion }}
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        repository: ${{ github.repository }}
-        event-type: release-passed
-        client-payload: '{"ref": "${{ steps.next_version.outputs.tag }}", "sha": "${{ github.sha }}", "type": "release-passed"}'
 
     - name: Verify Release
       run: |
