@@ -74,7 +74,7 @@ jobs:
       if: ${{ inputs.next_version != 'skip' }}
       run: |
         NEXT="${{ steps.next_version.outputs.next }}"
-        sed -i "s/^version=.*/version=\"$NEXT\"/" build.gradle
+        sed -i "s/^version = .*/version = '$NEXT'/" build.gradle
         echo "Updated build.gradle version to $NEXT"
 
     - name: Commit version bump
