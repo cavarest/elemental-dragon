@@ -95,25 +95,14 @@ jobs:
         print(f'Next version: {next_ver}')
       shell: python
 
-    - name: Update version in build.gradle and gradle.properties
+    - name: Update version in gradle.properties
       if: ${{ inputs.next_version != 'skip' }}
       run: |
         import re
 
         next_ver = '${{ steps.next_version.outputs.next }}'
 
-        # Update build.gradle
-        with open('build.gradle', 'r') as f:
-            content = f.read()
-        content = re.sub(
-            r"(version\s*=\s*['\"])([^'\"]+)(['\"])",
-            lambda m: m.group(1) + next_ver + m.group(3),
-            content
-        )
-        with open('build.gradle', 'w') as f:
-            f.write(content)
-
-        # Update gradle.properties
+        # Update gradle.properties (single source of truth)
         with open('gradle.properties', 'r') as f:
             content = f.read()
         content = re.sub(
@@ -133,7 +122,7 @@ jobs:
         git config user.name github-actions
         git config user.email github-actions@github.com
         NEXT="${{ steps.next_version.outputs.next }}"
-        git add build.gradle
+        git add gradle.properties
         git commit -m "chore: bump version to $NEXT"
         git push
 

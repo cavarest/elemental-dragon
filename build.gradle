@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'org.cavarest'
-version = '1.2.5'
+version = project.property('project.version')
 description = 'Elemental Dragon Plugin - Lightning ability and secret powers'
 
 java {
@@ -166,14 +166,14 @@ hangarPublish {
                 // Users must install ProtocolSidebar and FoliaLib separately
                 jar.set(tasks.slimJar.archiveFile)
                 platformVersions.set(["1.21.x"])
-                // Declare external plugin dependencies with download URLs
+                // Declare external plugin dependencies with direct JAR download URLs
                 dependencies {
-                    // ProtocolSidebar - HUD library
-                    url("ProtocolSidebar", "https://github.com/CatCoderr/ProtocolSidebar") {
+                    // ProtocolSidebar - HUD library (from JitPack)
+                    url("ProtocolSidebar", "https://jitpack.io/com/github/CatCoderr/ProtocolSidebar/master-SNAPSHOT/ProtocolSidebar-master-SNAPSHOT.jar") {
                         required.set(true)
                     }
-                    // FoliaLib - Task scheduling library
-                    url("FoliaLib", "https://github.com/TechnicallyCoded/FoliaLib") {
+                    // FoliaLib - Task scheduling library (from TCoded repo)
+                    url("FoliaLib", "https://repo.tcoded.com/releases/com/tcoded/FoliaLib/0.5.1/FoliaLib-0.5.1.jar") {
                         required.set(true)
                     }
                 }
