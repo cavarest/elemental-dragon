@@ -120,6 +120,9 @@ config/local.yml
 *.zip
 *.tar.gz
 
+# Gradle wrapper (needed for CI/CD)
+!gradle/wrapper/gradle-wrapper.jar
+
 # No longer using Maven
 pom.xml
 target/
