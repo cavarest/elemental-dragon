@@ -68,14 +68,27 @@ jobs:
     - name: Setup pnpm
       uses: pnpm/action-setup@v4
       with:
-        version: 8
+        version: 10
+
+    - name: Get pnpm store directory
+      id: pnpm-cache
+      shell: bash
+      working-directory: pilaf
+      run: |
+        echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+    - name: Setup pnpm cache
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pilaf/pnpm-lock.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-pnpm-store-
 
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        cache: 'pnpm'
-        cache-dependency-path: pilaf/pnpm-lock.yaml
 
     - name: Cache Gradle packages
       uses: actions/cache@v4
