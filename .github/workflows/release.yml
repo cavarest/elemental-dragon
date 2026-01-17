@@ -50,13 +50,17 @@ jobs:
     - name: Get current version from build.gradle
       id: current_version
       run: |
+        import os
         import re
+
         with open('build.gradle', 'r') as f:
             content = f.read()
             match = re.search(r"version\s*=\s*['\"]([^'\"]+)['\"]", content)
             if match:
-                version = match.group(1)
-                print(f'current={version}')
+                version_str = match.group(1)
+                with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                    f.write(f'current={version_str}\n')
+                print(f'Found version: {version_str}')
             else:
                 raise ValueError('Version not found in build.gradle')
       shell: python
@@ -64,6 +68,8 @@ jobs:
     - name: Calculate next version
       id: next_version
       run: |
+        import os
+
         current_version = '${{ steps.current_version.outputs.current }}'
         next_version_input = '${{ inputs.next_version }}'
 
@@ -83,8 +89,10 @@ jobs:
         else:
             next_ver = next_version_input
 
-        print(f'next={next_ver}')
-        print(f'tag=v{next_ver}')
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+            f.write(f'next={next_ver}\n')
+            f.write(f'tag=v{next_ver}\n')
+        print(f'Next version: {next_ver}')
       shell: python
 
     - name: Update version in build.gradle and gradle.properties
