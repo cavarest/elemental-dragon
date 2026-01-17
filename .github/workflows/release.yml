@@ -70,12 +70,15 @@ jobs:
         echo "tag=v$NEXT" >> $GITHUB_OUTPUT
         echo "Calculated next version: $NEXT"
 
-    - name: Update version in build.gradle
+    - name: Update version in build.gradle and gradle.properties
       if: ${{ inputs.next_version != 'skip' }}
       run: |
         NEXT="${{ steps.next_version.outputs.next }}"
+        # Update build.gradle
         sed -i "s/^version = .*/version = '$NEXT'/" build.gradle
-        echo "Updated build.gradle version to $NEXT"
+        # Update gradle.properties
+        sed -i "s/^project.version=.*/project.version=$NEXT/" gradle.properties
+        echo "Updated version to $NEXT in build.gradle and gradle.properties"
 
     - name: Commit version bump
       if: ${{ inputs.next_version != 'skip' }}
