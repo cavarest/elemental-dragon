@@ -99,21 +99,28 @@ jobs:
       if: ${{ inputs.next_version != 'skip' }}
       run: |
         import re
-        import sys
 
         next_ver = '${{ steps.next_version.outputs.next }}'
 
         # Update build.gradle
         with open('build.gradle', 'r') as f:
             content = f.read()
-        content = re.sub(r"(version\s*=\s*['\"])([^'\"]+)(['\"])", r'\1' + next_ver + r'\3', content)
+        content = re.sub(
+            r"(version\s*=\s*['\"])([^'\"]+)(['\"])",
+            lambda m: m.group(1) + next_ver + m.group(3),
+            content
+        )
         with open('build.gradle', 'w') as f:
             f.write(content)
 
         # Update gradle.properties
         with open('gradle.properties', 'r') as f:
             content = f.read()
-        content = re.sub(r'(project.version=).*', r'\1' + next_ver, content)
+        content = re.sub(
+            r'(project.version=).*',
+            lambda m: m.group(1) + next_ver,
+            content
+        )
         with open('gradle.properties', 'w') as f:
             f.write(content)
 
