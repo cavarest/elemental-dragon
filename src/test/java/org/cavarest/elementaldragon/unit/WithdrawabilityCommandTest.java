@@ -81,7 +81,9 @@ public class WithdrawabilityCommandTest {
     @Test
     @DisplayName("Non-player sender cannot use command")
     public void testNonPlayerSenderCannotUseCommand() {
-        when(nonPlayerSender instanceof Player).thenReturn(false);
+        // nonPlayerSender is a mocked CommandSender (not a Player)
+        // The instanceof Player check in the command will return false
+        // because CommandSender is not an instance of Player
 
         boolean result = withdrawabilityCommand.onCommand(nonPlayerSender, command, "withdrawability", new String[0]);
 
@@ -122,21 +124,20 @@ public class WithdrawabilityCommandTest {
     // ==================== /clear command simulation tests ====================
 
     @Test
-    @DisplayName("Withdrawability after /clear clears cache and shows correct message")
+    @DisplayName("Withdrawability after /clear shows correct message when fragment is gone")
     public void testWithdrawabilityAfterClearCommand() {
-        // First call returns BURNING (cache shows equipped)
-        // Second call returns null (cache was cleared after inventory check)
-        when(fragmentManager.getEquippedFragment(player))
-            .thenReturn(FragmentType.BURNING)  // First call - cache check passes
-            .thenReturn(null);  // Subsequent calls - cache cleared
+        // After /clear removes the fragment from inventory, getEquippedFragment()
+        // detects the item is missing, clears the cache, and returns null
+
+        when(fragmentManager.getEquippedFragment(player)).thenReturn(null);
 
         boolean result = withdrawabilityCommand.onCommand(player, command, "withdrawability", new String[0]);
 
         assertTrue(result, "Command should return true");
-        // getEquippedFragment() was called, which cleared the cache
-        verify(fragmentManager, atLeastOnce()).getEquippedFragment(player);
-        // unequipFragment() should NOT be called since fragment is not actually in inventory
-        verify(fragmentManager, never()).unequipFragment(player);
+        // getEquippedFragment() was called and returned null (item missing from inventory)
+        verify(fragmentManager).getEquippedFragment(player);
+        // unequipFragment() should NOT be called since getEquippedFragment already returned null
+        verify(fragmentManager, never()).unequipFragment(any());
         // Player should get the "don't have any fragment abilities equipped" message
         verify(player).sendMessage(any(net.kyori.adventure.text.Component.class));
     }
