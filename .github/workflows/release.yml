@@ -118,58 +118,40 @@ jobs:
     - name: Get release notes
       id: release_notes
       run: |
+        # Check if custom notes provided
         if [[ -n "${{ inputs.release_notes }}" ]]; then
           NOTES="${{ inputs.release_notes }}"
         else
+          # Generate notes from git log
           PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
           if [[ -z "$PREV_TAG" ]]; then
-            NOTES="## 🎉 Initial Release
-
-This is the first release of Elemental Dragon plugin!"
+            NOTES="Initial release of Elemental Dragon plugin"
           else
-            NOTES="## 📝 Changes
-
-$(git log $PREV_TAG..HEAD --oneline | sed 's/^/- /')"
+            NOTES="Changes since $PREV_TAG:"$(git log $PREV_TAG..HEAD --oneline | sed 's/^/ - /')
           fi
         fi
 
-        # Add version header
-        NOTES="## Release ${{ steps.next_version.outputs.tag }}
+        # Add header and installation instructions
+        cat > /tmp/notes.txt << 'NOTES_EOF'
+        ## Release ${{ steps.next_version.outputs.tag }}
 
-$NOTES"
+        $NOTES
 
-        # Add installation instructions
-        NOTES="$NOTES
+        ### Installation
+        1. Download elemental-dragon-*.jar below
+        2. Place in plugins/ directory
+        3. Restart Paper 1.21.8+ server
 
-## 📥 Installation
+        ### Quick Start
+        /give @p minecraft:dragon_egg
+        # Move to offhand (F key)
+        /lightning 1
+        NOTES_EOF
 
-1. Download \`elemental-dragon-*.jar\` below
-2. Place in \`plugins/\` directory
-3. Restart Paper 1.21.8+ server
-4. No configuration needed!
-
-## ⚡ Quick Start
-
-\`\`\`bash
-/give @p minecraft:dragon_egg  # Get dragon egg
-# Move to offhand (F key)
-/lightning 1                      # Strike with lightning!
-\`\`\`
-
-## 📋 System Requirements
-
-- Minecraft: Java Edition 1.21.8+
-- Server: Paper 1.21.8-R0.1+
-- Java: 21 or higher
-"
-
-        # Write to file for multi-line support
-        echo "$NOTES" > /tmp/release_notes.txt
-
-        # Set output (single line for GitHub Actions)
+        # Read file and set output
         delimiter="$(openssl rand -hex 8)"
         echo "notes<<$delimiter" >> $GITHUB_OUTPUT
-        cat /tmp/release_notes.txt >> $GITHUB_OUTPUT
+        cat /tmp/notes.txt >> $GITHUB_OUTPUT
         echo "$delimiter" >> $GITHUB_OUTPUT
 
     - name: Create GitHub Release
