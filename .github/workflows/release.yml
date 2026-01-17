@@ -45,7 +45,7 @@ jobs:
     - name: Get current version from build.gradle
       id: current_version
       run: |
-        CURRENT_VERSION=$(grep '^version=' build.gradle | sed "s/version=//" | sed "s/'//g" | sed "s/ //g")
+        CURRENT_VERSION=$(grep "^version " build.gradle | head -1 | sed "s/version = '//" | sed "s/'//g" | sed "s/ //g")
         echo "current=$CURRENT_VERSION" >> $GITHUB_OUTPUT
         echo "Detected current version: $CURRENT_VERSION"
 
