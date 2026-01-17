@@ -175,10 +175,9 @@ jobs:
       uses: EnricoMi/publish-unit-test-result-action@v2
       if: always() && !cancelled()
       with:
-        files: "pilaf/test-results/**/*.xml"
+        files: "pilaf/target/test-results/**/*.xml"
         check_name: Dragon Egg Integration Test Report
         comment_mode: "off"
-        fail_on: "test failures"
 
     - name: Upload Pilaf HTML reports
       if: always()
