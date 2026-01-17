@@ -144,7 +144,8 @@ hangarPublish {
 
         platforms {
             paper {
-                jar.set(tasks.jar.flatMap { it.archiveFile })
+                // Groovy DSL: use archiveFile directly without flatMap
+                jar.set(tasks.jar.archiveFile)
                 platformVersions.set(["1.21.x"])
                 // No external plugin dependencies for ElementalDragon
             }
