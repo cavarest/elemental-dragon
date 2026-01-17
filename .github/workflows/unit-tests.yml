@@ -48,7 +48,7 @@ jobs:
       uses: scacap/action-surefire-report@v1
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        report_paths: '**/test-results/**/*.xml'
+        report_paths: '**/build/test-results/test/TEST-*.xml'
         check_name: Test Report (Java ${{ matrix.java-version }})
         fail_on_test_failures: false
         fail_if_no_tests: true
@@ -96,7 +96,10 @@ jobs:
       if: always()
       with:
         name: test-results-java-${{ matrix.java-version }}
-        path: build/reports/tests/test/
+        path: |
+          build/reports/tests/test/
+          build/test-results/test/
+        if-no-files-found: ignore
         retention-days: 30
 
     - name: Upload coverage reports
