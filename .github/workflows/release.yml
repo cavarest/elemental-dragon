@@ -42,43 +42,78 @@ jobs:
         java-version: '21'
         distribution: 'temurin'
 
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+
     - name: Get current version from build.gradle
       id: current_version
       run: |
-        CURRENT_VERSION=$(grep "^version " build.gradle | head -1 | sed "s/version = '//" | sed "s/'//g" | sed "s/ //g")
-        echo "current=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-        echo "Detected current version: $CURRENT_VERSION"
+        import re
+        with open('build.gradle', 'r') as f:
+            content = f.read()
+            match = re.search(r"version\s*=\s*['\"]([^'\"]+)['\"]", content)
+            if match:
+                version = match.group(1)
+                print(f'current={version}')
+            else:
+                raise ValueError('Version not found in build.gradle')
+      shell: python
 
     - name: Calculate next version
       id: next_version
       run: |
-        CURRENT="${{ steps.current_version.outputs.current }}"
+        import re
+        from packaging import version
 
-        if [[ "${{ inputs.next_version }}" == "major" ]]; then
-          NEXT=$(echo $CURRENT | awk -F. '{print $1+1".0.0"}')
-        elif [[ "${{ inputs.next_version }}" == "minor" ]]; then
-          NEXT=$(echo $CURRENT | awk -F. '{print $1"."$2+1".0"}')
-        elif [[ "${{ inputs.next_version }}" == "patch" ]]; then
-          NEXT=$(echo $CURRENT | awk -F. '{print $1"."$2"."$3+1}')
-        elif [[ "${{ inputs.next_version }}" == "skip" ]]; then
-          NEXT=$CURRENT
-        else
-          NEXT="${{ inputs.next_version }}"
-        fi
+        current_version = '${{ steps.current_version.outputs.current }}'
+        next_version_input = '${{ inputs.next_version }}'
 
-        echo "next=$NEXT" >> $GITHUB_OUTPUT
-        echo "tag=v$NEXT" >> $GITHUB_OUTPUT
-        echo "Calculated next version: $NEXT"
+        # Parse current version
+        v = version.parse(current_version)
+        parts = [v.major, v.minor, v.micro]
+
+        # Calculate next version
+        if next_version_input == 'major':
+            next_ver = f'{parts[0] + 1}.0.0'
+        elif next_version_input == 'minor':
+            next_ver = f'{parts[0]}.{parts[1] + 1}.0'
+        elif next_version_input == 'patch':
+            next_ver = f'{parts[0]}.{parts[1]}.{parts[2] + 1}'
+        elif next_version_input == 'skip':
+            next_ver = current_version
+        else:
+            next_ver = next_version_input
+
+        print(f'next={next_ver}')
+        print(f'tag=v{next_ver}')
+      shell: python
 
     - name: Update version in build.gradle and gradle.properties
       if: ${{ inputs.next_version != 'skip' }}
       run: |
-        NEXT="${{ steps.next_version.outputs.next }}"
+        import re
+        import sys
+
+        next_ver = '${{ steps.next_version.outputs.next }}'
+
         # Update build.gradle
-        sed -i "s/^version = .*/version = '$NEXT'/" build.gradle
+        with open('build.gradle', 'r') as f:
+            content = f.read()
+        content = re.sub(r"(version\s*=\s*['\"])([^'\"]+)(['\"])", r'\1' + next_ver + r'\3', content)
+        with open('build.gradle', 'w') as f:
+            f.write(content)
+
         # Update gradle.properties
-        sed -i "s/^project.version=.*/project.version=$NEXT/" gradle.properties
-        echo "Updated version to $NEXT in build.gradle and gradle.properties"
+        with open('gradle.properties', 'r') as f:
+            content = f.read()
+        content = re.sub(r'(project.version=).*', r'\1' + next_ver, content)
+        with open('gradle.properties', 'w') as f:
+            f.write(content)
+
+        print(f'Updated version to {next_ver}')
+      shell: python
 
     - name: Commit version bump
       if: ${{ inputs.next_version != 'skip' }}
