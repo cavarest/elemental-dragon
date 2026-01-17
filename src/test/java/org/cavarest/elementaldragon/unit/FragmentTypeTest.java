@@ -82,7 +82,7 @@ class FragmentTypeTest {
     String message = getThemedCraftMessage("TestPlayer", FragmentType.IMMORTAL);
 
     assertNotNull(message, "Message should not be null");
-    assertTrue(message.contains("🛡️"), "Message should contain shield emoji");
+    assertTrue(message.contains("🛡"), "Message should contain shield emoji");
     assertTrue(message.contains("TestPlayer"), "Message should contain player name");
     assertTrue(message.contains("Immortal Fragment"), "Message should contain fragment name");
     assertTrue(message.contains("<green>") || message.contains("green>"),
@@ -109,7 +109,7 @@ class FragmentTypeTest {
 
     assertNotNull(message, "Message should not be null");
     assertTrue(message.contains("TestPlayer"), "Message should contain player name");
-    assertTrue(message.contains("⚔️"), "Message should contain sword emoji");
+    assertTrue(message.contains("⚔"), "Message should contain sword emoji");
   }
 
   /**
@@ -119,7 +119,7 @@ class FragmentTypeTest {
   private String getThemedCraftMessage(String playerName, FragmentType fragmentType) {
     if (fragmentType == null) {
       return String.format(
-        "<gold>⚔️ <yellow>%s</yellow> has forged an elemental fragment!",
+        "<gold>⚔ <yellow>%s</yellow> has forged an elemental fragment!",
         playerName
       );
     }
@@ -137,7 +137,7 @@ class FragmentTypeTest {
         );
       case IMMORTAL:
         return String.format(
-          "<green>🛡️ The earth of the ancient dragon acknowledges <yellow>%s</yellow> has forged the <green>Immortal Fragment</green>!",
+          "<green>🛡 The earth of the ancient dragon acknowledges <yellow>%s</yellow> has forged the <green>Immortal Fragment</green>!",
           playerName
         );
       case CORRUPTED:
@@ -147,7 +147,7 @@ class FragmentTypeTest {
         );
       default:
         return String.format(
-          "<gold>⚔️ <yellow>%s</yellow> has forged an elemental fragment!",
+          "<gold>⚔ <yellow>%s</yellow> has forged an elemental fragment!",
           playerName
         );
     }

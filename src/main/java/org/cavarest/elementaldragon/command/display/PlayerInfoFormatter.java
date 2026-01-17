@@ -75,7 +75,7 @@ public class PlayerInfoFormatter {
             sender.sendMessage(Component.text(
                 "📋 " + target.getName() + " | " +
                 getStatusEmojis(status) + " | " +
-                (equippedFragment != null ? "⚔️ " + equippedFragment.getDisplayName() : "⚔️ None") + " | " +
+                (equippedFragment != null ? "⚔ " + equippedFragment.getDisplayName() : "⚔ None") + " | " +
                 (onCooldown ? "⏳ " + cooldownRemaining + "s" : "✅ Ready"),
                 NamedTextColor.WHITE
             ));
@@ -96,13 +96,13 @@ public class PlayerInfoFormatter {
             sender.sendMessage(Component.text("", NamedTextColor.WHITE));
 
             // Equipped Fragment
-            sender.sendMessage(Component.text("  ⚔️  Equipped: ", NamedTextColor.AQUA)
+            sender.sendMessage(Component.text("  ⚔  Equipped: ", NamedTextColor.AQUA)
                 .append(equippedFragment != null ?
                     Component.text(equippedFragment.getDisplayName(), NamedTextColor.GREEN) :
                     Component.text("None", NamedTextColor.GRAY)));
 
             // Cooldown Status
-            sender.sendMessage(Component.text("  ⏱️  Cooldown: ", NamedTextColor.AQUA)
+            sender.sendMessage(Component.text("  ⏱  Cooldown: ", NamedTextColor.AQUA)
                 .append(onCooldown ?
                     Component.text(cooldownRemaining + " seconds remaining", NamedTextColor.RED) :
                     Component.text("Ready", NamedTextColor.GREEN)));
@@ -135,7 +135,7 @@ public class PlayerInfoFormatter {
         Map<String, Integer> counts = tracker.getElementCounts();
 
         sender.sendMessage(Component.text("═══════════════════════════════════════════════════════════", NamedTextColor.GOLD));
-        sender.sendMessage(Component.text("     ⚔️  ELEMENTAL DRAGON STATUS REPORT  ⚔️", NamedTextColor.GOLD));
+        sender.sendMessage(Component.text("     ⚔  ELEMENTAL DRAGON STATUS REPORT  ⚔", NamedTextColor.GOLD));
         sender.sendMessage(Component.text("═══════════════════════════════════════════════════════════", NamedTextColor.GOLD));
 
         // Element summary with counts

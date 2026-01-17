@@ -75,7 +75,7 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
   private final List<AbilityDefinition> abilities = List.of(
     new AbilityDefinition(1, "Dread Gaze", "blindness & slow",
       List.of("gaze", "dread-gaze"),
-      "Dark energy blinds and slows your foe! 👁❄️", "❄️"),
+      "Dark energy blinds and slows your foe! 👁❄", "❄"),
     new AbilityDefinition(2, "Life Devourer", "health steal",
       List.of("devourer", "life-devourer"),
       "The void drains life force from your enemy! 👁🩸", "🩸")
@@ -682,7 +682,7 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
 
     // Send feedback messages
     attacker.sendMessage(
-      Component.text(victim.getName() + " is completely frozen now! 👁❄️",
+      Component.text(victim.getName() + " is completely frozen now! 👁❄",
         NamedTextColor.DARK_PURPLE)
     );
 

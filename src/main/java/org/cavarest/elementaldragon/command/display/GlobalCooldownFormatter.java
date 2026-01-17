@@ -43,7 +43,7 @@ public class GlobalCooldownFormatter {
         Map<String, Integer> globalCooldowns = cooldownManager.getAllGlobalCooldowns();
 
         sender.sendMessage(Component.text("═══════════════════════════════════════", NamedTextColor.GOLD));
-        sender.sendMessage(Component.text("    ⚙️  GLOBAL COOLDOWN CONFIGURATION  ⚙️", NamedTextColor.GOLD));
+        sender.sendMessage(Component.text("    ⚙  GLOBAL COOLDOWN CONFIGURATION  ⚙", NamedTextColor.GOLD));
         sender.sendMessage(Component.text("═══════════════════════════════════════", NamedTextColor.GOLD));
         sender.sendMessage(Component.text("", NamedTextColor.WHITE));
 

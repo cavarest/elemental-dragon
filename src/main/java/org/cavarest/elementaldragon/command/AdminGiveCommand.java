@@ -353,7 +353,7 @@ public class AdminGiveCommand {
     // Check if player already has this fragment type
     if (hasFragmentInInventory(target, fragmentType)) {
       target.sendMessage(Component.text(
-        "⚠️ You already have a " + fragmentType.getDisplayName() + "!",
+        "⚠ You already have a " + fragmentType.getDisplayName() + "!",
         NamedTextColor.RED
       ));
       target.sendMessage(Component.text(
