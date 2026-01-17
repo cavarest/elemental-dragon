@@ -166,6 +166,17 @@ hangarPublish {
                 // Users must install ProtocolSidebar and FoliaLib separately
                 jar.set(tasks.slimJar.archiveFile)
                 platformVersions.set(["1.21.x"])
+                // Declare external plugin dependencies with download URLs
+                dependencies {
+                    // ProtocolSidebar - HUD library
+                    url("ProtocolSidebar", "https://github.com/CatCoderr/ProtocolSidebar") {
+                        required.set(true)
+                    }
+                    // FoliaLib - Task scheduling library
+                    url("FoliaLib", "https://github.com/TechnicallyCoded/FoliaLib") {
+                        required.set(true)
+                    }
+                }
             }
         }
     }
