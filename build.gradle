@@ -79,6 +79,12 @@ test {
         events "passed", "skipped", "failed"
     }
     finalizedBy jacocoTestReport // generate report after tests
+
+    // Generate XML test reports for GitHub Actions
+    reports {
+        junitXml.required = true
+        html.required = true
+    }
 }
 
 // Jacoco configuration
