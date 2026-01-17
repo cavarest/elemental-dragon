@@ -374,11 +374,45 @@ Target receives maximum-level potion effects:
 
 ### Unequipping
 
-Use `/withdrawability` command to:
-- Remove fragment from offhand
-- Deactivate all abilities and passives
-- Clear active ability states (including READY TO STRIKE)
-- Fragment remains in inventory
+**Method 1: `/withdrawability` Command**
+```
+/withdrawability
+```
+Removes fragment abilities while keeping the fragment in your inventory:
+- Deactivates all passive bonuses
+- Cancels active ability states (including READY TO STRIKE)
+- Removes active abilities (Life Devourer, Draconic Reflex, etc.)
+- Fragment item remains in your inventory
+- Cooldowns are preserved (not reset)
+
+**Method 2: Drop Fragment**
+```
+Press Q key (drop hotbar item)
+```
+Dropping the equipped fragment will:
+- Unequip that fragment only
+- Deactivate all passive bonuses for that fragment
+- Cancel active ability states for that fragment
+- Other equipped fragments remain active
+
+**Method 3: `/clear` Command (Vanilla Minecraft)**
+```
+/clear
+```
+The vanilla Minecraft `/clear` command removes all items from your inventory:
+- All fragments are unequipped (if in inventory)
+- All passive bonuses are removed
+- All active abilities are canceled
+- All active states are cleared (including READY TO STRIKE)
+- Cooldowns are preserved (not reset)
+
+**⚠️ Important Note: Cooldown Persistence**
+Cooldowns **DO NOT reset** when you:
+- Drop and re-equip a fragment
+- Use `/withdrawability` and re-equip
+- Use `/clear` and re-craft/re-equip
+
+This spam prevention means you cannot bypass cooldowns by quickly unequipping and re-equipping fragments.
 
 ### Dropping Fragments
 
@@ -387,14 +421,17 @@ When a fragment is dropped:
 - Other fragments remain equipped
 - Example: Dropping Burning Fragment while Immortal equipped → Immortal stays equipped
 - Fragments are indestructible when dropped (immune to fire, lava, cactus, and all damage sources)
+- **Cooldowns persist** - re-equipping will not reset your cooldowns
 
 ### Cooldown System
 
 **Cooldown Persistence**
-- Survives player logout/login
-- Survives server restart
-- Cleared on player death
-- Persists across fragment switches
+- ✅ Survives player logout/login
+- ✅ Survives server restart
+- ✅ Survives fragment unequip/equip (spam prevention)
+- ✅ Survives `/clear` command and item dropping
+- ✅ Cleared on player death (fair respawn mechanics)
+- ✅ Persists across fragment switches
 
 **Cooldown Display Format**
 - HUD shows remaining cooldown time
@@ -670,9 +707,27 @@ Shows player's equipped fragment and cooldown states.
 /immortal [1|2|equip|status|help]
 /corrupt [1|2|equip|status|help]
 /lightning 1
-/withdrawability
+/withdrawability    # Withdraw equipped fragment abilities
 /craft
 ```
+
+**Fragment Ability Management**:
+- `/withdrawability` - Removes abilities while keeping fragment equipped
+  - Deactivates passive bonuses (Fire Resistance, Speed, etc.)
+  - Cancels active abilities (Life Devourer, Draconic Reflex, etc.)
+  - Clears active states (including READY TO STRIKE)
+  - Fragment item remains in inventory
+  - Cooldowns are preserved (not reset)
+
+**Using `/clear` (Vanilla Command)**:
+- Removes all inventory items including fragments
+- All abilities are unequipped and passives removed
+- **Cooldowns persist** (spam prevention)
+
+**Important Notes**:
+- ⚠️ Cooldowns survive `/withdrawability`, `/clear`, and fragment dropping
+- ⚠️ You cannot bypass cooldowns by unequipping and re-equipping
+- ✅ Only death clears cooldowns (fair respawn mechanics)
 
 ### Operator Commands
 ```
@@ -693,14 +748,26 @@ Shows player's equipped fragment and cooldown states.
 - Make sure you have a fragment in your offhand
 - Right-click while holding a fragment to equip it
 - Or use `/<type> equip` to equip
+- If you used `/clear`, you need to re-craft or re-equip your fragment
 
 ### "Crafting limit reached"
 - You've already crafted the maximum number of this fragment type
 - Check your crafted count with `/craft`
 
 ### "Fragment abilities have been withdrawn"
-- You dropped your equipped fragment on the ground
-- Pick up the fragment and re-equip it
+- You used `/withdrawability` to remove abilities
+- Or you dropped your equipped fragment
+- Re-equip the fragment to restore abilities
+- Note: Cooldowns are preserved (not reset)
+
+### "Why is my cooldown still active after re-equipping?"
+- This is intentional spam prevention
+- Cooldowns persist when you:
+  - Drop and re-equip a fragment
+  - Use `/withdrawability` and re-equip
+  - Use `/clear` and re-craft/re-equip
+- Only death clears cooldowns (fair respawn mechanics)
+- This prevents bypassing cooldowns by quickly unequipping and re-equipping
 
 ### Dread Gaze "READY TO STRIKE" won't expire
 - This is intentional - Dread Gaze persists until you hit a target
