@@ -42,8 +42,12 @@ public class WithdrawabilityCommand implements CommandExecutor {
 
     Player player = (Player) sender;
 
-    // Check if player has a fragment equipped
-    if (!fragmentManager.hasFragmentEquipped(player)) {
+    // Check if player has a fragment equipped (with inventory verification)
+    // Using getEquippedFragment() instead of hasFragmentEquipped() because:
+    // - hasFragmentEquipped() only checks cache
+    // - getEquippedFragment() checks cache AND verifies inventory
+    // This handles the case where /clear was used to remove the fragment
+    if (fragmentManager.getEquippedFragment(player) == null) {
       player.sendMessage(miniMessage.deserialize(
         "<gray>You don't have any fragment abilities equipped.</gray>"
       ));

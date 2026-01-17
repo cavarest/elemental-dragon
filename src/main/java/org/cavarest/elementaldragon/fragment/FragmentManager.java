@@ -50,6 +50,34 @@ public class FragmentManager implements Listener {
   private void registerFragmentListeners() {
     if (plugin != null && plugin.getServer() != null) {
       plugin.getServer().getPluginManager().registerEvents(this, plugin);
+
+      // Schedule periodic inventory verification to catch /clear, drops, etc.
+      // Runs every tick (20 times per second) to immediately detect removed fragments
+      plugin.getServer().getScheduler().runTaskTimer(plugin, () -> {
+        verifyAllEquippedFragments();
+      }, 20L, 1L);  // Start after 1 second, then every tick
+    }
+  }
+
+  /**
+   * Verify all equipped fragments are still in player inventories.
+   * This catches cases where fragments were removed via /clear, death, etc.
+   * Called periodically by scheduled task.
+   */
+  private void verifyAllEquippedFragments() {
+    if (equippedFragments.isEmpty()) {
+      return;  // No equipped fragments to verify
+    }
+
+    // Create a copy of the keys to avoid ConcurrentModificationException
+    java.util.Set<UUID> playerIds = new java.util.HashSet<>(equippedFragments.keySet());
+
+    for (UUID playerId : playerIds) {
+      Player player = org.bukkit.Bukkit.getPlayer(playerId);
+      if (player != null && player.isOnline()) {
+        // Call getEquippedFragment which verifies inventory and unequips if missing
+        getEquippedFragment(player);
+      }
     }
   }
 
@@ -262,8 +290,10 @@ public class FragmentManager implements Listener {
 
     // Verify the fragment item is still in the player's inventory (Issue 6 fix)
     if (!hasFragmentItem(player, cachedFragment)) {
-      // Fragment no longer in inventory - clear cache and return null
-      equippedFragments.remove(playerId);
+      // Fragment no longer in inventory - unequip to deactivate passive effects
+      // This handles /clear command, dropping fragments, death, etc.
+      // Show message so player knows abilities were removed
+      unequipFragment(player, false);  // NOT silent - show unequip message
       return null;
     }
 
