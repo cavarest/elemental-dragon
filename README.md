@@ -120,7 +120,24 @@ Players can use these commands to manage and activate their fragments.
 ```bash
 /craft <recipe>    # View crafting recipes
 /chronicle <cmd>   # Access lore and achievements
+/withdrawability   # Withdraw equipped fragment abilities
 ```
+
+**Fragment Ability Management**:
+
+The `/withdrawability` command removes your fragment's abilities while keeping the fragment item:
+- Deactivates all passive bonuses (Fire Resistance, Speed, etc.)
+- Cancels active abilities (Life Devourer, Draconic Reflex, etc.)
+- Clears active states (including READY TO STRIKE for Dread Gaze)
+- Fragment remains in your inventory for quick re-equip
+
+**Using `/clear` (Vanilla Minecraft Command)**:
+
+When you use the vanilla `/clear` command to remove all inventory items:
+- All fragment abilities are unequipped
+- All passive bonuses are removed
+- All active abilities are canceled
+- **Cooldowns are preserved** (spam prevention - see below)
 
 **Enhanced `/craft` Command Features**:
 
@@ -356,9 +373,14 @@ Each fragment ability has a carefully balanced default cooldown:
 
 #### **Cooldown Persistence**
 - ✅ **Survives logout/login**: Prevents bypassing cooldowns
+- ✅ **Survives server restart**: Cooldowns persist across restarts
+- ✅ **Survives fragment unequip/equip**: Spam prevention - cannot reset cooldowns by dropping and re-equipping
+- ✅ **Survives `/clear` command**: Clearing inventory doesn't reset cooldowns
 - ✅ **Cleared on death**: Fair respawn mechanics
 - ✅ **Independent of items**: Dropping fragment doesn't reset cooldown
 - ✅ **Global configuration**: Operators can override defaults
+
+**⚠️ Spam Prevention**: Cooldowns intentionally persist when you unequip/equip fragments. This prevents players from bypassing cooldowns by quickly dropping and re-equipping fragments. You must wait for the full cooldown duration even if you re-equip the fragment.
 
 #### **Cooldown Adjustment Behavior**
 
