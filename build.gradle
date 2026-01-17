@@ -110,7 +110,7 @@ processResources {
     }
 }
 
-// Include all runtime dependencies in the JAR
+// Standard JAR - bundles dependencies for local testing and GitHub releases
 tasks.jar {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     from {
@@ -122,6 +122,24 @@ tasks.jar {
     exclude 'META-INF/LICENSE*'
     exclude 'META-INF/NOTICE*'
     exclude 'META-INF/*.txt'
+}
+
+// Slim JAR for Hangar - doesn't bundle dependencies (users install them separately)
+tasks.register('slimJar', Jar) {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    archiveClassifier.set('slim')
+    from sourceSets.main.output
+    exclude 'META-INF/*.SF'
+    exclude 'META-INF/*.DSA'
+    exclude 'META-INF/*.RSA'
+    exclude 'META-INF/LICENSE*'
+    exclude 'META-INF/NOTICE*'
+    exclude 'META-INF/*.txt'
+
+    manifest {
+        attributes('Implementation-Title': project.description,
+                   'Implementation-Version': project.version)
+    }
 }
 
 // Note: com.gradleup.shadow plugin (Java 17+) requires pluginManagement setup
@@ -144,10 +162,10 @@ hangarPublish {
 
         platforms {
             paper {
-                // Groovy DSL: use archiveFile directly without flatMap
-                jar.set(tasks.jar.archiveFile)
+                // Use slim JAR for Hangar (size limit)
+                // Users must install ProtocolSidebar and FoliaLib separately
+                jar.set(tasks.slimJar.archiveFile)
                 platformVersions.set(["1.21.x"])
-                // No external plugin dependencies for ElementalDragon
             }
         }
     }

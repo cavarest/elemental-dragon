@@ -6,6 +6,10 @@ description: Elemental Dragon Plugin - Lightning ability and elemental fragments
 author: Augustus Tse and Octavius Tse
 website: https://github.com/cavarest/elemental-dragon
 
+# NOTE: This plugin bundles ProtocolSidebar and FoliaLib libraries.
+# When using the slim JAR variant, you must install these dependencies separately
+# as plugins on your server.
+
 commands:
   lightning:
     description: Activate lightning ability

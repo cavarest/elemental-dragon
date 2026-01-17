@@ -152,6 +152,28 @@ jobs:
         ./build.sh --production
         echo "✅ Plugin built successfully"
 
+    - name: Build slim JAR for advanced users
+      run: |
+        echo "📦 Building slim JAR (no bundled dependencies)..."
+        ./gradlew slimJar
+        echo "✅ Slim JAR built successfully"
+
+    - name: Download dependency JARs
+      run: |
+        echo "📥 Downloading dependency JARs for GitHub release..."
+        mkdir -p build/deps
+
+        # Download ProtocolSidebar (latest master-SNAPSHOT)
+        curl -L "https://jitpack.io/com/github/CatCoderr/ProtocolSidebar/master-SNAPSHOT/ProtocolSidebar-master-SNAPSHOT.jar" \
+          -o build/deps/ProtocolSidebar-master-SNAPSHOT.jar || echo "⚠️  ProtocolSidebar download failed"
+
+        # Download FoliaLib
+        curl -L "https://repo.tcoded.com/releases/com/tcoded/FoliaLib/0.5.1/FoliaLib-0.5.1.jar" \
+          -o build/deps/FoliaLib-0.5.1.jar || echo "⚠️  FoliaLib download failed"
+
+        ls -lh build/deps/
+        echo "✅ Dependencies downloaded"
+
     - name: Verify plugin.yml structure
       run: |
         echo "🔍 Verifying plugin.yml structure..."
@@ -171,6 +193,7 @@ jobs:
         prerelease: false
         files: |
           build/libs/elemental-dragon-*.jar
+          build/deps/*.jar
         generate_release_notes: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
