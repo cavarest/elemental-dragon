@@ -24,14 +24,14 @@ public class AbilityDefinitionTest {
         List<String> aliases = Arrays.asList("dragons wrath", "dw");
         AbilityDefinition definition = new AbilityDefinition(
             1, "Dragon's Wrath", "Fire a devastating fireball",
-            aliases, "☄️ Dragon's Wrath activated!", "🔥"
+            aliases, "☄ Dragon's Wrath activated!", "🔥"
         );
 
         assertEquals(1, definition.getNumber());
         assertEquals("Dragon's Wrath", definition.getName());
         assertEquals("Fire a devastating fireball", definition.getDescription());
         assertEquals(2, definition.getAliases().size());
-        assertEquals("☄️ Dragon's Wrath activated!", definition.getSuccessMessage());
+        assertEquals("☄ Dragon's Wrath activated!", definition.getSuccessMessage());
         assertEquals("🔥", definition.getActionEmoji());
     }
 
@@ -146,10 +146,10 @@ public class AbilityDefinitionTest {
     public void testGetActionEmoji() {
         AbilityDefinition definition = new AbilityDefinition(
             1, "Test", "Test",
-            Collections.emptyList(), "Success", "☄️"
+            Collections.emptyList(), "Success", "☄"
         );
 
-        assertEquals("☄️", definition.getActionEmoji());
+        assertEquals("☄", definition.getActionEmoji());
     }
 
     @Test

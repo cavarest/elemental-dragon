@@ -89,7 +89,7 @@ public class FragmentManager implements Listener {
       if (!hasFragment) {
         String craftName = fragmentType.getCanonicalName(); // Use canonical name (fire, agile, immortal, corrupt)
         player.sendMessage(miniMessage.deserialize(
-          "<red>⚠️ You don't have the <white>" + fragmentType.getDisplayName() + "</white>!</red>\n" +
+          "<red>⚠ You don't have the <white>" + fragmentType.getDisplayName() + "</white>!</red>\n" +
           "<gray>Craft it first using <white>/craft " + craftName + "</white> or ask an admin for help.</gray>"
         ));
         return false;

@@ -147,7 +147,7 @@ public class FragmentItemListener implements Listener {
       // Cancel pickup - player already has this fragment type
       event.setCancelled(true);
       player.sendMessage(miniMessage.deserialize(
-        "<red>⚠️ You can only possess ONE <white>" + pickupType.getDisplayName() + "</white> at a time!</red>\n" +
+        "<red>⚠ You can only possess ONE <white>" + pickupType.getDisplayName() + "</white> at a time!</red>\n" +
         "<gray>Drop or store your existing <white>" + pickupType.getDisplayName() + "</white> before picking up another.</gray>"
       ));
     }

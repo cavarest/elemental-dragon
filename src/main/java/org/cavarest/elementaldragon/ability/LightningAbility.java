@@ -345,9 +345,9 @@ public class LightningAbility implements Ability {
    */
   private String getThunderEmoji(int strikeNumber) {
     if (strikeNumber == STRIKE_COUNT) {
-      return " 🌩️💥"; // Final strike with explosion
+      return " 🌩💥"; // Final strike with explosion
     } else if (strikeNumber == 2) {
-      return " 🌩️"; // Middle strike
+      return " 🌩"; // Middle strike
     } else {
       return " ⚡"; // First strike
     }
