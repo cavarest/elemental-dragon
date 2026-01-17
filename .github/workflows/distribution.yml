@@ -105,6 +105,12 @@ jobs:
         # Save to file for multiline support
         echo "$NOTES" > /tmp/release_notes.txt
         echo "notes_file=/tmp/release_notes.txt" >> $GITHUB_OUTPUT
+        # Also output as content (multiline safe for workflow_call)
+        {
+          echo 'notes<<EOF'
+          cat /tmp/release_notes.txt
+          echo EOF
+        } >> $GITHUB_OUTPUT
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -137,7 +143,7 @@ jobs:
         project: elemental-dragon
         version: ${{ steps.version_vars.outputs.version }}
         name: ${{ inputs.release_title || format('Elemental Dragon Plugin {0}', steps.version_vars.outputs.version) }}
-        changelog: ${{ inputs.release_notes || steps.release_notes.outputs.notes_file }}
+        changelog: ${{ inputs.release_notes || steps.release_notes.outputs.notes }}
         loaders: |-
           paper
           folia
