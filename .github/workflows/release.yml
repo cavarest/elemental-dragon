@@ -1,10 +1,30 @@
-name: Release
+name: release
 
 on:
+  workflow_dispatch:
+    inputs:
+      next_version:
+        description: |
+          Next release version. Possible values: x.y.z, major, minor, patch.
+          Also, you can pass 'skip' to skip git tag and create release for the current version.
+        required: true
+        type: string
+      release_title:
+        description: 'Title for the GitHub release (optional, defaults to version)'
+        required: false
+        type: string
+      release_notes:
+        description: 'Release notes (optional, defaults to changelog)'
+        required: false
+        type: string
+      create_discussion:
+        description: 'Create a GitHub discussion for the release (true/false)'
+        required: false
+        type: boolean
+        default: true
   push:
     tags:
       - 'v*.*.*'
-  workflow_dispatch:
 
 jobs:
   release:
@@ -17,7 +37,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v6
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
@@ -27,144 +47,180 @@ jobs:
         java-version: '21'
         distribution: 'temurin'
 
-    - name: Get version from gradle.properties
-      id: get_version
+    - name: Get current version from build.gradle
+      id: current_version
       run: |
-        VERSION=$(grep "^project.version=" gradle.properties | cut -d'=' -f2)
-        echo "version=$VERSION" >> $GITHUB_OUTPUT
-        echo "tag=v$VERSION" >> $GITHUB_OUTPUT
-        echo "Detected version: $VERSION"
+        CURRENT_VERSION=$(grep '^version=' build.gradle | sed "s/version=//" | sed "s/'//g" | sed "s/ //g")
+        echo "current=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+        echo "Detected current version: $CURRENT_VERSION"
 
-    - name: Create and push tag
-      if: github.event_name == 'workflow_dispatch'
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Calculate next version
+      id: next_version
       run: |
-        # Configure git identity for tagging
-        git config user.name "github-actions[bot]"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
+        CURRENT="${{ steps.current_version.outputs.current }}"
 
-        TAG="v${{ steps.get_version.outputs.version }}"
-        echo "Creating tag $TAG"
-
-        # Check if tag already exists
-        if git rev-parse "$TAG" >/dev/null 2>&1; then
-          echo "Tag $TAG already exists locally, deleting it first"
-          git tag -d "$TAG"
+        if [[ "${{ inputs.next_version }}" == "major" ]]; then
+          NEXT=$(echo $CURRENT | awk -F. '{$1+=1; $2=0; $3=0} OFS=. print $1"."$2"."$3}')
+        elif [[ "${{ inputs.next_version }}" == "minor" ]]; then
+          NEXT=$(echo $CURRENT | awk -F. '{$2+=1; $3=0} OFS=. print $1"."$2"."$3}')
+        elif [[ "${{ inputs.next_version }}" == "patch" ]]; then
+          NEXT=$(echo $CURRENT | awk -F. '{$3+=1} OFS=. print $1"."$2"."$3}')
+        elif [[ "${{ inputs.next_version }}" == "skip" ]]; then
+          NEXT=$CURRENT
+        else
+          NEXT="${{ inputs.next_version }}"
         fi
 
-        # Create annotated tag
-        git tag -a "$TAG" -m "Release version ${{ steps.get_version.outputs.version }}"
+        echo "next=$NEXT" >> $GITHUB_OUTPUT
+        echo "tag=v$NEXT" >> $GITHUB_OUTPUT
+        echo "Calculated next version: $NEXT"
 
-        # Push tag to remote
+    - name: Update version in build.gradle
+      if: ${{ inputs.next_version != 'skip' }}
+      run: |
+        NEXT="${{ steps.next_version.outputs.next }}"
+        sed -i "s/^version=.*/version=\"$NEXT\"/" build.gradle
+        echo "Updated build.gradle version to $NEXT"
+
+    - name: Commit version bump
+      if: ${{ inputs.next_version != 'skip' }}
+      run: |
+        git config user.name github-actions
+        git config user.email github-actions@github.com
+        NEXT="${{ steps.next_version.outputs.next }}"
+        git add build.gradle
+        git commit -m "chore: bump version to $NEXT"
+        git push
+
+    - name: Create and push git tag
+      if: ${{ inputs.next_version != 'skip' }}
+      run: |
+        TAG="${{ steps.next_version.outputs.tag }}"
+        git tag -a "$TAG" -m "Release $TAG"
         git push origin "$TAG"
-        echo "Tag $TAG created and pushed successfully"
+        echo "Created and pushed tag: $TAG"
 
     - name: Build plugin using Gradle (production build)
       run: |
-        echo "🏗️ Building production plugin using Gradle..."
-        gradle clean jar -x test
-        echo "Plugin built successfully"
+        echo "🏗️ Building production plugin..."
+        chmod +x build.sh
+        ./build.sh --production
+        echo "✅ Plugin built successfully"
 
     - name: Verify plugin.yml structure
       run: |
-        echo "🔍 Verifying plugin.yml is correctly packaged..."
+        echo "🔍 Verifying plugin.yml structure..."
         JAR_FILE=$(find build/libs -name "elemental-dragon-*.jar" | head -1)
         echo "Found JAR: $JAR_FILE"
         jar tf "$JAR_FILE" | grep plugin.yml
-        echo "✅ Plugin.yml structure verified (no duplicate files)"
+        echo "✅ Plugin.yml verified"
 
-    - name: Generate changelog using GitHub Action
-      id: changelog
-      uses: janheinrichmerker/action-github-changelog-generator@v2.3
+    - name: Get release notes
+      id: release_notes
+      run: |
+        if [[ -n "${{ inputs.release_notes }}" ]]; then
+          NOTES="${{ inputs.release_notes }}"
+        else
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [[ -z "$PREV_TAG" ]]; then
+            NOTES="## 🎉 Initial Release
+
+This is the first release of Elemental Dragon plugin!"
+          else
+            NOTES="## 📝 Changes
+
+$(git log $PREV_TAG..HEAD --oneline | sed 's/^/- /')"
+          fi
+        fi
+
+        # Add version header
+        NOTES="## Release ${{ steps.next_version.outputs.tag }}
+
+$NOTES"
+
+        # Add installation instructions
+        NOTES="$NOTES
+
+## 📥 Installation
+
+1. Download \`elemental-dragon-*.jar\` below
+2. Place in \`plugins/\` directory
+3. Restart Paper 1.21.8+ server
+4. No configuration needed!
+
+## ⚡ Quick Start
+
+\`\`\`bash
+/give @p minecraft:dragon_egg  # Get dragon egg
+# Move to offhand (F key)
+/lightning 1                      # Strike with lightning!
+\`\`\`
+
+## 📋 System Requirements
+
+- Minecraft: Java Edition 1.21.8+
+- Server: Paper 1.21.8-R0.1+
+- Java: 21 or higher
+"
+
+        # Write to file for multi-line support
+        echo "$NOTES" > /tmp/release_notes.txt
+
+        # Set output (single line for GitHub Actions)
+        delimiter="$(openssl rand -hex 8)"
+        echo "notes<<$delimiter" >> $GITHUB_OUTPUT
+        cat /tmp/release_notes.txt >> $GITHUB_OUTPUT
+        echo "$delimiter" >> $GITHUB_OUTPUT
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        output: RELEASE_CHANGELOG.md
-        headerLabel: "## 📝 Changes in v${{ steps.get_version.outputs.version }}"
-        compareLink: true
-        issues: true
-        pullRequests: true
-        author: true
-        verbose: false
-
-    - name: Create GitHub Release with auto-generated changelog
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: ${{ steps.get_version.outputs.tag }}
-        name: Elemental Dragon Plugin v${{ steps.get_version.outputs.version }}
-        body: |
-          🎉 **Elemental Dragon Plugin v${{ steps.get_version.outputs.version }} Released!**
-
-          ${{ steps.changelog.outputs.changelog }}
-
-          ---
-
-          ## 📥 Installation Instructions
-
-          ### For Server Administrators:
-          1. **Download** the plugin JAR file below
-          2. **Place** it in your Paper server's `plugins/` directory
-          3. **Restart** your Paper 1.21.8+ server
-          4. **Configure** - No additional configuration needed!
-
-          ### For Players:
-          - Get a Dragon Egg: `/give @p minecraft:dragon_egg`
-          - Move to offhand: Press `F` key
-          - Use ability: `/ability 1`
-
-          ## ⚡ Features
-          - **3 Sequential Lightning Strikes** with 0.5s intervals
-          - **Purple Visual Effects** and thunder sounds
-          - **Smart Targeting** - finds closest entity in view
-          - **60-Second Cooldown** prevents spam (with smart behavior)
-          - **4.5 Hearts Total Damage** (1.5 per strike)
-          - **HUD Display** with real-time cooldown status
-          - **Cooldown Management**: Death clears, item-independent, session-persistent
-
-          ## 📊 Build Information
-          - **Plugin Version**: ${{ steps.get_version.outputs.version }}
-          - **JAR File**: $(basename "$(find build/libs -name "elemental-dragon-*.jar" | head -1)")
-          - **File Size**: $(du -h "$(find build/libs -name "elemental-dragon-*.jar" | head -1)" | cut -f1)
-          - **Build Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
-          - **Git Commit**: `${{ github.sha }}`
-          - **Paper Version**: 1.21.8
-          - **Java Version**: 21+
-          - **Build System**: Gradle
-        files: |
-          build/libs/elemental-dragon-*.jar
+        tag_name: ${{ steps.next_version.outputs.tag }}
+        name: ${{ inputs.release_title || format('Elemental Dragon Plugin {0}', steps.next_version.outputs.next) }}
+        body: ${{ steps.release_notes.outputs.notes }}
         draft: false
         prerelease: false
-        generate_release_notes: true
+        files: |
+          build/libs/elemental-dragon-*.jar
+        generate_release_notes: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Upload plugin JAR as artifact (backup)
-      uses: actions/upload-artifact@v4
+    - name: Create GitHub Discussion (Announcement)
+      if: ${{ inputs.create_discussion }}
+      uses: peter-evans/create-discussion@v3
       with:
-        name: plugin-jar-${{ steps.version.outputs.version }}
-        path: build/libs/elemental-dragon-*.jar
-        retention-days: 90
+        title: ${{ inputs.release_title || format('Elemental Dragon Plugin {0} Released!', steps.next_version.outputs.next) }}
+        body: |
+          **Elemental Dragon Plugin ${{ steps.next_version.outputs.next }} has been released!** :rocket:
 
-    - name: Verify Release Creation
+          ${{ steps.release_notes.outputs.notes }}
+
+          **Download**: https://github.com/${{ github.repository }}/releases/tag/${{ steps.next_version.outputs.tag }}
+        category: Announcements
+        repository-discussions: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Repository dispatch (release-passed event)
+      uses: peter-evans/repository-dispatch@v3
+      if: ${{ inputs.create_discussion }}
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        repository: ${{ github.repository }}
+        event-type: release-passed
+        client-payload: '{"ref": "${{ steps.next_version.outputs.tag }}", "sha": "${{ github.sha }}", "type": "release-passed"}'
+
+    - name: Verify Release
       run: |
         echo "🎉 Verifying release creation..."
         echo ""
 
-        # Check if release was created
-        if gh release view ${{ steps.version.outputs.tag }} --json id --jq '.id' 2>/dev/null; then
-          echo "✅ Release ${{ steps.version.outputs.tag }} created successfully!"
+        if gh release view ${{ steps.next_version.outputs.tag }} --json id --jq '.id' 2>/dev/null; then
+          echo "✅ Release ${{ steps.next_version.outputs.tag }} created successfully!"
           echo ""
-          echo "📦 Release Assets:"
-          gh release view ${{ steps.version.outputs.tag }} --json assets --jq '.assets[] | "  - \(.name): \(.size) bytes"'
-          echo ""
-          echo "🔗 Release URL: https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.tag }}"
-          echo ""
-          echo "📥 Direct Download Link:"
-          JAR_FILE=$(find build/libs -name "elemental-dragon-*.jar" | head -1 | xargs basename)
-          echo "  https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/$JAR_FILE"
+          echo "🔗 https://github.com/${{ github.repository }}/releases/tag/${{ steps.next_version.outputs.tag }}"
         else
-          echo "❌ Failed to create release"
+          echo "❌ Failed to verify release"
           exit 1
         fi
