@@ -112,9 +112,8 @@ jobs:
       run: |
         JAR_FILE="build/libs/elemental-dragon-${{ steps.version_vars.outputs.version }}.jar"
         if [ ! -f "$JAR_FILE" ]; then
-          echo "JAR not found, building..."
-          chmod +x build.sh
-          ./build.sh --production
+          echo "JAR not found, building with Gradle..."
+          ./gradlew clean build -x test
         else
           echo "JAR found: $JAR_FILE"
         fi
