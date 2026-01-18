@@ -110,6 +110,11 @@ jobs:
         ./build.sh --production
         ls -la build/libs/
 
+    - name: Fix Docker volume permissions
+      run: |
+        echo "🔧 Fixing Docker volume permissions..."
+        sudo chmod 777 /tmp/mc-plugins || sudo mkdir -p /tmp/mc-plugins && sudo chmod 777 /tmp/mc-plugins
+
     - name: Copy plugin to server plugins directory
       run: |
         echo "📦 Copying Elemental Dragon plugin to server..."
