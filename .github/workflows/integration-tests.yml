@@ -81,7 +81,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pilaf/mineflayer-bridge/pnpm-lock.yaml') }}
+        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pilaf/mineflayer-bridge/package.json') }}
         restore-keys: |
           ${{ runner.os }}-pnpm-store-
 
@@ -100,7 +100,7 @@ jobs:
 
     - name: Install Pilaf dependencies
       working-directory: pilaf/mineflayer-bridge
-      run: pnpm install --frozen-lockfile
+      run: pnpm install
 
     - name: Build Elemental Dragon plugin
       working-directory: dragon-egg
