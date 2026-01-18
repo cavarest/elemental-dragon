@@ -73,7 +73,7 @@ jobs:
     - name: Get pnpm store directory
       id: pnpm-cache
       shell: bash
-      working-directory: pilaf
+      working-directory: pilaf/mineflayer-bridge
       run: |
         echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
 
@@ -81,7 +81,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pilaf/pnpm-lock.yaml') }}
+        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pilaf/mineflayer-bridge/pnpm-lock.yaml') }}
         restore-keys: |
           ${{ runner.os }}-pnpm-store-
 
@@ -99,7 +99,7 @@ jobs:
           ${{ runner.os }}-gradle-
 
     - name: Install Pilaf dependencies
-      working-directory: pilaf
+      working-directory: pilaf/mineflayer-bridge
       run: pnpm install --frozen-lockfile
 
     - name: Build Elemental Dragon plugin
@@ -153,7 +153,7 @@ jobs:
         fi
 
     - name: Run Pilaf integration tests
-      working-directory: pilaf
+      working-directory: pilaf/mineflayer-bridge
       env:
         RCON_HOST: localhost
         RCON_PORT: 25575
@@ -175,7 +175,7 @@ jobs:
       uses: EnricoMi/publish-unit-test-result-action@v2
       if: always() && !cancelled()
       with:
-        files: "pilaf/target/test-results/**/*.xml"
+        files: "pilaf/mineflayer-bridge/target/test-results/**/*.xml"
         check_name: Dragon Egg Integration Test Report
         comment_mode: "off"
 
@@ -184,7 +184,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: dragon-egg-pilaf-reports
-        path: pilaf/target/pilaf-reports/
+        path: pilaf/mineflayer-bridge/target/pilaf-reports/
         retention-days: 30
         if-no-files-found: ignore
 
@@ -203,7 +203,7 @@ jobs:
         echo "## Elemental Dragon Integration Test Summary" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "✅ Integration tests completed." >> $GITHUB_STEP_SUMMARY
-        if [ -d pilaf/target/pilaf-reports ]; then
+        if [ -d pilaf/mineflayer-bridge/target/pilaf-reports ]; then
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Pilaf HTML Reports" >> $GITHUB_STEP_SUMMARY
           echo "HTML reports have been uploaded as artifacts." >> $GITHUB_STEP_SUMMARY
