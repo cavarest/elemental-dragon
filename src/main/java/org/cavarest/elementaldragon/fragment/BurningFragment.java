@@ -547,59 +547,6 @@ public class BurningFragment extends AbstractFragment implements Listener {
   }
 
   /**
-   * Event handler for passive thorns effect - fire damage to melee attackers.
-   * Passive Bonus: Dragon's Scales
-   * - Applies 1 heart fire damage to melee attackers
-   *
-   * @param event The entity damage event
-   */
-  @EventHandler
-  public void onMeleeAttackForThorns(EntityDamageByEntityEvent event) {
-    // Check if the victim is a Player
-    if (!(event.getEntity() instanceof Player)) {
-      return;
-    }
-
-    Player victim = (Player) event.getEntity();
-
-    // Check if player has Burning Fragment equipped
-    FragmentManager fragmentManager = plugin.getFragmentManager();
-    if (fragmentManager.getEquippedFragment(victim) != FragmentType.BURNING) {
-      return;
-    }
-
-    // Check if this is melee damage from a living entity
-    if (!(event.getDamager() instanceof LivingEntity)) {
-      return;
-    }
-
-    LivingEntity attacker = (LivingEntity) event.getDamager();
-
-    // Apply fire damage (1 heart = 2.0 damage)
-    attacker.setFireTicks(60); // 3 seconds of fire
-    attacker.damage(2.0, victim); // 1 heart damage
-
-    // Visual feedback - fire particles on attacker
-    attacker.getWorld().spawnParticle(
-      Particle.FLAME,
-      attacker.getLocation().add(0, 1, 0),
-      15,
-      0.3,
-      0.5,
-      0.3,
-      0.05
-    );
-
-    // Sound feedback
-    playAbilitySound(
-      attacker.getLocation(),
-      Sound.ENTITY_BLAZE_HURT,
-      0.5f,
-      1.2f
-    );
-  }
-
-  /**
    * Play activation sound for burning fragment.
    *
    * @param player The player
@@ -660,10 +607,8 @@ public class BurningFragment extends AbstractFragment implements Listener {
 
   /**
    * Event handler for Dragon's Wrath fireball damage.
-   * Applies TRUE damage that ignores armor but still fires damage events.
-   *
-   * Uses EntityDamageEvent with DamageModifier.ARMOR set to 0 to bypass armor
-   * while still allowing other plugins/abilities to react to the damage.
+   * Applies TRUE damage that ignores armor and strength potions.
+   * Always deals exactly 3 hearts (6.0 damage) regardless of armor or effects.
    */
   @EventHandler
   public void onFireballDamage(EntityDamageByEntityEvent event) {
@@ -678,7 +623,7 @@ public class BurningFragment extends AbstractFragment implements Listener {
       return; // Not a Dragon's Wrath fireball
     }
 
-    // Get custom damage value
+    // Get custom damage value (exactly 3 hearts = 6.0 damage)
     double customDamage = fireball.getPersistentDataContainer().get(
       damageKey, org.bukkit.persistence.PersistentDataType.DOUBLE);
 
@@ -688,27 +633,19 @@ public class BurningFragment extends AbstractFragment implements Listener {
       // Cancel the original fireball damage event
       event.setCancelled(true);
 
-      // Create a custom damage event that bypasses armor
+      // Fire the event through the plugin manager so other abilities can react
       @SuppressWarnings("removal")
       org.bukkit.event.entity.EntityDamageEvent damageEvent = new org.bukkit.event.entity.EntityDamageEvent(
         target,
         org.bukkit.event.entity.EntityDamageEvent.DamageCause.CUSTOM,
         customDamage
       );
-
-      // Set armor modifier to 0 to bypass armor
-      if (damageEvent.getDamage(org.bukkit.event.entity.EntityDamageEvent.DamageModifier.ARMOR) > 0) {
-        damageEvent.setDamage(org.bukkit.event.entity.EntityDamageEvent.DamageModifier.ARMOR, 0);
-      }
-
-      // Fire the event through the plugin manager so other abilities can react
       plugin.getServer().getPluginManager().callEvent(damageEvent);
 
-      // If event wasn't cancelled, apply the damage
+      // If event wasn't cancelled, apply the TRUE damage (ignore armor, strength, etc.)
       if (!damageEvent.isCancelled()) {
-        double finalDamage = damageEvent.getFinalDamage();
         double currentHealth = target.getHealth();
-        double newHealth = Math.max(0, currentHealth - finalDamage);
+        double newHealth = Math.max(0, currentHealth - customDamage);
         target.setHealth(newHealth);
       }
 
@@ -719,8 +656,8 @@ public class BurningFragment extends AbstractFragment implements Listener {
 
   /**
    * Event handler for Dragon's Wrath fireball impact.
-   * Applies AOE damage to all players within 5 blocks of impact point.
-   * Original Specification: Affects all players in 5 block radius with armor-ignoring damage.
+   * Applies AOE damage to all living entities within 5 blocks of impact point.
+   * Damage is TRUE damage (ignores armor and strength potions), always exactly 3 hearts.
    */
   @EventHandler
   public void onProjectileHit(ProjectileHitEvent event) {
@@ -769,27 +706,19 @@ public class BurningFragment extends AbstractFragment implements Listener {
         continue;
       }
 
-      // Create a custom damage event that bypasses armor
+      // Fire the event through the plugin manager so other abilities can react
       @SuppressWarnings("removal")
       org.bukkit.event.entity.EntityDamageEvent damageEvent = new org.bukkit.event.entity.EntityDamageEvent(
         target,
         org.bukkit.event.entity.EntityDamageEvent.DamageCause.CUSTOM,
         damage
       );
-
-      // Set armor modifier to 0 to bypass armor
-      if (damageEvent.getDamage(org.bukkit.event.entity.EntityDamageEvent.DamageModifier.ARMOR) > 0) {
-        damageEvent.setDamage(org.bukkit.event.entity.EntityDamageEvent.DamageModifier.ARMOR, 0);
-      }
-
-      // Fire the event through the plugin manager so other abilities can react
       plugin.getServer().getPluginManager().callEvent(damageEvent);
 
-      // If event wasn't cancelled, apply the damage
+      // If event wasn't cancelled, apply the TRUE damage (ignore armor, strength, etc.)
       if (!damageEvent.isCancelled()) {
-        double finalDamage = damageEvent.getFinalDamage();
         double currentHealth = target.getHealth();
-        double newHealth = Math.max(0, currentHealth - finalDamage);
+        double newHealth = Math.max(0, currentHealth - damage);
         target.setHealth(newHealth);
       }
 
