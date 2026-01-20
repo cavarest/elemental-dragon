@@ -22,7 +22,10 @@ import org.bukkit.event.entity.EntityTargetEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.persistence.PersistentDataContainer;
+import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.NamespacedKey;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -43,7 +46,7 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
 
   // Dread Gaze constants (ORIGINAL SPECIFICATION)
   private static final long DREAD_GAZE_COOLDOWN = 180000L; // 3 minutes (original spec)
-  private static final int DREAD_GAZE_DURATION = 200; // 10 seconds (200 ticks) (complete freeze)
+  private static final int DREAD_GAZE_DURATION = 80; // 4 seconds (80 ticks) - changed from 10s per Issue #20
   private static final int MAX_AMPLIFIER = 255; // Maximum effect level for complete freeze
 
   // Life Devourer constants (ORIGINAL SPECIFICATION)
@@ -60,10 +63,19 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
   // Debuff metadata keys (set on VICTIMS when Dread Gaze hits them)
   private static final String DREAD_GAZE_DEBUFF_KEY = "corrupted_dread_gaze_debuff";
   private static final String DREAD_GAZE_DEBUFF_START_KEY = "corrupted_dread_gaze_debuff_start_time";
+  private static final String DREAD_GAZE_FREEZE_LOCATION_KEY = "corrupted_dread_gaze_freeze_location";
+  private static final String DREAD_GAZE_SATURATION_KEY = "corrupted_dread_gaze_saturation";
 
   // Attacker metadata keys (set on ATTACKER when they freeze someone with Dread Gaze)
   private static final String DREAD_GAZE_FOE_FROZEN_KEY = "corrupted_dread_gaze_foe_frozen";
   private static final String DREAD_GAZE_FOE_FROZEN_START_KEY = "corrupted_dread_gaze_foe_frozen_start_time";
+  private static final String DREAD_GAZE_FOE_FROZEN_DURATION_KEY = "corrupted_dread_gaze_foe_frozen_duration";
+
+  // PersistentDataContainer keys (for debuff persistence across rejoins - Issue #20)
+  private final NamespacedKey DEBUFF_PERSIST_KEY;
+  private final NamespacedKey DEBUFF_START_PERSIST_KEY;
+  private final NamespacedKey FREEZE_LOCATION_PERSIST_KEY;
+  private final NamespacedKey SATURATION_PERSIST_KEY;
 
   // Fragment metadata (Single Source of Truth)
   // Using NETHER_STAR instead of HEAVY_CORE to avoid default right-click block placement behavior
@@ -82,6 +94,10 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
   );
 
   private final ElementalDragon plugin;
+
+  // Freeze task - processes frozen players every tick using teleportation
+  // This prevents Paper anti-cheat from flagging as "flying" since we use server-initiated teleport
+  private BukkitRunnable freezeTask;
 
   /**
    * Create a new Corrupted Core fragment.
@@ -102,6 +118,29 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
       )
     );
     this.plugin = plugin;
+
+    // Initialize NamespacedKeys for persistent storage (only if plugin is real, not mocked for tests)
+    // Mocked plugins have null getName() which causes NamespacedKey constructor to fail
+    boolean isRealPlugin = plugin != null && plugin.getServer() != null;
+    if (isRealPlugin) {
+      this.DEBUFF_PERSIST_KEY = new NamespacedKey(plugin, "dread_gaze_debuff_persist");
+      this.DEBUFF_START_PERSIST_KEY = new NamespacedKey(plugin, "dread_gaze_debuff_start_persist");
+      this.FREEZE_LOCATION_PERSIST_KEY = new NamespacedKey(plugin, "dread_gaze_freeze_location_persist");
+      this.SATURATION_PERSIST_KEY = new NamespacedKey(plugin, "dread_gaze_saturation_persist");
+    } else {
+      // For tests with null plugin or mocked plugin, use placeholder keys
+      this.DEBUFF_PERSIST_KEY = null;
+      this.DEBUFF_START_PERSIST_KEY = null;
+      this.FREEZE_LOCATION_PERSIST_KEY = null;
+      this.SATURATION_PERSIST_KEY = null;
+    }
+
+    // Start the freeze monitoring task (runs every tick)
+    // Uses scheduler-based teleportation instead of PlayerMoveEvent cancellation
+    // to prevent Paper anti-cheat false positives
+    if (isRealPlugin) {
+      startFreezeMonitoringTask();
+    }
   }
 
   // ===== Single Source of Truth Methods =====
@@ -194,6 +233,18 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
     }
     if (player.hasMetadata(DREAD_GAZE_FOE_FROZEN_START_KEY)) {
       player.removeMetadata(DREAD_GAZE_FOE_FROZEN_START_KEY, plugin);
+    }
+    if (player.hasMetadata(DREAD_GAZE_DEBUFF_KEY)) {
+      player.removeMetadata(DREAD_GAZE_DEBUFF_KEY, plugin);
+    }
+    if (player.hasMetadata(DREAD_GAZE_DEBUFF_START_KEY)) {
+      player.removeMetadata(DREAD_GAZE_DEBUFF_START_KEY, plugin);
+    }
+    if (player.hasMetadata(DREAD_GAZE_FREEZE_LOCATION_KEY)) {
+      player.removeMetadata(DREAD_GAZE_FREEZE_LOCATION_KEY, plugin);
+    }
+    if (player.hasMetadata(DREAD_GAZE_SATURATION_KEY)) {
+      player.removeMetadata(DREAD_GAZE_SATURATION_KEY, plugin);
     }
     if (player.hasMetadata(LIFE_DEVOURER_ACTIVE_KEY)) {
       player.removeMetadata(LIFE_DEVOURER_ACTIVE_KEY, plugin);
@@ -621,6 +672,39 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
       new org.bukkit.metadata.FixedMetadataValue(plugin, System.currentTimeMillis())
     );
 
+    // Store freeze location (for scheduler-based position locking)
+    // This prevents Paper anti-cheat from flagging as "flying" since we use teleport
+    Location freezeLocation = victim.getLocation().clone();
+    victim.setMetadata(
+      DREAD_GAZE_FREEZE_LOCATION_KEY,
+      new org.bukkit.metadata.FixedMetadataValue(plugin, freezeLocation)
+    );
+
+    // Store initial saturation value (for saturation freezing)
+    // Only applies to players, not mobs
+    float initialSaturation = 0.0f;
+    if (victim instanceof Player) {
+      initialSaturation = ((Player) victim).getSaturation();
+      victim.setMetadata(
+        DREAD_GAZE_SATURATION_KEY,
+        new org.bukkit.metadata.FixedMetadataValue(plugin, initialSaturation)
+      );
+    }
+
+    // PERSISTENCE: Save debuff data to PersistentDataContainer for players
+    // This allows the freeze effect to persist across rejoins (Issue #20)
+    if (victim instanceof Player && DEBUFF_PERSIST_KEY != null) {
+      Player victimPlayer = (Player) victim;
+      PersistentDataContainer pdc = victimPlayer.getPersistentDataContainer();
+      long startTime = System.currentTimeMillis();
+
+      pdc.set(DEBUFF_PERSIST_KEY, PersistentDataType.BYTE, (byte) 1);
+      pdc.set(DEBUFF_START_PERSIST_KEY, PersistentDataType.LONG, startTime);
+      pdc.set(FREEZE_LOCATION_PERSIST_KEY, PersistentDataType.STRING,
+              serializeLocation(freezeLocation));
+      pdc.set(SATURATION_PERSIST_KEY, PersistentDataType.FLOAT, initialSaturation);
+    }
+
     // Mark attacker with foe frozen metadata for HUD countdown display
     // This allows the attacker to see how much longer their target remains frozen
     attacker.setMetadata(
@@ -630,6 +714,12 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
     attacker.setMetadata(
       DREAD_GAZE_FOE_FROZEN_START_KEY,
       new org.bukkit.metadata.FixedMetadataValue(plugin, System.currentTimeMillis())
+    );
+    // Store duration in metadata as single source of truth for HUD display
+    // DREAD_GAZE_DURATION is in ticks, convert to seconds for HUD
+    attacker.setMetadata(
+      DREAD_GAZE_FOE_FROZEN_DURATION_KEY,
+      new org.bukkit.metadata.FixedMetadataValue(plugin, DREAD_GAZE_DURATION / 20) // ticks to seconds
     );
 
     // Update HUD to show the foe frozen countdown
@@ -645,6 +735,17 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
         if (victim.isValid() && !victim.isDead()) {
           victim.removeMetadata(DREAD_GAZE_DEBUFF_KEY, plugin);
           victim.removeMetadata(DREAD_GAZE_DEBUFF_START_KEY, plugin);
+          victim.removeMetadata(DREAD_GAZE_FREEZE_LOCATION_KEY, plugin);
+          victim.removeMetadata(DREAD_GAZE_SATURATION_KEY, plugin);
+
+          // PERSISTENCE: Remove debuff data from PersistentDataContainer
+          if (victim instanceof Player && DEBUFF_PERSIST_KEY != null) {
+            PersistentDataContainer pdc = ((Player) victim).getPersistentDataContainer();
+            pdc.remove(DEBUFF_PERSIST_KEY);
+            pdc.remove(DEBUFF_START_PERSIST_KEY);
+            pdc.remove(FREEZE_LOCATION_PERSIST_KEY);
+            pdc.remove(SATURATION_PERSIST_KEY);
+          }
         }
 
         // Clean up attacker's metadata (both READY TO STRIKE and foe frozen)
@@ -652,6 +753,7 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
           attacker.removeMetadata(DREAD_GAZE_START_TIME_KEY, plugin);
           attacker.removeMetadata(DREAD_GAZE_FOE_FROZEN_KEY, plugin);
           attacker.removeMetadata(DREAD_GAZE_FOE_FROZEN_START_KEY, plugin);
+          attacker.removeMetadata(DREAD_GAZE_FOE_FROZEN_DURATION_KEY, plugin);
 
           // Update HUD to remove the foe frozen countdown
           if (plugin.getHudManager() != null) {
@@ -876,6 +978,70 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
   }
 
   /**
+   * Start the freeze monitoring task.
+   * Runs every tick to teleport frozen players back to their freeze location
+   * and reset their saturation to the stored value.
+   *
+   * NATIVE APPROACH: Uses scheduler-based teleportation instead of
+   * PlayerMoveEvent cancellation to prevent Paper anti-cheat false positives.
+   * Since the movement is server-initiated (teleport), anti-cheat doesn't flag it.
+   */
+  private void startFreezeMonitoringTask() {
+    // Guard against null plugin (for tests)
+    if (plugin == null) {
+      return;
+    }
+
+    freezeTask = new BukkitRunnable() {
+      @Override
+      public void run() {
+        // Process all online players
+        for (org.bukkit.entity.Player player : plugin.getServer().getOnlinePlayers()) {
+          // Check if player is frozen by Dread Gaze
+          if (!player.hasMetadata(DREAD_GAZE_DEBUFF_KEY)) {
+            continue;
+          }
+
+          // Check if player has valid freeze location stored
+          if (!player.hasMetadata(DREAD_GAZE_FREEZE_LOCATION_KEY)) {
+            continue;
+          }
+
+          // Get stored freeze location
+          Object locationObj = player.getMetadata(DREAD_GAZE_FREEZE_LOCATION_KEY).get(0).value();
+          if (!(locationObj instanceof Location)) {
+            continue;
+          }
+
+          Location freezeLocation = (Location) locationObj;
+
+          // Teleport player back to freeze location if they moved
+          // (allowing rotation/looking around, preventing position change)
+          Location current = player.getLocation();
+          if (current.getX() != freezeLocation.getX() ||
+              current.getY() != freezeLocation.getY() ||
+              current.getZ() != freezeLocation.getZ()) {
+            // Teleport back to freeze location (preserves pitch/yaw for looking around)
+            player.teleport(freezeLocation);
+          }
+
+          // Reset saturation to stored value (for players)
+          if (player.hasMetadata(DREAD_GAZE_SATURATION_KEY)) {
+            Object saturationObj = player.getMetadata(DREAD_GAZE_SATURATION_KEY).get(0).value();
+            if (saturationObj instanceof Float) {
+              float storedSaturation = (Float) saturationObj;
+              player.setSaturation(storedSaturation);
+            }
+          }
+        }
+      }
+    };
+
+    // Run every tick (20 times per second)
+    freezeTask.runTaskTimer(plugin, 0L, 1L);
+  }
+
+  /**
    * Get the plugin instance.
    *
    * @return The plugin
@@ -885,29 +1051,6 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
   }
 
   // ===== Dread Gaze Freeze Event Handlers (Issue 3) =====
-
-  /**
-   * Prevent frozen players from moving.
-   * Allows looking around but blocks all movement.
-   */
-  @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-  public void onPlayerMoveWhileFrozen(PlayerMoveEvent event) {
-    Player player = event.getPlayer();
-
-    // Check if player is frozen by Dread Gaze (checks VICTIM's debuff metadata)
-    if (!player.hasMetadata(DREAD_GAZE_DEBUFF_KEY)) {
-      return;
-    }
-
-    // Allow looking around (head rotation) but cancel movement
-    Location from = event.getFrom();
-    Location to = event.getTo();
-
-    // Check if position changed (ignore rotation changes)
-    if (from.getX() != to.getX() || from.getY() != to.getY() || from.getZ() != to.getZ()) {
-      event.setCancelled(true);
-    }
-  }
 
   /**
    * Prevent frozen players from placing blocks.
@@ -960,6 +1103,146 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
           Component.text("⛶ You cannot interact while frozen by Dread Gaze!", NamedTextColor.DARK_PURPLE)
         );
       }
+    }
+  }
+
+  // ===== Debuff Persistence (Issue #20) =====
+
+  /**
+   * Restore freeze debuff when a player rejoins.
+   * Checks PersistentDataContainer for active debuff and reapplies it.
+   */
+  @EventHandler(priority = EventPriority.MONITOR)
+  public void onPlayerJoinRestoreDebuff(PlayerJoinEvent event) {
+    // Skip if keys are null (tests with null plugin)
+    if (DEBUFF_PERSIST_KEY == null) {
+      return;
+    }
+
+    Player player = event.getPlayer();
+    PersistentDataContainer pdc = player.getPersistentDataContainer();
+
+    // Check if player has an active debuff stored
+    if (!pdc.has(DEBUFF_PERSIST_KEY, PersistentDataType.BYTE)) {
+      return; // No debuff to restore
+    }
+
+    Long startTime = pdc.get(DEBUFF_START_PERSIST_KEY, PersistentDataType.LONG);
+    String locationStr = pdc.get(FREEZE_LOCATION_PERSIST_KEY, PersistentDataType.STRING);
+    Float saturation = pdc.get(SATURATION_PERSIST_KEY, PersistentDataType.FLOAT);
+
+    if (startTime == null) {
+      return; // Invalid data, clear it
+    }
+
+    // Calculate remaining duration
+    long elapsed = System.currentTimeMillis() - startTime;
+    long remainingMillis = DREAD_GAZE_DURATION * 50L - elapsed; // ticks to ms
+
+    if (remainingMillis <= 0) {
+      // Debuff expired while player was offline, clear it
+      pdc.remove(DEBUFF_PERSIST_KEY);
+      pdc.remove(DEBUFF_START_PERSIST_KEY);
+      pdc.remove(FREEZE_LOCATION_PERSIST_KEY);
+      pdc.remove(SATURATION_PERSIST_KEY);
+      return;
+    }
+
+    // Restore the debuff metadata
+    player.setMetadata(DREAD_GAZE_DEBUFF_KEY, new org.bukkit.metadata.FixedMetadataValue(plugin, true));
+    player.setMetadata(DREAD_GAZE_DEBUFF_START_KEY, new org.bukkit.metadata.FixedMetadataValue(plugin, startTime));
+
+    // Restore freeze location
+    if (locationStr != null) {
+      Location freezeLocation = deserializeLocation(locationStr);
+      if (freezeLocation != null) {
+        player.setMetadata(DREAD_GAZE_FREEZE_LOCATION_KEY,
+                         new org.bukkit.metadata.FixedMetadataValue(plugin, freezeLocation));
+      }
+    }
+
+    // Restore saturation value
+    if (saturation != null) {
+      player.setMetadata(DREAD_GAZE_SATURATION_KEY,
+                       new org.bukkit.metadata.FixedMetadataValue(plugin, saturation));
+    }
+
+    // Reapply potion effects
+    player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, (int) remainingMillis / 50,
+                                           MAX_AMPLIFIER, false, true, true));
+    player.addPotionEffect(new PotionEffect(PotionEffectType.MINING_FATIGUE, (int) remainingMillis / 50,
+                                           MAX_AMPLIFIER, false, true, true));
+    player.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, (int) remainingMillis / 50,
+                                           MAX_AMPLIFIER, false, true, true));
+    player.addPotionEffect(new PotionEffect(PotionEffectType.HUNGER, (int) remainingMillis / 50,
+                                           MAX_AMPLIFIER, false, true, true));
+
+    // Schedule cleanup for remaining duration
+    new BukkitRunnable() {
+      @Override
+      public void run() {
+        if (!player.isOnline()) {
+          return;
+        }
+        player.removeMetadata(DREAD_GAZE_DEBUFF_KEY, plugin);
+        player.removeMetadata(DREAD_GAZE_DEBUFF_START_KEY, plugin);
+        player.removeMetadata(DREAD_GAZE_FREEZE_LOCATION_KEY, plugin);
+        player.removeMetadata(DREAD_GAZE_SATURATION_KEY, plugin);
+
+        PersistentDataContainer pdc2 = player.getPersistentDataContainer();
+        pdc2.remove(DEBUFF_PERSIST_KEY);
+        pdc2.remove(DEBUFF_START_PERSIST_KEY);
+        pdc2.remove(FREEZE_LOCATION_PERSIST_KEY);
+        pdc2.remove(SATURATION_PERSIST_KEY);
+      }
+    }.runTaskLater(plugin, remainingMillis / 50L);
+
+    player.sendMessage(
+      Component.text("⚠ You are still frozen by Dread Gaze from before you disconnected!", NamedTextColor.DARK_PURPLE)
+    );
+  }
+
+  /**
+   * Serialize a Location to a String for storage in PersistentDataContainer.
+   */
+  private String serializeLocation(Location loc) {
+    if (loc == null) {
+      return "";
+    }
+    return String.format("%.2f,%.2f,%.2f,%s,%.2f,%.2f",
+                       loc.getX(), loc.getY(), loc.getZ(),
+                       loc.getWorld() != null ? loc.getWorld().getName() : "unknown",
+                       loc.getYaw(), loc.getPitch());
+  }
+
+  /**
+   * Deserialize a Location from a String stored in PersistentDataContainer.
+   */
+  private Location deserializeLocation(String str) {
+    if (str == null || str.isEmpty()) {
+      return null;
+    }
+    try {
+      String[] parts = str.split(",");
+      if (parts.length != 6) {
+        return null;
+      }
+      double x = Double.parseDouble(parts[0]);
+      double y = Double.parseDouble(parts[1]);
+      double z = Double.parseDouble(parts[2]);
+      String worldName = parts[3];
+      float yaw = Float.parseFloat(parts[4]);
+      float pitch = Float.parseFloat(parts[5]);
+
+      org.bukkit.World world = plugin.getServer().getWorld(worldName);
+      if (world == null) {
+        return null;
+      }
+
+      return new Location(world, x, y, z, yaw, pitch);
+    } catch (NumberFormatException e) {
+      plugin.getLogger().warning("Failed to deserialize location: " + str);
+      return null;
     }
   }
 }
