@@ -96,7 +96,7 @@ jobs:
       shell: python
 
     - name: Update version in gradle.properties
-      if: ${{ inputs.next_version != 'skip' }}
+      if: ${{ inputs.next_version != '' && inputs.next_version != 'skip' }}
       run: |
         import re
 
@@ -117,7 +117,7 @@ jobs:
       shell: python
 
     - name: Commit version bump
-      if: ${{ inputs.next_version != 'skip' }}
+      if: ${{ inputs.next_version != '' && inputs.next_version != 'skip' }}
       run: |
         git config user.name github-actions
         git config user.email github-actions@github.com
@@ -127,7 +127,7 @@ jobs:
         git push
 
     - name: Create and push git tag
-      if: ${{ inputs.next_version != 'skip' }}
+      if: ${{ inputs.next_version != '' && inputs.next_version != 'skip' }}
       run: |
         TAG="${{ steps.next_version.outputs.tag }}"
         git tag -a "$TAG" -m "Release $TAG"
@@ -194,7 +194,7 @@ jobs:
         echo "🔗 https://github.com/${{ github.repository }}/releases/tag/${{ steps.next_version.outputs.tag }}"
 
     - name: Distribute to Modrinth and Hangar
-      if: ${{ inputs.next_version != 'skip' }}
+      if: ${{ inputs.next_version != '' && inputs.next_version != 'skip' }}
       uses: ./.github/workflows/distribution.yml
       with:
         tag: ${{ steps.next_version.outputs.tag }}
