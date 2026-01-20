@@ -9,38 +9,15 @@ on:
           The JAR must already be built and available in build/libs/.
         required: true
         type: string
-      release_notes:
-        description: 'Release notes (optional, fetched from GitHub if not provided)'
-        required: false
-        type: string
-      modrinth_only:
-        description: 'Only publish to Modrinth (skip Hangar)'
-        required: false
-        type: boolean
-        default: false
-      hangar_only:
-        description: 'Only publish to Hangar (skip Modrinth)'
-        required: false
-        type: boolean
-        default: false
-  workflow_call:
-    inputs:
-      tag:
-        description: 'Git tag to distribute (e.g., v1.2.5)'
-        required: true
-        type: string
-      version:
-        description: 'Version number (e.g., 1.2.5)'
-        required: true
-        type: string
       release_title:
-        description: 'Title for the releases (optional)'
+        description: 'Title for the releases (optional, defaults to version)'
         required: false
         type: string
-      release_notes:
-        description: 'Release notes (optional)'
+      changelog_file:
+        description: 'Path to CHANGELOG.md (optional, defaults to CHANGELOG.md)'
         required: false
         type: string
+        default: 'CHANGELOG.md'
       modrinth_only:
         description: 'Only publish to Modrinth (skip Hangar)'
         required: false
@@ -53,10 +30,172 @@ on:
         default: false
 
 jobs:
-  distribute:
-    name: Distribute to Platforms
+  # Job to prepare release notes (shared by both Modrinth and Hangar)
+  prepare:
+    name: Prepare Release Notes
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      modrinth_notes: ${{ steps.modrinth_notes.outputs.notes }}
+      hangar_notes: ${{ steps.hangar_notes.outputs.notes }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
+    - name: Set version variables
+      id: version
+      run: |
+        TAG="${{ inputs.tag }}"
+        # Remove 'v' prefix if present
+        VERSION="${TAG#v}"
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "tag=$TAG" >> $GITHUB_OUTPUT
+        echo "📦 Preparing distribution for $VERSION"
+
+    - name: Extract Changelog
+      id: extract_changelog
+      shell: python
+      run: |
+        import re
+        import os
+
+        changelog_file = "${{ inputs.changelog_file }}"
+        version = "${{ steps.version.outputs.version }}"
+        tag = "${{ steps.version.outputs.tag }}"
+
+        with open(changelog_file, 'r') as f:
+            content = f.read()
+
+        # Find the section for this version (e.g., [1.3.0])
+        # Look from the version header to the next version header or end of file
+        pattern = rf'##\[{version}\](.*?)\n(.*?)(?=##\[\d+\.\d+\.\d+\]|$)'
+
+        match = re.search(pattern, content, re.DOTALL)
+        if match:
+            notes = match.group(1).strip()
+        else:
+            notes = f"Release {tag}"
+
+        # Write to output file
+        with open('/tmp/changelog_notes.txt', 'w') as f:
+            f.write(notes)
+
+        print(f"Extracted {len(notes)} characters from changelog")
+
+    - name: Prepare Modrinth Release Notes
+      id: modrinth_notes
+      run: |
+        echo "📝 Generating Modrinth release notes..."
+
+        # Add a header for Modrinth
+        cat > /tmp/modrinth_final.txt << 'EOF'
+**Elemental Dragon Plugin - Fire & Void Powers**
+
+⚔ **Required Paper version**: 1.21.x
+
+📦 **Download**: https://github.com/cavarest/elemental-dragon/releases/latest
+
+EOF
+        cat /tmp/changelog_notes.txt >> /tmp/modrinth_final.txt
+        echo "" >> /tmp/modrinth_final.txt
+
+        # Output for workflow
+        {
+          echo 'notes<<EOF'
+          cat /tmp/modrinth_final.txt
+          echo EOF
+        } >> $GITHUB_OUTPUT
+
+        echo "✅ Modrinth release notes prepared"
+
+    - name: Prepare Hangar Release Notes
+      id: hangar_notes
+      run: |
+        echo "📝 Generating Hangar release notes..."
+
+        # Add a header and dependency note for Hangar
+        cat > /tmp/hangar_final.txt << 'EOF'
+**Elemental Dragon Plugin - Fire & Void Powers**
+
+📦 **Download**: https://github.com/cavarest/elementaldragon/releases/latest
+
+⚠️ **Required Dependencies** (install these on your server first):
+- **ProtocolSidebar** (sidebar API): Download from https://jitpack.io/com/github/CatCoderr/ProtocolSidebar/master-SNAPSHOT/ProtocolSidebar-master-SNAPSHOT.jar
+- **FoliaLib** (Folia API): https://repo.tcoded.com/releases/com/tcoded/FoliaLib/0.5.1/FoliaLib-0.5.1.jar
+
+Place these JARs in your server's plugins folder before installing Elemental Dragon.
+
+EOF
+        cat /tmp/changelog_notes.txt >> /tmp/hangar_final.txt
+        echo "" >> /tmp/hangar_final.txt
+
+        # Output for workflow
+        {
+          echo 'notes<<EOF'
+          cat /tmp/hangar_final.txt
+          echo EOF
+        } >> $GITHUB_OUTPUT
+
+        echo "✅ Hangar release notes prepared"
+
+  # Modrinth distribution job
+  modrinth:
+    name: Publish to Modrinth
+    needs: prepare
+    if: ${{ inputs.modrinth_only != true }}
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Download dependency JARs
+      run: |
+        echo "📥 Downloading dependency JARs for GitHub release..."
+        mkdir -p build/deps
+
+        # Download ProtocolSidebar (latest master-SNAPSHOT)
+        curl -L "https://jitpack.io/com/github/CatCoderr/ProtocolSidebar/master-SNAPSHOT/ProtocolSidebar-master-SNAPSHOT.jar" \
+          -o build/deps/ProtocolSidebar-master-SNAPSHOT.jar || echo "⚠️  ProtocolSidebar download failed"
+
+        # Download FoliaLib
+        curl -L "https://repo.tcoded.com/releases/com/tcoded/FoliaLib/0.5.1/FoliaLib-0.5.1.jar" \
+          -o build/deps/FoliaLib-0.5.1.jar || echo "⚠️  FoliaLib download failed"
+
+        ls -lh build/deps/
+        echo "✅ Dependencies downloaded"
+
+    - name: Publish to Modrinth
+      uses: cloudnode-pro/modrinth-publish@v2
+      with:
+        token: ${{ secrets.MODRINTH_API_KEY }}
+        project: 66f6mWei
+        version: ${{ needs.prepare.outputs.version }}
+        name: ${{ inputs.release_title || format('Elemental Dragon Plugin {0}', needs.prepare.outputs.version) }}
+        changelog: ${{ needs.prepare.outputs.modrinth_notes }}
+        loaders: |-
+          paper
+          folia
+        game-versions: |-
+          1.21.x
+        files: build/libs/elemental-dragon-${{ needs.prepare.outputs.version }}.jar
+
+    - name: Modrinth Distribution Summary
+      run: |
+        VERSION="${{ needs.prepare.outputs.version }}"
+        echo "🎉 Modrinth distribution complete for v$VERSION!"
+        echo "🔗 https://modrinth.com/plugin/elemental-dragon"
+
+  # Hangar distribution job
+  hangar:
+    name: Publish to Hangar
+    needs: prepare
+    if: ${{ inputs.hangar_only != true }}
+    runs-on: ubuntu-latest
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -69,102 +208,28 @@ jobs:
         java-version: '21'
         distribution: 'temurin'
 
-    - name: Extract version from tag
-      id: extract_version
-      if: ${{ github.event_name == 'workflow_dispatch' }}
-      run: |
-        TAG="${{ inputs.tag }}"
-        # Remove 'v' prefix if present
-        VERSION="${TAG#v}"
-        echo "version=$VERSION" >> $GITHUB_OUTPUT
-        echo "Extracted version: $VERSION"
-
-    - name: Set version variables
-      id: version_vars
-      run: |
-        if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-          VERSION="${{ steps.extract_version.outputs.version }}"
-          TAG="${{ inputs.tag }}"
-        else
-          VERSION="${{ inputs.version }}"
-          TAG="${{ inputs.tag }}"
-        fi
-        echo "version=$VERSION" >> $GITHUB_OUTPUT
-        echo "tag=$TAG" >> $GITHUB_OUTPUT
-
-    - name: Get GitHub Release notes
-      id: release_notes
-      if: ${{ github.event_name == 'workflow_dispatch' && inputs.release_notes == null }}
-      run: |
-        TAG="${{ steps.version_vars.outputs.tag }}"
-        echo "Fetching release notes for tag: $TAG"
-
-        # Try to get release notes from GitHub API
-        NOTES=$(gh release view "$TAG" --json body -q '.body' || echo "")
-
-        if [ -z "$NOTES" ]; then
-          NOTES="Release $TAG"
-        fi
-
-        # Save to file for multiline support
-        echo "$NOTES" > /tmp/release_notes.txt
-        echo "notes_file=/tmp/release_notes.txt" >> $GITHUB_OUTPUT
-        # Also output as content (multiline safe for workflow_call)
-        {
-          echo 'notes<<EOF'
-          cat /tmp/release_notes.txt
-          echo EOF
-        } >> $GITHUB_OUTPUT
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Build plugin if needed
-      run: |
-        JAR_FILE="build/libs/elemental-dragon-${{ steps.version_vars.outputs.version }}.jar"
-        if [ ! -f "$JAR_FILE" ]; then
-          echo "JAR not found, building with Gradle..."
-          ./gradlew clean build -x test
-        else
-          echo "JAR found: $JAR_FILE"
-        fi
-
-    - name: Verify JAR exists
-      run: |
-        JAR_FILE="build/libs/elemental-dragon-${{ steps.version_vars.outputs.version }}.jar"
-        if [ ! -f "$JAR_FILE" ]; then
-          echo "ERROR: JAR file not found: $JAR_FILE"
-          echo "Available files:"
-          ls -la build/libs/ || echo "build/libs/ directory not found"
-          exit 1
-        fi
-        echo "✅ JAR verified: $JAR_FILE"
-
-    - name: Publish to Modrinth
-      if: ${{ inputs.hangar_only != true }}
-      uses: cloudnode-pro/modrinth-publish@v2
-      with:
-        token: ${{ secrets.MODRINTH_API_KEY }}
-        project: 66f6mWei
-        version: ${{ steps.version_vars.outputs.version }}
-        name: ${{ inputs.release_title || format('Elemental Dragon Plugin {0}', steps.version_vars.outputs.version) }}
-        changelog: ${{ inputs.release_notes || steps.release_notes.outputs.notes || format('Release {0}', steps.version_vars.outputs.tag) }}
-        loaders: |-
-          paper
-          folia
-        game-versions: |-
-          1.21.x
-        files: build/libs/elemental-dragon-${{ steps.version_vars.outputs.version }}.jar
-
     - name: Publish to Hangar
-      if: ${{ inputs.modrinth_only != true }}
       env:
         HANGER_PAPERMC_API_KEY: ${{ secrets.HANGER_PAPERMC_API_KEY }}
       run: |
         ./gradlew publishPluginPublicationToHangar --stacktrace
 
-    - name: Distribution Summary
+    - name: Hangar Distribution Summary
       run: |
-        VERSION="${{ steps.version_vars.outputs.version }}"
+        VERSION="${{ needs.prepare.outputs.version }}"
+        echo "🎉 Hangar distribution complete for v$VERSION!"
+        echo "🔗 https://hangar.papermc.io/ElementalDragon/versions/$VERSION"
+
+  # Distribution summary
+  summary:
+    name: Distribution Summary
+    needs: [modrinth, hangar]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+    - name: Print Summary
+      run: |
+        VERSION="${{ needs.prepare.outputs.version }}"
         echo "🎉 Distribution complete for v$VERSION!"
         echo ""
         echo "📦 Platforms:"
@@ -172,5 +237,5 @@ jobs:
           echo "  ✅ Modrinth: https://modrinth.com/plugin/elemental-dragon"
         fi
         if [ "${{ inputs.hangar_only }}" != "true" ]; then
-          echo "  ✅ Hangar: https://hangar.papermc.io/ElementalDragon"
+          echo "  ✅ Hangar: https://hangar.papermc.io/ElementalDragon/versions/$VERSION"
         fi
