@@ -47,22 +47,22 @@ jobs:
       with:
         python-version: '3.x'
 
-    - name: Get current version from build.gradle
+    - name: Get current version from gradle.properties
       id: current_version
       run: |
         import os
         import re
 
-        with open('build.gradle', 'r') as f:
+        with open('gradle.properties', 'r') as f:
             content = f.read()
-            match = re.search(r"version\s*=\s*['\"]([^'\"]+)['\"]", content)
+            match = re.search(r"project\.version\s*=\s*([0-9.]+)", content)
             if match:
                 version_str = match.group(1)
                 with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
                     f.write(f'current={version_str}\n')
                 print(f'Found version: {version_str}')
             else:
-                raise ValueError('Version not found in build.gradle')
+                raise ValueError('Version not found in gradle.properties')
       shell: python
 
     - name: Calculate next version
