@@ -6,9 +6,14 @@ import org.cavarest.elementaldragon.cooldown.CooldownManager;
 import org.cavarest.elementaldragon.item.ElementalItems;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.NamespacedKey;
+import org.bukkit.persistence.PersistentDataType;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -26,6 +31,12 @@ public class FragmentManager implements Listener {
   private final FragmentRegistry fragmentRegistry;
   private final Map<UUID, FragmentType> equippedFragments;
   private final MiniMessage miniMessage = MiniMessage.miniMessage();
+
+  /**
+   * NamespacedKey for persisting equipped fragment type in player data.
+   * Issue #23: Persist fragments across logins/reconnections.
+   */
+  private static final NamespacedKey FRAGMENT_KEY = NamespacedKey.fromString("elementaldragon:equipped_fragment");
 
   /**
    * Create a new FragmentManager.
@@ -446,6 +457,90 @@ public class FragmentManager implements Listener {
     return true;
   }
 
+  // ==================== Issue #23: Fragment Persistence ====================
+
+  /**
+   * Save the player's equipped fragment to persistent storage.
+   * Called when player quits to restore fragment on re-login.
+   *
+   * @param player The player
+   */
+  private void saveEquippedFragment(Player player) {
+    FragmentType equipped = equippedFragments.get(player.getUniqueId());
+    if (equipped != null) {
+      player.getPersistentDataContainer().set(
+        FRAGMENT_KEY,
+        PersistentDataType.STRING,
+        equipped.name()
+      );
+    }
+  }
+
+  /**
+   * Load and re-equip the player's saved fragment from persistent storage.
+   * Called when player joins to restore fragment from previous session.
+   *
+   * @param player The player
+   */
+  private void loadAndRequipFragment(Player player) {
+    // Check if player has a saved fragment
+    String savedFragmentName = player.getPersistentDataContainer().get(
+      FRAGMENT_KEY,
+      PersistentDataType.STRING
+    );
+
+    if (savedFragmentName != null && !savedFragmentName.isEmpty()) {
+      try {
+        FragmentType fragmentType = FragmentType.valueOf(savedFragmentName);
+
+        // Verify the fragment item is still in the player's inventory
+        // Only re-equip if the item exists (don't want to restore with missing item)
+        if (hasFragmentItem(player, fragmentType)) {
+          // Re-equip the fragment (silent - no message)
+          equipFragmentInternal(player, fragmentType);
+
+          // Update HUD
+          if (plugin != null && plugin.getHudManager() != null) {
+            plugin.getHudManager().updatePlayerHud(player);
+          }
+
+          plugin.getLogger().info("Restored " + fragmentType.getDisplayName() +
+            " fragment for player " + player.getName() + " on login");
+        } else {
+          // Fragment item not in inventory - clear saved data
+          player.getPersistentDataContainer().remove(FRAGMENT_KEY);
+
+          plugin.getLogger().info("Could not restore " + fragmentType.getDisplayName() +
+            " fragment for player " + player.getName() + " (item not found in inventory)");
+        }
+      } catch (IllegalArgumentException e) {
+        // Invalid fragment type (old data format or corrupted)
+        plugin.getLogger().warning("Invalid fragment type in persistent data: " + savedFragmentName);
+        player.getPersistentDataContainer().remove(FRAGMENT_KEY);
+      }
+    }
+  }
+
+  /**
+   * Handles player join event - restores equipped fragment from previous session.
+   * Issue #23: Persist fragments across logins/reconnections.
+   */
+  @EventHandler(priority = EventPriority.MONITOR)
+  public void onPlayerJoin(PlayerJoinEvent event) {
+    Player player = event.getPlayer();
+    loadAndRequipFragment(player);
+  }
+
+  /**
+   * Handles player quit event - saves equipped fragment for next session.
+   * Issue #23: Persist fragments across logins/reconnections.
+   */
+  @EventHandler(priority = EventPriority.MONITOR)
+  public void onPlayerQuit(PlayerQuitEvent event) {
+    Player player = event.getPlayer();
+    saveEquippedFragment(player);
+  }
+
   /**
    * Check if player has the fragment item in inventory.
    * Uses ElementalItems.getFragmentType() - Single Source of Truth.
@@ -459,11 +554,21 @@ public class FragmentManager implements Listener {
       return false;
     }
 
+    // Check inventory contents
     for (ItemStack item : player.getInventory().getContents()) {
       if (item != null && ElementalItems.getFragmentType(item) == fragmentType) {
         return true;
       }
     }
+
+    // CRITICAL FIX (Issue #22): Also check cursor item
+    // When clicking on a fragment, it moves to the cursor temporarily.
+    // We must check the cursor to avoid false negatives that trigger unwanted unequip.
+    ItemStack cursorItem = player.getItemOnCursor();
+    if (cursorItem != null && ElementalItems.getFragmentType(cursorItem) == fragmentType) {
+      return true;
+    }
+
     return false;
   }
 
