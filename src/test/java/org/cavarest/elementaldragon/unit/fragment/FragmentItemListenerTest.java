@@ -266,8 +266,8 @@ public class FragmentItemListenerTest {
     // ==================== Container Click Tests ====================
 
     @Test
-    @DisplayName("Clicking equipped fragment should unequip it first")
-    public void testClickEquippedFragmentUnequips() {
+    @DisplayName("Clicking equipped fragment should NOT unequip (Issue #22)")
+    public void testClickEquippedFragmentDoesNotUnequip() {
         try (MockedStatic<ElementalItems> mockedElementalItems = mockStatic(ElementalItems.class)) {
             mockedElementalItems.when(() -> ElementalItems.getFragmentType(fragmentItem))
                 .thenReturn(FragmentType.BURNING);
@@ -286,8 +286,9 @@ public class FragmentItemListenerTest {
 
             fragmentItemListener.onInventoryClickFragment(event);
 
-            // Should have unequipped the fragment before checking container restriction
-            verify(fragmentManager).unequipFragment(player, true); // silent unequip
+            // Issue #22 fix: Should NOT unequip when clicking on fragment
+            // The smart unequip logic is in onInventoryClickUnequip (MONITOR priority)
+            verify(fragmentManager, never()).unequipFragment(any(), anyBoolean());
         }
     }
 
@@ -355,8 +356,8 @@ public class FragmentItemListenerTest {
     }
 
     @Test
-    @DisplayName("Issue #22: Clicking equipped fragment WITH container open should unequip")
-    public void testClickEquippedFragmentWithContainerUnequips() {
+    @DisplayName("Issue #22: Clicking equipped fragment WITH container open should keep abilities equipped")
+    public void testClickEquippedFragmentWithContainerKeepsAbilities() {
         try (MockedStatic<ElementalItems> mockedElementalItems = mockStatic(ElementalItems.class)) {
             FragmentType burningType = FragmentType.BURNING;
             mockedElementalItems.when(() -> ElementalItems.getFragmentType(fragmentItem))
@@ -388,8 +389,9 @@ public class FragmentItemListenerTest {
 
             fragmentItemListener.onInventoryClickUnequip(event);
 
-            // Should unequip - container is open
-            verify(fragmentManager).unequipFragment(player, true); // silent unequip
+            // Issue #22: Should NOT unequip even with container open
+            // Abilities stay equipped when managing inventory, regardless of container state
+            verify(fragmentManager, never()).unequipFragment(any(), anyBoolean());
         }
     }
 
@@ -424,6 +426,41 @@ public class FragmentItemListenerTest {
             fragmentItemListener.onInventoryClickUnequip(event);
 
             // Should NOT unequip - no container is open
+            verify(fragmentManager, never()).unequipFragment(any(), anyBoolean());
+        }
+    }
+
+    // ==================== REGRESSION TEST: Player Inventory Check ====================
+
+    @Test
+    @DisplayName("REGRESSION: Clicking fragment in non-player inventory should NOT unequip")
+    public void testClickFragmentInNonPlayerInventoryDoesNotUnequip() {
+        try (MockedStatic<ElementalItems> mockedElementalItems = mockStatic(ElementalItems.class)) {
+            FragmentType burningType = FragmentType.BURNING;
+            mockedElementalItems.when(() -> ElementalItems.getFragmentType(fragmentItem))
+                .thenReturn(burningType);
+
+            // Player inventory (what player.getInventory() returns)
+            org.bukkit.inventory.PlayerInventory mockedPlayerInventory = mock(org.bukkit.inventory.PlayerInventory.class);
+            when(mockedPlayerInventory.getType()).thenReturn(null);
+            when(player.getInventory()).thenReturn(mockedPlayerInventory);
+
+            // Clicked inventory is DIFFERENT from player inventory (e.g., a chest)
+            org.bukkit.inventory.Inventory mockedClickedInventory = mock(org.bukkit.inventory.Inventory.class);
+            when(mockedClickedInventory.getType()).thenReturn(null);
+
+            InventoryClickEvent event = mock(InventoryClickEvent.class);
+            when(event.getCurrentItem()).thenReturn(fragmentItem);
+            when(event.getWhoClicked()).thenReturn(player);
+            when(event.getClickedInventory()).thenReturn(mockedClickedInventory);
+
+            // Player has Burning Fragment equipped
+            when(fragmentManager.getEquippedFragment(player)).thenReturn(burningType);
+
+            fragmentItemListener.onInventoryClickUnequip(event);
+
+            // CRITICAL: Should NOT unequip because clickedInventory != player.getInventory()
+            // This prevents unequipping when clicking in containers or other inventories
             verify(fragmentManager, never()).unequipFragment(any(), anyBoolean());
         }
     }
