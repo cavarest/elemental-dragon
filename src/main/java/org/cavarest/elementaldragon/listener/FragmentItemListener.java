@@ -28,7 +28,7 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
  * 1. Enforces one-fragment limit (Issue #20)
  * 2. Prevents storage in containers (Issue #20)
  * 3. Detects when fragments leave player inventory (drop, despawn) and unequips them
- * 4. Unequips on inventory drag/sort operations (Issue #20)
+ * 4. Unequips on inventory click to container (Issue #22), but NOT when organizing own inventory
  * 5. Protects fragments from destruction (fire, lava, cactus, etc.)
  */
 public class FragmentItemListener implements Listener {
@@ -244,13 +244,28 @@ public class FragmentItemListener implements Listener {
   /**
    * Detect inventory drag/sort operations and unequip if equipped fragment is moved - Issue #20.
    * This handles cases where players drag/sort their inventory, which should unequip the fragment.
+   *
+   * IMPORTANT: Only unequip if clicking on equipped fragment while a container is open.
+   * If organizing within player's own inventory (no container), keep abilities equipped.
+   *
+   * Implementation note: Uses object identity comparison to detect if a container is open.
+   * - When no container is open, getTopInventory() and getClickedInventory() return the SAME object
+   * - When a container is open, they return DIFFERENT objects
+   * - This avoids using InventoryType enums which cause initialization issues in tests
    */
   @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
   public void onInventoryClickUnequip(InventoryClickEvent event) {
     // Only care about clicks in player inventory
-    if (event.getClickedInventory() == null ||
-        event.getClickedInventory().getType() != InventoryType.PLAYER) {
+    // Use object identity comparison to avoid InventoryType.PLAYER enum access
+    if (event.getClickedInventory() == null) {
       return;
+    }
+
+    // Check if clicked inventory is the player's inventory (using object identity)
+    // This avoids accessing InventoryType.PLAYER which causes Bukkit enum initialization issues
+    Player player = (Player) event.getWhoClicked();
+    if (event.getClickedInventory() != player.getInventory()) {
+      return; // Not clicking in player inventory
     }
 
     ItemStack clickedItem = event.getCurrentItem();
@@ -258,16 +273,24 @@ public class FragmentItemListener implements Listener {
       return;
     }
 
-    Player player = (Player) event.getWhoClicked();
     FragmentType clickedFragmentType = getFragmentType(clickedItem);
 
     // Check if this fragment is currently equipped
     FragmentType equippedFragmentType = fragmentManager.getEquippedFragment(player);
     if (equippedFragmentType == clickedFragmentType) {
-      // Fragment is equipped - unequip it when it's moved in inventory
-      // This prevents players from having abilities active while moving the item
+      // CRITICAL FIX (Issue #22): Only unequip if a container is open
+      // If organizing within player's own inventory (no container), keep abilities equipped
+      // Use object identity: if top inventory == clicked inventory, no container is open
+      org.bukkit.inventory.Inventory topInventory = event.getView().getTopInventory();
+
+      // If there's no container (top inventory is the same as clicked inventory), don't unequip
+      if (topInventory == null || topInventory == event.getClickedInventory()) {
+        return; // Keep abilities equipped when organizing own inventory
+      }
+
+      // Container is open - unequip the fragment
       fragmentManager.unequipFragment(player, true); // silent unequip
-      // We don't show a message here since the user is just organizing their inventory
+      // We don't show a message here since the user is just managing their inventory
     }
   }
 
