@@ -194,7 +194,6 @@ jobs:
         echo "🔗 https://github.com/${{ github.repository }}/releases/tag/${{ steps.next_version.outputs.tag }}"
 
     - name: Distribute to Modrinth and Hangar
-      if: ${{ inputs.next_version != '' && inputs.next_version != 'skip' }}
       uses: ./.github/workflows/distribution.yml
       with:
         tag: ${{ steps.next_version.outputs.tag }}
