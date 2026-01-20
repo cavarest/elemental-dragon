@@ -201,4 +201,3 @@ jobs:
         version: ${{ steps.next_version.outputs.next }}
         release_title: ${{ inputs.release_title }}
         release_notes: ${{ inputs.release_notes }}
-      secrets: inherit
