@@ -90,15 +90,14 @@ jobs:
       run: |
         echo "📝 Generating Modrinth release notes..."
 
-        # Add a header for Modrinth
-        cat > /tmp/modrinth_final.txt << 'EOF'
-**Elemental Dragon Plugin - Fire & Void Powers**
+        # Read release notes from file
+        if [ -f RELEASE_NOTES.md ]; then
+          cat RELEASE_NOTES.md > /tmp/modrinth_final.txt
+          echo "" >> /tmp/modrinth_final.txt
+        else
+          echo "No RELEASE_NOTES.md found, using basic notes" > /tmp/modrinth_final.txt
+        fi
 
-⚔ **Required Paper version**: 1.21.x
-
-📦 **Download**: https://github.com/cavarest/elemental-dragon/releases/latest
-
-EOF
         cat /tmp/changelog_notes.txt >> /tmp/modrinth_final.txt
         echo "" >> /tmp/modrinth_final.txt
 
@@ -116,19 +115,24 @@ EOF
       run: |
         echo "📝 Generating Hangar release notes..."
 
-        # Add a header and dependency note for Hangar
-        cat > /tmp/hangar_final.txt << 'EOF'
-**Elemental Dragon Plugin - Fire & Void Powers**
+        # Read release notes from file
+        if [ -f RELEASE_NOTES.md ]; then
+          cat RELEASE_NOTES.md > /tmp/hangar_final.txt
+          echo "" >> /tmp/hangar_final.txt
+        else
+          echo "No RELEASE_NOTES.md found, using basic notes" > /tmp/hangar_final.txt
+        fi
 
-📦 **Download**: https://github.com/cavarest/elementaldragon/releases/latest
+        # Add dependency note for Hangar
+        {
+          echo ""
+          echo "Required Dependencies (install these on your server first):"
+          echo "- ProtocolSidebar (sidebar API): Download from https://jitpack.io/com/github/CatCoderr/ProtocolSidebar/master-SNAPSHOT/ProtocolSidebar-master-SNAPSHOT.jar"
+          echo "- FoliaLib (Folia API): https://repo.tcoded.com/releases/com/tcoded/FoliaLib/0.5.1/FoliaLib-0.5.1.jar"
+          echo ""
+          echo "Place these JARs in your server's plugins folder before installing Elemental Dragon."
+        } >> /tmp/hangar_final.txt
 
-⚠️ **Required Dependencies** (install these on your server first):
-- **ProtocolSidebar** (sidebar API): Download from https://jitpack.io/com/github/CatCoderr/ProtocolSidebar/master-SNAPSHOT/ProtocolSidebar-master-SNAPSHOT.jar
-- **FoliaLib** (Folia API): https://repo.tcoded.com/releases/com/tcoded/FoliaLib/0.5.1/FoliaLib-0.5.1.jar
-
-Place these JARs in your server's plugins folder before installing Elemental Dragon.
-
-EOF
         cat /tmp/changelog_notes.txt >> /tmp/hangar_final.txt
         echo "" >> /tmp/hangar_final.txt
 
