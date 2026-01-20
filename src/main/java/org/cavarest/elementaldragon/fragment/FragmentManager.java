@@ -102,6 +102,7 @@ public class FragmentManager implements Listener {
 
   /**
    * Internal equip implementation.
+   * Requires players to drop their existing fragment before equipping a new one.
    */
   private boolean equipFragmentInternal(Player player, FragmentType fragmentType) {
     if (player == null || fragmentType == null) {
@@ -132,33 +133,37 @@ public class FragmentManager implements Listener {
       }
     }
 
-    // If player already has a fragment equipped, unequip it first
+    // ONE-FRAGMENT LIMIT: Player must drop their existing fragment before equipping a new one
     FragmentType existingFragment = equippedFragments.get(playerUuid);
-    if (existingFragment != null) {
-      // If same fragment type, just refresh and return success
-      if (existingFragment == fragmentType) {
-        player.sendMessage(miniMessage.deserialize("<yellow>Already equipped!</yellow>"));
-        return true;
-      }
 
-      // Unequip with error handling - don't show errors to user for auto-unequip
-      try {
-        // Get the fragment instance from registry
-        Fragment oldFragment = fragmentRegistry.getFragment(existingFragment);
-        if (oldFragment != null) {
-          oldFragment.deactivate(player);
-        }
-        // Remove from map
-        equippedFragments.remove(playerUuid);
-      } catch (Exception e) {
-        plugin.getLogger().warning(
-          "Error auto-unequipping fragment " + existingFragment +
-          " for player " + player.getName() + ": " + e.getMessage()
-        );
-        // Force remove from map even if deactivate fails
-        equippedFragments.remove(playerUuid);
-        // Continue with equipping new fragment - don't fail the operation
-      }
+    // Check if same fragment is already equipped - allow re-equipping (no-op)
+    if (existingFragment == fragmentType) {
+      // Already has this fragment equipped - return true (no error)
+      // This allows right-click equip on already-equipped fragment
+      return true;
+    }
+
+    // Different fragment is equipped - prevent swapping
+    if (existingFragment != null) {
+      player.sendMessage(miniMessage.deserialize(
+        "<red>⚠ You can only carry one fragment at a time!</red>\n" +
+        "<gray>Drop your <white>" + existingFragment.getDisplayName() + "</white> before equipping the " +
+        "<white>" + fragmentType.getDisplayName() + "</white>.</gray>\n" +
+        "<gray>Use <yellow>/withdrawability</yellow> to remove your current fragment first.</gray>"
+      ));
+      return false;
+    }
+
+    // CRITICAL: Also check if player has a DIFFERENT fragment in their inventory
+    // This prevents having multiple fragments even if none are equipped
+    FragmentType inventoryFragment = hasAnyFragmentInInventory(player, fragmentType);
+    if (inventoryFragment != null) {
+      player.sendMessage(miniMessage.deserialize(
+        "<red>⚠ You can only carry one fragment at a time!</red>\n" +
+        "<gray>You already have the <white>" + inventoryFragment.getDisplayName() + "</white> in your inventory.</gray>\n" +
+        "<gray>Drop it before equipping the <white>" + fragmentType.getDisplayName() + "</white>.</gray>"
+      ));
+      return false;
     }
 
     // Equip the new fragment
@@ -460,6 +465,30 @@ public class FragmentManager implements Listener {
       }
     }
     return false;
+  }
+
+  /**
+   * Check if player has ANY fragment in their inventory (except the specified type).
+   * This is used to enforce the one-fragment limit at equip time.
+   *
+   * @param player The player
+   * @param excludeType The fragment type to exclude from check (the one being equipped)
+   * @return The fragment type found in inventory, or null if none
+   */
+  private FragmentType hasAnyFragmentInInventory(Player player, FragmentType excludeType) {
+    if (player.getInventory() == null) {
+      return null;
+    }
+
+    for (ItemStack item : player.getInventory().getContents()) {
+      if (item != null) {
+        FragmentType fragmentType = ElementalItems.getFragmentType(item);
+        if (fragmentType != null && fragmentType != excludeType) {
+          return fragmentType;
+        }
+      }
+    }
+    return null;
   }
 
   /**

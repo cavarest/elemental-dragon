@@ -174,6 +174,19 @@ public abstract class AbstractFragmentCommand implements CommandExecutor, TabCom
       return true;
     }
 
+    // Check if player has a DIFFERENT fragment equipped (one-fragment limit check)
+    // Do this BEFORE giving items to admins to avoid adding items that can't be equipped
+    if (currentEquipped != null) {
+      player.sendMessage(
+        Component.text("You can only carry one fragment at a time!", NamedTextColor.RED)
+      );
+      player.sendMessage(
+        Component.text("Drop your " + currentEquipped.getDisplayName() + " before equipping the " +
+          fragment.getType().getDisplayName() + ".", NamedTextColor.GRAY)
+      );
+      return false;
+    }
+
     // Check if player has the fragment item
     boolean hasFragment = hasFragmentItem(player, fragment.getType());
 

@@ -914,6 +914,7 @@ public class HudManager implements Listener {
   /**
    * Get the remaining duration for the Dread Gaze "Foe Frozen" countdown.
    * This shows the attacker how much longer their target remains frozen.
+   * Reads duration from metadata (single source of truth) set by CorruptedCoreFragment.
    *
    * @param player The attacker player
    * @return Remaining duration in seconds, or 0 if no foe is frozen
@@ -921,6 +922,7 @@ public class HudManager implements Listener {
   private int getFoeFrozenRemainingDuration(Player player) {
     String foeFrozenKey = "corrupted_dread_gaze_foe_frozen";
     String startTimeKey = "corrupted_dread_gaze_foe_frozen_start_time";
+    String durationKey = "corrupted_dread_gaze_foe_frozen_duration";
 
     if (!player.hasMetadata(foeFrozenKey)) {
       return 0;
@@ -930,15 +932,32 @@ public class HudManager implements Listener {
       return 0;
     }
 
+    if (!player.hasMetadata(durationKey)) {
+      plugin.getLogger().warning("[HUD] Foe frozen duration metadata not found, using default 10s");
+      // Fallback to 10 seconds for backwards compatibility with old data
+      try {
+        long startTime = player.getMetadata(startTimeKey).get(0).asLong();
+        long elapsedMillis = System.currentTimeMillis() - startTime;
+        int elapsedSeconds = (int) (elapsedMillis / 1000);
+        int remaining = 10 - elapsedSeconds;
+        return Math.max(0, remaining);
+      } catch (Exception e) {
+        plugin.getLogger().warning("[HUD] Invalid foe frozen timestamp: " + e.getMessage());
+        return 0;
+      }
+    }
+
     try {
       long startTime = player.getMetadata(startTimeKey).get(0).asLong();
       long elapsedMillis = System.currentTimeMillis() - startTime;
       int elapsedSeconds = (int) (elapsedMillis / 1000);
-      // Dread Gaze freeze lasts 10 seconds
-      int remaining = 10 - elapsedSeconds;
+
+      // Read duration from metadata (single source of truth from CorruptedCoreFragment)
+      int durationSeconds = player.getMetadata(durationKey).get(0).asInt();
+      int remaining = durationSeconds - elapsedSeconds;
       return Math.max(0, remaining);
     } catch (Exception e) {
-      plugin.getLogger().warning("[HUD] Invalid foe frozen timestamp: " + e.getMessage());
+      plugin.getLogger().warning("[HUD] Invalid foe frozen metadata: " + e.getMessage());
       return 0;
     }
   }

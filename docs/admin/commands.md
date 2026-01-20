@@ -129,6 +129,13 @@ If you cannot run admin commands:
 /ed give @a equipment immortal      # Give Immortal Fragment to all players
 ```
 
+**⚠️ Important - One-Fragment Limit**:
+Players can only carry **one fragment at a time**. When you use this command:
+- If the player already has a fragment in their inventory, they **cannot pick up** the new fragment
+- The fragment will be dropped on the ground
+- The player must drop their existing fragment first (press Q key)
+- The player will see: `⚠ You can only carry one fragment at a time!`
+
 **What Gets Given**:
 
 **Equipment**:
@@ -148,7 +155,22 @@ If you cannot run admin commands:
 ### Equip Player Fragment
 **Syntax**: `/ed setfragment <player-ref> <element>`
 
-Equip a fragment for a player (replaces currently equipped fragment).
+Equip a fragment for a player.
+
+**⚠️ Important - One-Fragment Limit**:
+Players can only carry **one fragment at a time**. This command will **fail** if the player already has a fragment equipped.
+
+**Error Messages**:
+- If player already has a fragment: `⚠ You can only carry one fragment at a time!`
+- Player will see: `Drop your [Fragment] before equipping the [New Fragment].`
+- Player will see: `Your fragment abilities have been withdrawn.` (if they ran `/withdrawability` first)
+
+**Recommended Workflow for Operators**:
+1. Check player's current fragment: `/ed status <player>`
+2. If player has a fragment equipped:
+   - Ask player to use `/withdrawability` to remove abilities
+   - Ask player to drop their fragment (press Q)
+3. Then use `/ed setfragment <player> <element>`
 
 **Parameters**:
 - `<player-ref>`: Player selector or name
@@ -156,12 +178,18 @@ Equip a fragment for a player (replaces currently equipped fragment).
 
 **Examples**:
 ```
-/ed setfragment @p immortal          # Equip Immortal Fragment for nearest player
-/ed setfragment PlayerName agile    # Equip Agility Fragment for PlayerName
-/ed setfragment @a corrupt          # Equip Corrupted Core for all players
+/ed status @p                      # Check if player has fragment equipped
+/ed setfragment @p immortal        # Equip Immortal Fragment (if player has no fragment)
 ```
 
-**Use Case**: Quickly equip a fragment for a player without giving them the item.
+**Use Case**: Quickly equip a fragment for a player who has no fragment equipped.
+
+**Alternative - Give Command**:
+If you want to give a player a fragment item (which they can then pick up):
+```
+/ed give @p equipment immortal
+```
+This will give the player the fragment item, but they still need to drop any existing fragment first before picking it up.
 
 ---
 
