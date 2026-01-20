@@ -356,6 +356,45 @@ Target receives maximum-level potion effects:
 
 ## Game Mechanics
 
+### One-Fragment Limit
+
+**Important**: Players can only carry **one fragment at a time**.
+
+This limit is enforced to prevent fragment swapping during combat and maintain game balance.
+
+**What This Means**:
+- You can only have one fragment item in your inventory
+- To get a different fragment, you must drop your current fragment first
+- Operators using `/{element} equip` must also drop their existing fragment first
+- Fragments cannot be stored in containers (chests, barrels, hoppers, etc.)
+
+**How to Switch Fragments**:
+1. Drop your current fragment (press Q key)
+2. Craft or pick up the new fragment
+3. Equip the new fragment
+
+**Fragment Protection**:
+- Fragments are indestructible when dropped (immune to fire, lava, cactus, etc.)
+- You can safely drop fragments without losing them
+
+**Container Restrictions**:
+- Fragments **cannot** be stored in any container type:
+  - Personal chests, barrels, shulker boxes
+  - Community chests and storage systems
+  - Hoppers, droppers, dispensers
+  - Furnaces, blast furnaces, smokers
+  - Ender chests
+  - Any other inventory container
+- Attempting to move a fragment to a container will show:
+  - `⚠ Fragments cannot be stored in containers!`
+  - `They must remain in your personal inventory.`
+
+**Pickup Prevention**:
+- You cannot pick up a different fragment type while already carrying one
+- If you try, you'll see:
+  - `⚠ You can only carry one fragment at a time!`
+  - `You already have the [Fragment] equipped.`
+
 ### Equipping Fragments
 
 **Method 1: Right-Click**
@@ -364,6 +403,8 @@ Target receives maximum-level potion effects:
 3. Fragment moves to offhand automatically
 4. Abilities and passive activate
 
+**⚠️ Important**: If you already have a fragment equipped, right-clicking another fragment will **not work**. You must drop your current fragment first.
+
 **Method 2: Command**
 ```
 /fire equip
@@ -371,6 +412,24 @@ Target receives maximum-level potion effects:
 /immortal equip
 /corrupt equip
 ```
+
+**⚠️ Important**: These commands require you to drop your existing fragment first. If you try to equip a new fragment without dropping, you'll see:
+- `⚠ You can only carry one fragment at a time!`
+- `Drop your [Current Fragment] before equipping the [New Fragment].`
+- `Your fragment abilities have been withdrawn.` (if you run `/withdrawability` first)
+
+**Unequipping First**:
+Before switching fragments, use `/withdrawability` to unequip:
+```
+/withdrawability
+```
+- Deactivates all passive bonuses
+- Cancels active ability states (including READY TO STRIKE)
+- Removes active abilities (Life Devourer, Draconic Reflex, etc.)
+- Fragment item remains in your inventory
+- Cooldowns are preserved (not reset)
+
+Then drop the fragment and pick up/equip the new one.
 
 ### Unequipping
 
@@ -417,11 +476,15 @@ This spam prevention means you cannot bypass cooldowns by quickly unequipping an
 ### Dropping Fragments
 
 When a fragment is dropped:
-- Only the dropped fragment is unequipped if it was equipped
-- Other fragments remain equipped
-- Example: Dropping Burning Fragment while Immortal equipped → Immortal stays equipped
-- Fragments are indestructible when dropped (immune to fire, lava, cactus, and all damage sources)
+- The dropped fragment is immediately unequipped if it was equipped
+- All passive bonuses for that fragment are deactivated
+- Active abilities and states are canceled
+- Fragment is indestructible when dropped (immune to fire, lava, cactus, and all damage sources)
 - **Cooldowns persist** - re-equipping will not reset your cooldowns
+
+**⚠️ Important**: You must drop your existing fragment before picking up or crafting a different fragment type. Attempting to pick up a new fragment while carrying one will show:
+- `⚠ You can only carry one fragment at a time!`
+- `You already have the [Fragment] equipped.`
 
 ### Cooldown System
 
@@ -707,16 +770,22 @@ Shows player's equipped fragment and cooldown states.
 /immortal [1|2|equip|status|help]
 /corrupt [1|2|equip|status|help]
 /lightning 1
-/withdrawability    # Withdraw equipped fragment abilities
+/withdrawability  # Withdraw fragment abilities (keep item)
 /craft
 ```
 
+**Fragment Switching Workflow**:
+1. `/withdrawability` - Remove current fragment abilities
+2. Press Q - Drop the fragment item from your inventory
+3. Craft or pick up the new fragment
+4. Right-click or use `/<type> equip` to equip the new fragment
+
 **Fragment Ability Management**:
-- `/withdrawability` - Removes abilities while keeping fragment equipped
+- `/withdrawability` - Remove abilities while keeping fragment equipped
   - Deactivates passive bonuses (Fire Resistance, Speed, etc.)
   - Cancels active abilities (Life Devourer, Draconic Reflex, etc.)
   - Clears active states (including READY TO STRIKE)
-  - Fragment item remains in inventory
+  - Fragment item remains in inventory (you must drop it manually)
   - Cooldowns are preserved (not reset)
 
 **Using `/clear` (Vanilla Command)**:
@@ -725,9 +794,12 @@ Shows player's equipped fragment and cooldown states.
 - **Cooldowns persist** (spam prevention)
 
 **Important Notes**:
+- ⚠️ You can only carry **one fragment at a time**
+- ⚠️ To switch fragments: withdraw abilities → drop → pickup/craft new → equip
 - ⚠️ Cooldowns survive `/withdrawability`, `/clear`, and fragment dropping
 - ⚠️ You cannot bypass cooldowns by unequipping and re-equipping
 - ✅ Only death clears cooldowns (fair respawn mechanics)
+- ✅ Fragments cannot be stored in containers (chests, barrels, hoppers, etc.)
 
 ### Operator Commands
 ```
@@ -744,11 +816,32 @@ Shows player's equipped fragment and cooldown states.
 
 ## Troubleshooting
 
+### "You can only carry one fragment at a time!"
+- You already have a fragment equipped
+- To switch fragments:
+  1. Use `/withdrawability` to deactivate current fragment
+  2. Press Q to drop the fragment item
+  3. Craft or pick up the new fragment
+  4. Right-click or use `/<type> equip` to equip
+
 ### "You don't have any fragment abilities equipped"
 - Make sure you have a fragment in your offhand
 - Right-click while holding a fragment to equip it
 - Or use `/<type> equip` to equip
 - If you used `/clear`, you need to re-craft or re-equip your fragment
+
+### "Drop your [Fragment] before equipping the [New Fragment]"
+- You tried to equip a new fragment without dropping your current one
+- Use `/withdrawability` to deactivate your current fragment
+- Press Q to drop the fragment item
+- Then try equipping the new fragment
+
+### "⚠ Fragments cannot be stored in containers!"
+- Fragments must remain in your personal inventory
+- You cannot store fragments in:
+  - Chests, barrels, shulker boxes
+  - Hoppers, droppers, dispensers
+  - Any other container type
 
 ### "Crafting limit reached"
 - You've already crafted the maximum number of this fragment type

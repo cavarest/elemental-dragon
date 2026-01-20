@@ -4,6 +4,26 @@
 
 set -e
 
+# Check if Docker daemon is running BEFORE doing anything else
+if ! docker info >/dev/null 2>&1; then
+    echo "================================"
+    echo "❌ Docker is not running!"
+    echo "================================"
+    echo ""
+    echo "The Docker daemon is not accessible. Please start Docker and try again."
+    echo ""
+    echo "On macOS:"
+    echo "  1. Open Docker Desktop from Applications"
+    echo "  2. Wait for the Docker whale icon to appear in your menu bar"
+    echo "  3. Run this script again"
+    echo ""
+    echo "On Linux:"
+    echo "  sudo systemctl start docker"
+    echo "  sudo systemctl enable docker  # To start on boot"
+    echo ""
+    exit 1
+fi
+
 # Load environment variables
 if [ -f .env ]; then
     source .env

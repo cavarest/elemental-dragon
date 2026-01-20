@@ -200,7 +200,7 @@ public class FragmentManagerBehaviorTest {
     }
 
     @Test
-    @DisplayName("Can replace equipped fragment with different fragment")
+    @DisplayName("Cannot replace equipped fragment without unequipping first")
     public void testReplaceEquippedFragment() throws Exception {
         // Create another mock fragment for Agility
         Fragment agilityFragment = mock(Fragment.class);
@@ -216,15 +216,23 @@ public class FragmentManagerBehaviorTest {
         doNothing().when(agilityFragment).deactivate(any());
 
         // Equip Burning
-        fragmentManager.equipFragment(player, FragmentType.BURNING);
+        assertTrue(fragmentManager.equipFragment(player, FragmentType.BURNING));
         assertTrue(fragmentManager.hasFragmentEquipped(player));
 
-        // Equip Agility (should unequip Burning first)
-        fragmentManager.equipFragment(player, FragmentType.AGILITY);
+        // Try to equip Agility without unequipping first - should fail
+        assertFalse(fragmentManager.equipFragment(player, FragmentType.AGILITY));
         assertTrue(fragmentManager.hasFragmentEquipped(player));
 
-        // Verify Burning was deactivated and Agility was activated
+        // Verify Burning was NOT deactivated and Agility was NOT activated
+        verify(mockFragment, never()).deactivate(player);
+        verify(agilityFragment, never()).activate(player);
+
+        // Now unequip Burning and equip Agility - should succeed
+        assertTrue(fragmentManager.unequipFragment(player));
         verify(mockFragment).deactivate(player);
+
+        assertTrue(fragmentManager.equipFragment(player, FragmentType.AGILITY));
+        assertTrue(fragmentManager.hasFragmentEquipped(player));
         verify(agilityFragment).activate(player);
     }
 
