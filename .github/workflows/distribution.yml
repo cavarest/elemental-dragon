@@ -28,6 +28,38 @@ on:
         required: false
         type: boolean
         default: false
+  workflow_call:
+    inputs:
+      tag:
+        description: |
+          Git tag to distribute (e.g., v1.2.5).
+          The JAR must already be built and available in build/libs/.
+        required: true
+        type: string
+      release_title:
+        description: 'Title for the releases (optional, defaults to version)'
+        required: false
+        type: string
+      changelog_file:
+        description: 'Path to CHANGELOG.md (optional, defaults to CHANGELOG.md)'
+        required: false
+        type: string
+        default: 'CHANGELOG.md'
+      modrinth_only:
+        description: 'Only publish to Modrinth (skip Hangar)'
+        required: false
+        type: boolean
+        default: false
+      hangar_only:
+        description: 'Only publish to Hangar (skip Modrinth)'
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      MODRINTH_API_KEY:
+        required: true
+      HANGER_PAPERMC_API_KEY:
+        required: true
 
 jobs:
   # Job to prepare release notes (shared by both Modrinth and Hangar)
@@ -157,6 +189,24 @@ jobs:
       with:
         fetch-depth: 0
 
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+
+    - name: Build plugin using Gradle (production build)
+      run: |
+        echo "🏗️ Building production plugin..."
+        chmod +x build.sh
+        ./build.sh --production
+        echo "✅ Plugin built successfully"
+
     - name: Download dependency JARs
       run: |
         echo "📥 Downloading dependency JARs for GitHub release..."
@@ -211,6 +261,18 @@ jobs:
       with:
         java-version: '21'
         distribution: 'temurin'
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+
+    - name: Build plugin using Gradle (production build)
+      run: |
+        echo "🏗️ Building production plugin..."
+        chmod +x build.sh
+        ./build.sh --production
+        echo "✅ Plugin built successfully"
 
     - name: Publish to Hangar
       env:

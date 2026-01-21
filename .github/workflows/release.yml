@@ -213,6 +213,4 @@ jobs:
       uses: ./.github/workflows/distribution.yml
       with:
         tag: ${{ steps.next_version.outputs.tag }}
-        version: ${{ steps.next_version.outputs.next }}
         release_title: ${{ inputs.release_title }}
-        release_notes: ${{ inputs.release_notes }}
