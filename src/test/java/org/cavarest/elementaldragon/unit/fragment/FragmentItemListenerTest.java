@@ -464,4 +464,57 @@ public class FragmentItemListenerTest {
             verify(fragmentManager, never()).unequipFragment(any(), anyBoolean());
         }
     }
+
+    // ==================== CRITICAL REGRESSION TEST: Issue #22 ====================
+
+    @Test
+    @DisplayName("REGRESSION (Issue #22): onInventoryClickUnequip MUST be a NO-OP")
+    public void testOnInventoryClickUnequipIsAlwaysNoOp() {
+        // CRITICAL: This test ensures Issue #22 never regresses.
+        // The onInventoryClickUnequip handler MUST be a NO-OP - it should NEVER
+        // call unequipFragment() for ANY reason.
+        //
+        // Issue #22: When managing inventory (clicking/dragging fragments), abilities
+        // MUST stay equipped. The fact that a container is open does NOT change this.
+        //
+        // The only valid ways to unequip a fragment are:
+        // 1. Player explicitly unequips via command
+        // 2. Fragment is dropped (handled by onPlayerDropItem)
+        // 3. Fragment is no longer in inventory (handled by getEquippedFragment)
+        //
+        // This test verifies that onInventoryClickUnequip NEVER calls unequipFragment(),
+        // regardless of the scenario (container open/closed, player inventory, etc.)
+
+        try (MockedStatic<ElementalItems> mockedElementalItems = mockStatic(ElementalItems.class)) {
+            FragmentType burningType = FragmentType.BURNING;
+            mockedElementalItems.when(() -> ElementalItems.getFragmentType(fragmentItem))
+                .thenReturn(burningType);
+
+            org.bukkit.inventory.PlayerInventory mockedPlayerInventory = mock(org.bukkit.inventory.PlayerInventory.class);
+            when(mockedPlayerInventory.getType()).thenReturn(null);
+            when(player.getInventory()).thenReturn(mockedPlayerInventory);
+
+            org.bukkit.inventory.Inventory mockedContainer = mock(org.bukkit.inventory.Inventory.class);
+            when(mockedContainer.getType()).thenReturn(null);
+
+            org.bukkit.inventory.InventoryView mockedView = mock(org.bukkit.inventory.InventoryView.class);
+            when(mockedView.getTopInventory()).thenReturn(mockedContainer);
+
+            InventoryClickEvent event = mock(InventoryClickEvent.class);
+            when(event.getCurrentItem()).thenReturn(fragmentItem);
+            when(event.getWhoClicked()).thenReturn(player);
+            when(event.getClickedInventory()).thenReturn(mockedPlayerInventory);
+            when(event.getView()).thenReturn(mockedView);
+
+            // Player has Burning Fragment equipped
+            when(fragmentManager.getEquippedFragment(player)).thenReturn(burningType);
+
+            // Call the handler
+            fragmentItemListener.onInventoryClickUnequip(event);
+
+            // CRITICAL ASSERTION: onInventoryClickUnequip MUST NEVER call unequipFragment()
+            // This is the core of Issue #22 - abilities stay equipped when managing inventory
+            verify(fragmentManager, never()).unequipFragment(any(), anyBoolean());
+        }
+    }
 }
