@@ -273,7 +273,7 @@ jobs:
       env:
         HANGER_PAPERMC_API_KEY: ${{ secrets.HANGER_PAPERMC_API_KEY }}
       run: |
-        ./gradlew publishPluginPublicationToHangar --stacktrace
+        ./gradlew publishPluginPublicationToHangar -PhangarChangelog="${{ needs.prepare.outputs.hangar_notes }}" --stacktrace
 
     - name: Hangar Distribution Summary
       run: |

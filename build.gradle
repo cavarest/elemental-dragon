@@ -159,6 +159,8 @@ hangarPublish {
         id.set("ElementalDragon")
         channel.set("Release")
         apiKey.set(System.getenv("HANGER_PAPERMC_API_KEY"))
+        // Read changelog from project property (set by CI/CD)
+        changelog.set(project.findProperty("hangarChangelog") ?: "Release ${version.get()}")
 
         platforms {
             paper {
