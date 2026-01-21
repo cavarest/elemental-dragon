@@ -13,11 +13,6 @@ on:
         description: 'Title for the releases (optional, defaults to version)'
         required: false
         type: string
-      changelog_file:
-        description: 'Path to CHANGELOG.md (optional, defaults to CHANGELOG.md)'
-        required: false
-        type: string
-        default: 'CHANGELOG.md'
       modrinth_only:
         description: 'Only publish to Modrinth (skip Hangar)'
         required: false
@@ -40,11 +35,6 @@ on:
         description: 'Title for the releases (optional, defaults to version)'
         required: false
         type: string
-      changelog_file:
-        description: 'Path to CHANGELOG.md (optional, defaults to CHANGELOG.md)'
-        required: false
-        type: string
-        default: 'CHANGELOG.md'
       modrinth_only:
         description: 'Only publish to Modrinth (skip Hangar)'
         required: false
@@ -82,51 +72,29 @@ jobs:
         echo "tag=$TAG" >> $GITHUB_OUTPUT
         echo "📦 Preparing distribution for $VERSION"
 
-    - name: Extract Changelog
-      id: extract_changelog
-      shell: python
+    - name: Read Release Notes
+      id: read_release_notes
       run: |
-        import re
-        import os
-
-        changelog_file = "${{ inputs.changelog_file }}"
-        version = "${{ steps.version.outputs.version }}"
-        tag = "${{ steps.version.outputs.tag }}"
-
-        with open(changelog_file, 'r') as f:
-            content = f.read()
-
-        # Find the section for this version (e.g., [1.3.0])
-        # Look from the version header to the next version header or end of file
-        pattern = rf'##\[{version}\](.*?)\n(.*?)(?=##\[\d+\.\d+\.\d+\]|$)'
-
-        match = re.search(pattern, content, re.DOTALL)
-        if match:
-            notes = match.group(1).strip()
-        else:
-            notes = f"Release {tag}"
-
-        # Write to output file
-        with open('/tmp/changelog_notes.txt', 'w') as f:
-            f.write(notes)
-
-        print(f"Extracted {len(notes)} characters from changelog")
+        # Read release notes from RELEASE_NOTES.md if it exists
+        # (Create from RELEASE_NOTES.md.in template before releasing)
+        if [ -f RELEASE_NOTES.md ]; then
+          echo "notes<<EOF" >> $GITHUB_OUTPUT
+          cat RELEASE_NOTES.md >> $GITHUB_OUTPUT
+          echo EOF >> $GITHUB_OUTPUT
+          echo "✅ Found RELEASE_NOTES.md"
+        else
+          # Fallback to basic message
+          echo "notes=Release ${{ steps.version.outputs.tag }}" >> $GITHUB_OUTPUT
+          echo "⚠️ No RELEASE_NOTES.md found. Create from RELEASE_NOTES.md.in template."
+        fi
 
     - name: Prepare Modrinth Release Notes
       id: modrinth_notes
       run: |
         echo "📝 Generating Modrinth release notes..."
 
-        # Read release notes from file
-        if [ -f RELEASE_NOTES.md ]; then
-          cat RELEASE_NOTES.md > /tmp/modrinth_final.txt
-          echo "" >> /tmp/modrinth_final.txt
-        else
-          echo "No RELEASE_NOTES.md found, using basic notes" > /tmp/modrinth_final.txt
-        fi
-
-        cat /tmp/changelog_notes.txt >> /tmp/modrinth_final.txt
-        echo "" >> /tmp/modrinth_final.txt
+        # Use release notes from RELEASE_NOTES.md
+        echo "${{ steps.read_release_notes.outputs.notes }}" > /tmp/modrinth_final.txt
 
         # Output for workflow
         {
@@ -142,13 +110,8 @@ jobs:
       run: |
         echo "📝 Generating Hangar release notes..."
 
-        # Read release notes from file
-        if [ -f RELEASE_NOTES.md ]; then
-          cat RELEASE_NOTES.md > /tmp/hangar_final.txt
-          echo "" >> /tmp/hangar_final.txt
-        else
-          echo "No RELEASE_NOTES.md found, using basic notes" > /tmp/hangar_final.txt
-        fi
+        # Use release notes from RELEASE_NOTES.md
+        echo "${{ steps.read_release_notes.outputs.notes }}" > /tmp/hangar_final.txt
 
         # Add dependency note for Hangar
         {
@@ -159,9 +122,6 @@ jobs:
           echo ""
           echo "Place these JARs in your server's plugins folder before installing Elemental Dragon."
         } >> /tmp/hangar_final.txt
-
-        cat /tmp/changelog_notes.txt >> /tmp/hangar_final.txt
-        echo "" >> /tmp/hangar_final.txt
 
         # Output for workflow
         {

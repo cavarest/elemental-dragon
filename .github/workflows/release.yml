@@ -210,6 +210,54 @@ jobs:
         echo ""
         echo "🔗 https://github.com/${{ github.repository }}/releases/tag/${{ steps.next_version.outputs.tag }}"
 
+    - name: Update CHANGELOG and cleanup
+      shell: python
+      run: |
+        import os
+        import re
+
+        version = "${{ steps.next_version.outputs.next }}"
+        date = os.popen("date +%Y-%m-%d").read().strip()
+
+        print("📝 Updating CHANGELOG.md and cleaning up...")
+
+        # Read RELEASE_NOTES.md if it exists
+        if os.path.exists("RELEASE_NOTES.md"):
+            with open("RELEASE_NOTES.md", "r") as f:
+                release_notes = f.read()
+
+            # Create new changelog entry
+            new_entry = f"### [{version}] - {date}\n{release_notes}\n\n---\n"
+
+            # Read CHANGELOG.md
+            with open("CHANGELOG.md", "r") as f:
+                changelog = f.read()
+
+            # Insert new entry after "## [Unreleased]"
+            pattern = r"(## \[Unreleased\])"
+            changelog = re.sub(pattern, r"\1\n\n" + new_entry, changelog, count=1)
+
+            # Write updated CHANGELOG.md
+            with open("CHANGELOG.md", "w") as f:
+                f.write(changelog)
+
+            print("✅ Updated CHANGELOG.md")
+
+            # Remove RELEASE_NOTES.md
+            os.remove("RELEASE_NOTES.md")
+            print("✅ Removed RELEASE_NOTES.md (template remains for next release)")
+        else:
+            print("⚠️ No RELEASE_NOTES.md found, skipping changelog update")
+
+    - name: Commit CHANGELOG update
+      run: |
+        BRANCH="${{ steps.branch_name.outputs.branch }}"
+        git config user.name github-actions
+        git config user.email github-actions@github.com
+        git add CHANGELOG.md RELEASE_NOTES.md 2>/dev/null || true
+        git diff --staged --quiet || git commit -m "docs: update CHANGELOG for ${{ steps.next_version.outputs.tag }}"
+        git push origin "$BRANCH"
+
     - name: Distribute to Modrinth and Hangar
       uses: benc-uk/workflow-dispatch@v1
       with:

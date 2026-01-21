@@ -54,6 +54,10 @@ cd elemental-dragon
 - [Testing Frameworks](frameworks/) - PILAF and other testing frameworks
 - [HeadlessMC Testing](headlessmc/) - Automated testing without GUI
 
+### Release Management
+
+- [Release Process](releases/) - Complete guide to creating releases
+
 ### Architecture Overview
 
 Key architectural patterns and systems:

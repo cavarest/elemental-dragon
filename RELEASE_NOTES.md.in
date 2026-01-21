@@ -1,0 +1,40 @@
+# Release v{VERSION}
+
+## New Features
+<!-- Add new features here -->
+
+## Bug Fixes
+<!-- Add bug fixes here -->
+
+## Technical Changes
+<!-- Add technical changes here -->
+
+## For Players
+<!-- Description of player-facing changes -->
+
+## For Server Operators
+<!-- Description of technical/admin changes -->
+
+---
+
+## Installation
+
+1. Download the plugin JAR from the release below
+2. Place it in your Paper/Folia server's `plugins/` directory
+3. **Install required dependencies**:
+   - [ProtocolSidebar](https://jitpack.io/com/github/CatCoderr/ProtocolSidebar/master-SNAPSHOT/ProtocolSidebar-master-SNAPSHOT.jar)
+   - [FoliaLib](https://repo.tcoded.com/releases/com/tcoded/FoliaLib/0.5.1/FoliaLib-0.5.1.jar)
+4. Restart your server
+
+## Requirements
+
+- Paper 1.21.x or Folia
+- Java 21 or higher
+- Minecraft 1.21.x
+
+## Upgrading
+
+From previous versions:
+- No config changes required
+- Existing fragments remain equipped
+- No data migration needed
