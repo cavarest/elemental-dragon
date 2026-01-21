@@ -211,6 +211,7 @@ jobs:
 
     - name: Distribute to Modrinth and Hangar
       uses: ./.github/workflows/distribution.yml
+      secrets: inherit
       with:
         tag: ${{ steps.next_version.outputs.tag }}
         release_title: ${{ inputs.release_title }}
