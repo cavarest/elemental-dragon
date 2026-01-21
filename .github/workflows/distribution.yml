@@ -55,11 +55,6 @@ on:
         required: false
         type: boolean
         default: false
-    secrets:
-      MODRINTH_API_KEY:
-        required: true
-      HANGER_PAPERMC_API_KEY:
-        required: true
 
 jobs:
   # Job to prepare release notes (shared by both Modrinth and Hangar)

@@ -210,8 +210,9 @@ jobs:
         echo "🔗 https://github.com/${{ github.repository }}/releases/tag/${{ steps.next_version.outputs.tag }}"
 
     - name: Distribute to Modrinth and Hangar
-      uses: ./.github/workflows/distribution.yml
-      secrets: inherit
+      uses: benc-uk/workflow-dispatch@v1
       with:
-        tag: ${{ steps.next_version.outputs.tag }}
-        release_title: ${{ inputs.release_title }}
+        workflow: distribution.yml
+        repo: ${{ github.repository }}
+        token: ${{ secrets.GITHUB_TOKEN }}
+        inputs: '{"tag": "${{ steps.next_version.outputs.tag }}", "release_title": "${{ inputs.release_title }}"}'
