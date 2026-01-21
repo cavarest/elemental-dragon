@@ -19,6 +19,21 @@ The release process consists of three main workflows:
 
 Post-release tasks (CHANGELOG update, cleanup) are **fully automated**.
 
+## Recent Release: v1.3.6
+
+The v1.3.6 release (2026-01-21) was the first to use the fully automated release process:
+
+**Workflow Run**: https://github.com/cavarest/elemental-dragon/actions/runs/21204524436
+
+**What was automated**:
+- Created GitHub Release with JAR artifacts
+- Published to Modrinth successfully
+- Updated CHANGELOG.md with release notes
+- Removed RELEASE_NOTES.md
+- Committed and pushed all changes
+
+This release validated the entire automated release workflow, confirming that developers can now create releases with a single command and no manual post-release steps.
+
 ## Prerequisites
 
 Before creating a release, ensure:
@@ -31,6 +46,18 @@ Before creating a release, ensure:
 ## Release Checklist
 
 ### 1. Update Release Notes
+
+**About the Template System:**
+
+The project uses a template-based release notes system following Unix conventions:
+
+- `RELEASE_NOTES.md.in` - Template file (tracked in git)
+- `RELEASE_NOTES.md` - Current release notes (created from template, removed after release)
+
+This ensures:
+1. Developers always have a structured template to follow
+2. Release notes are consistent across releases
+3. The workflow can read the notes file directly (no regex parsing)
 
 Create `RELEASE_NOTES.md` from the template:
 
