@@ -4,7 +4,8 @@
 
 ![Dragon Egg Lightning Banner](https://img.shields.io/badge/Minecraft-Paper%201.21.8-blue?logo=minecraft&style=for-the-badge)
 ![Java](https://img.shields.io/badge/Java-21+-ED8B00?logo=openjdk&logoColor=white&style=for-the-badge)
-![Version](https://img.shields.io/badge/Version-1.1.0-green?style=for-the-badge)
+<!-- Version badge: Keep in sync with gradle.properties project.version -->
+![Version](https://img.shields.io/badge/Version-1.3.6-green?style=for-the-badge)
 ![Build](https://img.shields.io/badge/Build-Passing-brightgreen?style=for-the-badge)
 
 **Transform your server with elemental powers from ancient dragon fragments!**
@@ -21,7 +22,8 @@
 ```bash
 # Download the latest JAR from releases
 # Place in your Paper server's plugins directory
-cp ElementalDragon-1.1.0.jar /path/to/your/paper-server/plugins/
+# Note: Version in gradle.properties is the single source of truth
+cp ElementalDragon-1.3.6.jar /path/to/your/paper-server/plugins/
 
 # Restart your Paper 1.21.8+ server
 java -Xms2G -Xmx2G -jar paper-1.21.8-latest.jar nogui
@@ -902,7 +904,7 @@ tail -f logs/latest.log | grep -i elementaldragon
 **License**: MIT License - Free for personal and commercial use
 
 **Author**: The Cavarest project
-**Version**: 1.1.0
+**Version**: 1.3.6 (see gradle.properties)
 **Minecraft Version**: 1.21.8+
 **Paper API**: 1.21.8-R0.1-SNAPSHOT
 
