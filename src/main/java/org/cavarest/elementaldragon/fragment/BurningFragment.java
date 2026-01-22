@@ -18,6 +18,8 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
+import org.bukkit.damage.DamageSource;
+import org.bukkit.damage.DamageType;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -415,31 +417,12 @@ public class BurningFragment extends AbstractFragment implements Listener {
           // Apply fire ticks (visual effect)
           target.setFireTicks(20); // 1 second of fire (20 ticks)
 
-          // Create a custom damage event that bypasses armor
-          // 1 heart per second = 2.0 damage per second
-          // Running every 10 ticks (0.5 seconds) = 1.0 damage per interval
-          @SuppressWarnings("removal")
-          org.bukkit.event.entity.EntityDamageEvent damageEvent = new org.bukkit.event.entity.EntityDamageEvent(
-            target,
-            org.bukkit.event.entity.EntityDamageEvent.DamageCause.CUSTOM,
-            INFERNAL_DOMINION_DAMAGE_PER_TICK
-          );
-
-          // Set armor modifier to 0 to bypass armor
-          if (damageEvent.getDamage(org.bukkit.event.entity.EntityDamageEvent.DamageModifier.ARMOR) > 0) {
-            damageEvent.setDamage(org.bukkit.event.entity.EntityDamageEvent.DamageModifier.ARMOR, 0);
-          }
-
-          // Fire the event through the plugin manager so other abilities can react
-          plugin.getServer().getPluginManager().callEvent(damageEvent);
-
-          // If event wasn't cancelled, apply the damage
-          if (!damageEvent.isCancelled()) {
-            double finalDamage = damageEvent.getFinalDamage();
-            double currentHealth = target.getHealth();
-            double newHealth = Math.max(0, currentHealth - finalDamage);
-            target.setHealth(newHealth);
-          }
+          // Apply damage directly using modern API (Paper 1.21+)
+          // DamageSource.builder() with DamageType.MAGIC for ability damage
+          DamageSource damageSource = DamageSource.builder(DamageType.MAGIC)
+              .withDirectEntity(player)
+              .build();
+          target.damage(INFERNAL_DOMINION_DAMAGE_PER_TICK, damageSource);
 
           // Visual feedback for affected entity
           target.getWorld().spawnParticle(
@@ -633,21 +616,18 @@ public class BurningFragment extends AbstractFragment implements Listener {
       // Cancel the original fireball damage event
       event.setCancelled(true);
 
-      // Fire the event through the plugin manager so other abilities can react
-      @SuppressWarnings("removal")
-      org.bukkit.event.entity.EntityDamageEvent damageEvent = new org.bukkit.event.entity.EntityDamageEvent(
-        target,
-        org.bukkit.event.entity.EntityDamageEvent.DamageCause.CUSTOM,
-        customDamage
-      );
-      plugin.getServer().getPluginManager().callEvent(damageEvent);
-
-      // If event wasn't cancelled, apply the TRUE damage (ignore armor, strength, etc.)
-      if (!damageEvent.isCancelled()) {
-        double currentHealth = target.getHealth();
-        double newHealth = Math.max(0, currentHealth - customDamage);
-        target.setHealth(newHealth);
+      // Get the shooter (player who fired the fireball)
+      // getShooter() returns ProjectileSource, check if it's a Player
+      if (!(fireball.getShooter() instanceof Player)) {
+        return; // Only handle player-fired fireballs
       }
+      Player shooter = (Player) fireball.getShooter();
+
+      // Apply damage directly using modern API (Paper 1.21+)
+      DamageSource damageSource = DamageSource.builder(DamageType.MAGIC)
+          .withDirectEntity(shooter)
+          .build();
+      target.damage(customDamage, damageSource);
 
       // Apply fire ticks
       target.setFireTicks(40); // 2 seconds of fire
@@ -706,21 +686,12 @@ public class BurningFragment extends AbstractFragment implements Listener {
         continue;
       }
 
-      // Fire the event through the plugin manager so other abilities can react
-      @SuppressWarnings("removal")
-      org.bukkit.event.entity.EntityDamageEvent damageEvent = new org.bukkit.event.entity.EntityDamageEvent(
-        target,
-        org.bukkit.event.entity.EntityDamageEvent.DamageCause.CUSTOM,
-        damage
-      );
-      plugin.getServer().getPluginManager().callEvent(damageEvent);
-
-      // If event wasn't cancelled, apply the TRUE damage (ignore armor, strength, etc.)
-      if (!damageEvent.isCancelled()) {
-        double currentHealth = target.getHealth();
-        double newHealth = Math.max(0, currentHealth - damage);
-        target.setHealth(newHealth);
-      }
+      // Apply damage directly using modern API (Paper 1.21+)
+      Entity damager = shooter != null ? shooter : target;
+      DamageSource damageSource = DamageSource.builder(DamageType.MAGIC)
+          .withDirectEntity(damager)
+          .build();
+      target.damage(damage, damageSource);
 
       // Apply fire ticks
       target.setFireTicks(40); // 2 seconds of fire

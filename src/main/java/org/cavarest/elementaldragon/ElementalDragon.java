@@ -16,9 +16,7 @@ import org.cavarest.elementaldragon.crafting.CraftedCountManager;
 import org.cavarest.elementaldragon.crafting.CraftingListener;
 import org.cavarest.elementaldragon.crafting.CraftingManager;
 import org.cavarest.elementaldragon.fragment.FragmentManager;
-import org.cavarest.elementaldragon.fragment.FragmentItemListener;
 import org.cavarest.elementaldragon.hud.PlayerPreferenceManager;
-import org.cavarest.elementaldragon.hud.FragmentHudManager;
 import org.cavarest.elementaldragon.hud.HudManager;
 import org.cavarest.elementaldragon.lore.ChronicleManager;
 import org.cavarest.elementaldragon.tracking.ElementalPlayerTracker;
@@ -39,7 +37,6 @@ public class ElementalDragon extends JavaPlugin {
   private AbilityManager abilityManager;
   private FragmentManager fragmentManager;
   private HudManager hudManager;
-  private FragmentHudManager fragmentHudManager;
   private CraftingManager craftingManager;
   private CraftedCountManager craftedCountManager;
   private ChronicleManager chronicleManager;
@@ -60,8 +57,6 @@ public class ElementalDragon extends JavaPlugin {
     this.fragmentManager = new FragmentManager(this, cooldownManager);
     this.playerTracker = new ElementalPlayerTracker(this);
     this.hudManager = new HudManager(this, abilityManager, fragmentManager, cooldownManager);
-    // FragmentHudManager is redundant - HudManager already handles both lightning and fragment status
-    // this.fragmentHudManager = new FragmentHudManager(this, fragmentManager);
     this.craftingManager = new CraftingManager(this);
     this.craftedCountManager = new CraftedCountManager(this);
     this.playerPreferenceManager = new PlayerPreferenceManager();
@@ -84,10 +79,6 @@ public class ElementalDragon extends JavaPlugin {
     if (playerPreferenceManager != null) {
       playerPreferenceManager.clearCache();
     }
-    // FragmentHudManager disabled - using combined HudManager instead
-    // if (fragmentHudManager != null) {
-    //   fragmentHudManager.shutdown();
-    // }
     getLogger().info("Elemental Dragon plugin disabled!");
   }
 
@@ -142,16 +133,11 @@ public class ElementalDragon extends JavaPlugin {
       getServer().getPluginManager().registerEvents(playerTracker, this);
     }
 
-    // Register fragment item listener for item loss detection, container restrictions, and right-click equip
+    // Register unified fragment item listener (handles equip, drop, container restrictions, protection)
     if (fragmentManager != null) {
-      org.cavarest.elementaldragon.fragment.FragmentItemListener fragmentItemListener =
-        new org.cavarest.elementaldragon.fragment.FragmentItemListener(this, fragmentManager);
-      getServer().getPluginManager().registerEvents(fragmentItemListener, this);
-
-      // Register listener for drop detection and unequip
-      org.cavarest.elementaldragon.listener.FragmentItemListener dropListener =
+      org.cavarest.elementaldragon.listener.FragmentItemListener fragmentItemListener =
         new org.cavarest.elementaldragon.listener.FragmentItemListener(this, fragmentManager);
-      getServer().getPluginManager().registerEvents(dropListener, this);
+      getServer().getPluginManager().registerEvents(fragmentItemListener, this);
     }
 
     // Register crafting listener for Heavy Core validation in fragment recipes
@@ -175,10 +161,6 @@ public class ElementalDragon extends JavaPlugin {
 
   public HudManager getHudManager() {
     return hudManager;
-  }
-
-  public FragmentHudManager getFragmentHudManager() {
-    return fragmentHudManager;
   }
 
   public CraftingManager getCraftingManager() {

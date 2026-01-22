@@ -1,129 +1,234 @@
 package org.cavarest.elementaldragon.listener;
 
+import org.bukkit.Material;
+import org.bukkit.entity.Item;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.entity.ItemDespawnEvent;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
-import org.bukkit.event.player.PlayerDropItemEvent;
-import org.bukkit.event.player.PlayerPickupItemEvent;
+import org.bukkit.event.entity.EntityPickupItemEvent;
+import org.bukkit.event.entity.ItemDespawnEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryAction;
-import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.inventory.InventoryDragEvent;
+import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.event.player.PlayerDropItemEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.entity.Player;
-import org.bukkit.entity.Item;
 import org.cavarest.elementaldragon.ElementalDragon;
 import org.cavarest.elementaldragon.fragment.FragmentManager;
 import org.cavarest.elementaldragon.fragment.FragmentType;
 import org.cavarest.elementaldragon.item.ElementalItems;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.minimessage.MiniMessage;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 /**
- * Listener for fragment item restrictions:
- * 1. Enforces one-fragment limit (Issue #20)
- * 2. Prevents storage in containers (Issue #20)
- * 3. Detects when fragments leave player inventory (drop, despawn) and unequips them
- * 4. Unequips on inventory click to container (Issue #22), but NOT when organizing own inventory
- * 5. Protects fragments from destruction (fire, lava, cactus, etc.)
+ * Unified listener for all fragment item interactions.
+ *
+ * <p>Handles:</p>
+ * <ul>
+ *   <li>Right-click to equip fragment</li>
+ *   <li>One-fragment limit enforcement (can only carry one fragment type at a time)</li>
+ *   <li>Duplicate fragment pickup prevention</li>
+ *   <li>Container storage restrictions</li>
+ *   <li>Automatic unequip on drop</li>
+ *   <li>Fragment protection (indestructible when dropped)</li>
+ * </ul>
  */
 public class FragmentItemListener implements Listener {
 
   private final ElementalDragon plugin;
   private final FragmentManager fragmentManager;
-  private final MiniMessage miniMessage = MiniMessage.miniMessage();
+  private final Map<UUID, Long> lastEquipClickTimes;
+
+  // Cooldown between equip attempts (500ms) to prevent spam clicking
+  private static final long EQUIP_COOLDOWN_MS = 500;
 
   public FragmentItemListener(ElementalDragon plugin, FragmentManager fragmentManager) {
     this.plugin = plugin;
     this.fragmentManager = fragmentManager;
+    this.lastEquipClickTimes = new HashMap<>();
   }
 
-  // ===== Item Loss Detection =====
+  // ===== Right-Click Equip =====
+
+  /**
+   * Handle fragment right-click to equip.
+   * Uses HIGHEST priority to run before item's default behaviors (like FIRE_CHARGE throwing fire).
+   */
+  @EventHandler(priority = EventPriority.HIGHEST)
+  public void onPlayerInteract(PlayerInteractEvent event) {
+    // Only handle right-click actions
+    if (event.getAction() != Action.RIGHT_CLICK_AIR &&
+        event.getAction() != Action.RIGHT_CLICK_BLOCK) {
+      return;
+    }
+
+    Player player = event.getPlayer();
+    UUID playerId = player.getUniqueId();
+
+    // Check cooldown to prevent spam clicking
+    long lastClickTime = lastEquipClickTimes.getOrDefault(playerId, 0L);
+    long currentTime = System.currentTimeMillis();
+    if (currentTime - lastClickTime < EQUIP_COOLDOWN_MS) {
+      // Still in cooldown, just cancel the event but don't send any message
+      event.setCancelled(true);
+      return;
+    }
+
+    // Get item from hand (main hand or offhand)
+    ItemStack item = getItemInHand(player);
+    if (item == null || !item.hasItemMeta()) {
+      return;
+    }
+
+    // Check if item is a fragment
+    FragmentType fragmentType = getFragmentType(item);
+    if (fragmentType == null) {
+      return;
+    }
+
+    // Cancel the event to prevent default item behaviors (FIRE_CHARGE throwing fire, HEAVY_CORE placement)
+    event.setCancelled(true);
+
+    // Update last click time
+    lastEquipClickTimes.put(playerId, currentTime);
+
+    // Equip the fragment
+    boolean success = fragmentManager.equipFragment(player, fragmentType);
+
+    if (success) {
+      // Check if already equipped message was shown by FragmentManager
+      FragmentType currentlyEquipped = fragmentManager.getEquippedFragment(player);
+      if (currentlyEquipped == fragmentType) {
+        // FragmentManager handles "Already equipped!" message internally
+        // No additional action needed
+      } else {
+        player.sendMessage(net.kyori.adventure.text.Component.text()
+            .append(net.kyori.adventure.text.Component.text("Equipped ", net.kyori.adventure.text.format.NamedTextColor.GOLD))
+            .append(net.kyori.adventure.text.Component.text(fragmentType.getDisplayName(), net.kyori.adventure.text.format.NamedTextColor.WHITE))
+            .append(net.kyori.adventure.text.Component.text("!", net.kyori.adventure.text.format.NamedTextColor.GOLD))
+            .append(net.kyori.adventure.text.Component.newline())
+            .append(net.kyori.adventure.text.Component.text(fragmentType.getPassiveBonus(), net.kyori.adventure.text.format.NamedTextColor.GRAY))
+            .build()
+        );
+      }
+    }
+  }
+
+  /**
+   * Get the item in the player's hand (checks both main hand and offhand).
+   */
+  private ItemStack getItemInHand(Player player) {
+    // Check main hand first
+    ItemStack mainHand = player.getInventory().getItemInMainHand();
+    if (mainHand != null && mainHand.hasItemMeta()) {
+      return mainHand;
+    }
+    // Then check offhand
+    return player.getInventory().getItemInOffHand();
+  }
+
+  // ===== Pickup Restriction =====
+
+  /**
+   * Enforce one-fragment limit - prevent pickup of additional fragments.
+   * Players can only carry one fragment type at a time (not counting duplicates of same type).
+   * Uses modern EntityPickupItemEvent instead of deprecated PlayerPickupItemEvent.
+   */
+  @EventHandler(priority = EventPriority.HIGH)
+  public void onEntityPickupItem(EntityPickupItemEvent event) {
+    if (!(event.getEntity() instanceof Player)) {
+      return;
+    }
+
+    Player player = (Player) event.getEntity();
+    ItemStack pickupItem = event.getItem().getItemStack();
+
+    // Check if the item being picked up is a fragment
+    FragmentType pickupType = getFragmentType(pickupItem);
+    if (pickupType == null) {
+      return;
+    }
+
+    // Count how many of this SAME fragment type the player already has
+    int existingCount = countFragmentType(player.getInventory().getContents(), pickupType);
+    if (existingCount > 0) {
+      // Cancel pickup - player already has this fragment type
+      event.setCancelled(true);
+      player.sendMessage(net.kyori.adventure.text.Component.text()
+          .append(net.kyori.adventure.text.Component.text("⚠ You can only possess ONE ", net.kyori.adventure.text.format.NamedTextColor.RED))
+          .append(net.kyori.adventure.text.Component.text(pickupType.getDisplayName(), net.kyori.adventure.text.format.NamedTextColor.WHITE))
+          .append(net.kyori.adventure.text.Component.text(" at a time!", net.kyori.adventure.text.format.NamedTextColor.RED))
+          .append(net.kyori.adventure.text.Component.newline())
+          .append(net.kyori.adventure.text.Component.text("Drop or store your existing ", net.kyori.adventure.text.format.NamedTextColor.GRAY))
+          .append(net.kyori.adventure.text.Component.text(pickupType.getDisplayName(), net.kyori.adventure.text.format.NamedTextColor.WHITE))
+          .append(net.kyori.adventure.text.Component.text(" before picking up another.", net.kyori.adventure.text.format.NamedTextColor.GRAY))
+          .build()
+      );
+    }
+  }
+
+  /**
+   * Count how many items of a specific fragment type exist in an inventory.
+   */
+  private int countFragmentType(ItemStack[] contents, FragmentType targetType) {
+    int count = 0;
+    for (ItemStack item : contents) {
+      FragmentType type = getFragmentType(item);
+      if (type == targetType) {
+        count += item.getAmount();
+      }
+    }
+    return count;
+  }
+
+  // ===== Drop Detection =====
 
   /**
    * Detect when a player drops a fragment and unequip it ONLY if it's the currently equipped fragment.
    */
   @EventHandler(priority = EventPriority.MONITOR)
   public void onPlayerDropItem(PlayerDropItemEvent event) {
-    ItemStack droppedItem = event.getItemDrop().getItemStack();
-    FragmentType droppedFragmentType = getFragmentType(droppedItem);
-
-    if (droppedFragmentType != null) {
-      Player player = event.getPlayer();
-
-      // Only unequip if the dropped fragment matches the currently equipped one
-      FragmentType equippedFragmentType = fragmentManager.getEquippedFragment(player);
-      if (equippedFragmentType == droppedFragmentType) {
-        fragmentManager.unequipFragment(player);
-        player.sendMessage(miniMessage.deserialize(
-          "<red>Your " + droppedFragmentType.getDisplayName() + " abilities have been withdrawn!</red>"
-        ));
-      }
-    }
-  }
-
-  /**
-   * Enforce one-fragment limit - prevent pickup of additional fragments (Issue #20).
-   * Players can only carry one fragment type at a time.
-   * This check considers: inventory, equipped fragment, AND cursor (item being held).
-   */
-  @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-  public void onPlayerPickupFragment(PlayerPickupItemEvent event) {
-    ItemStack pickedUpItem = event.getItem().getItemStack();
-    FragmentType pickedUpFragmentType = getFragmentType(pickedUpItem);
-
-    if (pickedUpFragmentType == null) {
-      return; // Not a fragment
-    }
-
     Player player = event.getPlayer();
+    ItemStack droppedItem = event.getItemDrop().getItemStack();
 
-    // Check if player already has a fragment in their inventory
-    FragmentType existingFragmentType = null;
-    for (ItemStack item : player.getInventory().getContents()) {
-      if (item != null) {
-        FragmentType fragmentType = getFragmentType(item);
-        if (fragmentType != null) {
-          existingFragmentType = fragmentType;
-          break;
-        }
-      }
+    // Check if the dropped item is a fragment
+    FragmentType droppedType = getFragmentType(droppedItem);
+    if (droppedType == null) {
+      return;
     }
 
-    // Also check if player has a different fragment EQUIPPED (even if not in inventory)
-    FragmentType equippedFragmentType = fragmentManager.getEquippedFragment(player);
-    if (equippedFragmentType != null && equippedFragmentType != pickedUpFragmentType) {
-      // Player has a different fragment equipped - prevent pickup
-      existingFragmentType = equippedFragmentType;
+    // Check if this fragment type is currently equipped
+    FragmentType equippedType = fragmentManager.getEquippedFragment(player);
+    if (equippedType == null) {
+      return;
     }
 
-    // IMPORTANT: Also check if player is HOLDING a fragment on their cursor
-    // This prevents pickup when clicking on an equipped fragment (which unequips it,
-    // then the item goes to cursor, then pickup sees no fragment equipped)
-    ItemStack cursorItem = player.getItemOnCursor();
-    FragmentType cursorFragmentType = getFragmentType(cursorItem);
-    if (cursorFragmentType != null && cursorFragmentType != pickedUpFragmentType) {
-      // Player is holding a different fragment on cursor - prevent pickup
-      existingFragmentType = cursorFragmentType;
-    }
+    // If the dropped fragment matches the equipped fragment, unequip it
+    if (droppedType == equippedType) {
+      fragmentManager.unequipFragment(player);
 
-    // If player already has a fragment (any type), prevent pickup of another
-    if (existingFragmentType != null && existingFragmentType != pickedUpFragmentType) {
-      event.setCancelled(true);
-      player.sendMessage(miniMessage.deserialize(
-        "<red>⚠ You can only carry one fragment at a time!</red>\n" +
-        "<gray>You already have the <white>" + existingFragmentType.getDisplayName() +
-        "</white> equipped.</gray>"
-      ));
+      // Inform the player that abilities have been withdrawn
+      player.sendMessage(net.kyori.adventure.text.Component.text()
+          .append(net.kyori.adventure.text.Component.text("Your ", net.kyori.adventure.text.format.NamedTextColor.YELLOW))
+          .append(net.kyori.adventure.text.Component.text(droppedType.getDisplayName(), net.kyori.adventure.text.format.NamedTextColor.WHITE))
+          .append(net.kyori.adventure.text.Component.text(" abilities have been withdrawn.", net.kyori.adventure.text.format.NamedTextColor.YELLOW))
+          .append(net.kyori.adventure.text.Component.newline())
+          .append(net.kyori.adventure.text.Component.text("The fragment item remains on the ground. Pick it up and re-equip to reactivate.", net.kyori.adventure.text.format.NamedTextColor.GRAY))
+          .build()
+      );
     }
   }
 
+  // ===== Container Restrictions =====
+
   /**
-   * Prevent storage of fragments in containers (chests, hoppers, etc.) - Issue #20.
+   * Prevent storage of fragments in containers (chests, hoppers, etc.).
    */
   @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
   public void onInventoryClickFragment(InventoryClickEvent event) {
@@ -141,24 +246,20 @@ public class FragmentItemListener implements Listener {
       return;
     }
 
-    Player player = (Player) event.getWhoClicked();
-
-    // NOTE: We do NOT unequip here anymore (Issue #22 fix)
-    // The smart unequip logic is in onInventoryClickUnequip at MONITOR priority
-    // This handler only enforces container restrictions
-
     // Check if the target inventory is a container (not player inventory)
     InventoryType clickedInventoryType = event.getClickedInventory() != null
-      ? event.getClickedInventory().getType()
-      : null;
+        ? event.getClickedInventory().getType()
+        : null;
 
     // Prevent moving fragments into containers
     if (clickedInventoryType != null && clickedInventoryType != InventoryType.PLAYER) {
       event.setCancelled(true);
-      event.getWhoClicked().sendMessage(miniMessage.deserialize(
-        "<red>⚠ Fragments cannot be stored in containers!</red>\n" +
-        "<gray>They must remain in your personal inventory.</gray>"
-      ));
+      event.getWhoClicked().sendMessage(net.kyori.adventure.text.Component.text()
+          .append(net.kyori.adventure.text.Component.text("⚠ Fragments cannot be stored in containers!", net.kyori.adventure.text.format.NamedTextColor.RED))
+          .append(net.kyori.adventure.text.Component.newline())
+          .append(net.kyori.adventure.text.Component.text("They must remain in your personal inventory.", net.kyori.adventure.text.format.NamedTextColor.GRAY))
+          .build()
+      );
       return;
     }
 
@@ -169,10 +270,12 @@ public class FragmentItemListener implements Listener {
       if (event.getView().getTopInventory() != null &&
           event.getView().getTopInventory().getType() != InventoryType.PLAYER) {
         event.setCancelled(true);
-        event.getWhoClicked().sendMessage(miniMessage.deserialize(
-          "<red>⚠ Fragments cannot be stored in containers!</red>\n" +
-          "<gray>They must remain in your personal inventory.</gray>"
-        ));
+        event.getWhoClicked().sendMessage(net.kyori.adventure.text.Component.text()
+            .append(net.kyori.adventure.text.Component.text("⚠ Fragments cannot be stored in containers!", net.kyori.adventure.text.format.NamedTextColor.RED))
+            .append(net.kyori.adventure.text.Component.newline())
+            .append(net.kyori.adventure.text.Component.text("They must remain in your personal inventory.", net.kyori.adventure.text.format.NamedTextColor.GRAY))
+            .build()
+        );
       }
     }
 
@@ -186,34 +289,29 @@ public class FragmentItemListener implements Listener {
         if (event.getClickedInventory() != null &&
             event.getClickedInventory().getType() != InventoryType.PLAYER) {
           event.setCancelled(true);
-          event.getWhoClicked().sendMessage(miniMessage.deserialize(
-            "<red>⚠ Fragments cannot be stored in containers!</red>\n" +
-            "<gray>They must remain in your personal inventory.</gray>"
-          ));
+          event.getWhoClicked().sendMessage(net.kyori.adventure.text.Component.text()
+              .append(net.kyori.adventure.text.Component.text("⚠ Fragments cannot be stored in containers!", net.kyori.adventure.text.format.NamedTextColor.RED))
+              .append(net.kyori.adventure.text.Component.newline())
+              .append(net.kyori.adventure.text.Component.text("They must remain in your personal inventory.", net.kyori.adventure.text.format.NamedTextColor.GRAY))
+              .build()
+          );
         }
       }
     }
   }
 
   /**
-   * Prevent storage of fragments in containers via drag operation - Issue #20.
+   * Prevent storage of fragments in containers via drag operation.
    */
   @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
   public void onInventoryDragFragment(InventoryDragEvent event) {
     // Check if any of the dragged items are fragments
     for (ItemStack item : event.getNewItems().values()) {
       if (item != null && isFragmentItem(item)) {
-        Player player = (Player) event.getWhoClicked();
-        FragmentType draggedFragmentType = getFragmentType(item);
-
-        // NOTE: We do NOT unequip here anymore (Issue #22 fix)
-        // The smart unequip logic is in onInventoryClickUnequip at MONITOR priority
-        // This handler only enforces container restrictions
-
         // Check if drag targets a container inventory
         InventoryType topInventoryType = event.getView().getTopInventory() != null
-          ? event.getView().getTopInventory().getType()
-          : null;
+            ? event.getView().getTopInventory().getType()
+            : null;
 
         // If dragging into a container (top inventory exists and is not player inventory)
         if (topInventoryType != null && topInventoryType != InventoryType.PLAYER) {
@@ -224,49 +322,16 @@ public class FragmentItemListener implements Listener {
             }
             // This slot is in the container - cancel
             event.setCancelled(true);
-            event.getWhoClicked().sendMessage(miniMessage.deserialize(
-              "<red>⚠ Fragments cannot be stored in containers!</red>\n" +
-              "<gray>They must remain in your personal inventory.</gray>"
-            ));
+            event.getWhoClicked().sendMessage(net.kyori.adventure.text.Component.text()
+                .append(net.kyori.adventure.text.Component.text("⚠ Fragments cannot be stored in containers!", net.kyori.adventure.text.format.NamedTextColor.RED))
+                .append(net.kyori.adventure.text.Component.newline())
+                .append(net.kyori.adventure.text.Component.text("They must remain in your personal inventory.", net.kyori.adventure.text.format.NamedTextColor.GRAY))
+                .build()
+            );
             return;
           }
         }
       }
-    }
-  }
-
-  /**
-   * NOTE: This handler is intentionally a NO-OP for Issue #22.
-   *
-   * Issue #22: When managing inventory (clicking/dragging fragments), abilities
-   * should stay equipped. The fact that a container is open does NOT change this.
-   *
-   * The only ways to unequip a fragment are:
-   * 1. Player explicitly unequips via command
-   * 2. Fragment is dropped (handled by onPlayerDropItem)
-   * 3. Fragment is no longer in inventory (handled by getEquippedFragment)
-   *
-   * @deprecated No longer needed after Issue #22 fix. Kept as placeholder for tests.
-   */
-  @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-  @Deprecated
-  public void onInventoryClickUnequip(InventoryClickEvent event) {
-    // NO-OP: Do not unequip on inventory clicks (Issue #22 fix)
-    // Abilities stay equipped when managing inventory, regardless of container state
-  }
-
-  /**
-   * Detect when a fragment despawns and unequip if the owner had it equipped.
-   */
-  @EventHandler(priority = EventPriority.MONITOR)
-  public void onItemDespawn(ItemDespawnEvent event) {
-    ItemStack despawnedItem = event.getEntity().getItemStack();
-    FragmentType fragmentType = getFragmentType(despawnedItem);
-
-    if (fragmentType != null) {
-      // Find the owner and unequip
-      // Note: We can't easily track who owned the item, so we just log it
-      plugin.getLogger().info("A " + fragmentType.getDisplayName() + " has despawned");
     }
   }
 
@@ -293,11 +358,20 @@ public class FragmentItemListener implements Listener {
   }
 
   /**
-   * Check if an ItemStack is a fragment item.
+   * Detect when a fragment despawns and log it.
    */
-  private boolean isFragmentItem(ItemStack item) {
-    return ElementalItems.getFragmentType(item) != null;
+  @EventHandler(priority = EventPriority.MONITOR)
+  public void onItemDespawn(ItemDespawnEvent event) {
+    ItemStack despawnedItem = event.getEntity().getItemStack();
+    FragmentType fragmentType = getFragmentType(despawnedItem);
+
+    if (fragmentType != null) {
+      // Log the despawn (we can't easily track who owned the item)
+      plugin.getLogger().info("A " + fragmentType.getDisplayName() + " has despawned");
+    }
   }
+
+  // ===== Helper Methods =====
 
   /**
    * Get the fragment type from an item.
@@ -305,5 +379,12 @@ public class FragmentItemListener implements Listener {
    */
   private FragmentType getFragmentType(ItemStack item) {
     return ElementalItems.getFragmentType(item);
+  }
+
+  /**
+   * Check if an ItemStack is a fragment item.
+   */
+  private boolean isFragmentItem(ItemStack item) {
+    return ElementalItems.getFragmentType(item) != null;
   }
 }
