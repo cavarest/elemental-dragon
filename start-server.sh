@@ -42,9 +42,17 @@ RESET=false
 CLEAN=false
 BLOCKING=false
 WIPE_WORLD=false
+PROFILE="normal-survival-normal"
 
 for arg in "$@"; do
     case $arg in
+        -p=*|--profile=*)
+            PROFILE="${arg#*=}"
+            ;;
+        -p|--profile)
+            shift
+            PROFILE="$1"
+            ;;
         -r|--rebuild)
             RESET=true
             ;;
@@ -61,25 +69,41 @@ for arg in "$@"; do
             echo "Usage: $0 [OPTIONS]"
             echo ""
             echo "Options:"
-            echo "  -r, --rebuild    Rebuild Docker image and restart server"
-            echo "  -c, --clean      Clean build (Gradle clean + fresh Docker image)"
-            echo "  -w, --wipe-world Clear world data before starting (preserves config)"
-            echo "  -b, --blocking   Start in blocking mode (logs shown directly)"
-            echo "  -h, --help       Show this help message"
+            echo "  -p, --profile NAME  Use world profile (default: 'normal-survival-normal')"
+            echo "  -r, --rebuild       Rebuild Docker image and restart server"
+            echo "  -c, --clean         Clean build (Gradle clean + fresh Docker image)"
+            echo "  -w, --wipe-world    Clear world data before starting (preserves config)"
+            echo "  -b, --blocking      Start in blocking mode (logs shown directly)"
+            echo "  -h, --help         Show this help message"
+            echo ""
+            echo "World Profiles:"
+            echo "  normal-survival-normal      Normal terrain, survival, all mobs"
+            echo "  flat-creative-none          Flat terrain, creative, no mobs"
+            echo "  flat-survival-peaceful      Flat terrain, survival, passive mobs only"
+            echo "  flat-survival-normal        Flat terrain, survival, all mobs"
             echo ""
             echo "Modes:"
             echo "  Daemon (default)    Server runs in background, use 'docker logs -f' to view"
             echo "  Blocking (-b)        Server logs shown directly, Ctrl+C to stop"
             echo ""
             echo "Examples:"
-            echo "  $0                  # Start server in daemon mode (background)"
-            echo "  $0 -b               # Start server in blocking mode (see logs)"
-            echo "  $0 -r               # Rebuild and start in daemon mode"
-            echo "  $0 -r -b            # Rebuild and start in blocking mode"
-            echo "  $0 -c               # Clean rebuild and start in daemon mode"
-            echo "  $0 -c -b            # Clean rebuild and start in blocking mode"
-            echo "  $0 -w               # Wipe world and start in daemon mode"
-            echo "  $0 -w -b            # Wipe world and start in blocking mode"
+            echo "  $0                     # Start server with default profile"
+            echo "  $0 -p flat-creative-none         # Start server with flat creative profile"
+            echo "  $0 -p flat-creative-none -b      # Flat creative profile, blocking mode"
+            echo "  $0 -p flat-creative-none -w      # Flat creative profile, wipe world first"
+            echo "  $0 -r                   # Rebuild and start (default profile)"
+            echo "  $0 -r -p flat-survival-normal -b    # Rebuild, flat survival profile, blocking mode"
+            echo ""
+            echo "Available Profiles:"
+            if [ -d "world-profiles" ]; then
+                for profile in world-profiles/*.sh; do
+                    if [ -f "$profile" ]; then
+                        name=$(basename "$profile" .sh)
+                        desc=$(grep "^# " "$profile" | head -1 | sed 's/^# //')
+                        printf "  %-20s %s\n" "$name" "$desc"
+                    fi
+                done
+            fi
             exit 0
             ;;
     esac
@@ -89,8 +113,31 @@ echo "================================"
 echo "Starting Paper MC Server"
 echo "================================"
 
+# Load world profile
+PROFILE_FILE="world-profiles/${PROFILE}.sh"
+if [ ! -f "$PROFILE_FILE" ]; then
+    echo "❌ Profile not found: ${PROFILE}"
+    echo ""
+    echo "Available profiles:"
+    for profile in world-profiles/*.sh; do
+        if [ -f "$profile" ]; then
+            name=$(basename "$profile" .sh)
+            echo "  - $name"
+        fi
+    done
+    exit 1
+fi
+
+echo "📁 Loading profile: ${PROFILE}"
+source "$PROFILE_FILE"
+echo "   World name: ${WORLD_NAME}"
+echo "   Level type: ${LEVEL_TYPE:-default}"
+echo "   Game mode: ${MODE:-survival}"
+echo ""
+
+
 # Check if server is already running and stop it
-CONTAINER_NAME=${CONTAINER_NAME:-papermc-elementaldragon}
+CONTAINER_NAME="${CONTAINER_NAME:-papermc-elementaldragon}-${PROFILE}"
 echo "🔍 Checking if server is already running..."
 
 # Check for our container
@@ -209,7 +256,8 @@ if [ "$WIPE_WORLD" = true ]; then
     else
         echo "🗑️  WORLD WIPE MODE: Clearing world data only..."
         echo ""
-        echo "⚠️  This will delete ALL world data (world, world_nether, world_the_end)"
+        echo "⚠️  This will delete ALL world data for profile: ${PROFILE}"
+        echo "   World: ${WORLD_NAME}"
         echo "   Server configs, plugins, and player data will be preserved."
         echo ""
 
@@ -217,7 +265,7 @@ if [ "$WIPE_WORLD" = true ]; then
         if docker ps --format "table {{.Names}}" | grep -q "^${CONTAINER_NAME}$"; then
             echo "Stopping server to wipe world..."
             docker-compose down 2>/dev/null || true
-            docker stop ${CONTAINER_NAME:-papermc-elementaldragon} 2>/dev/null || true
+            docker stop ${CONTAINER_NAME} 2>/dev/null || true
             echo "✅ Server stopped"
             echo ""
         fi
@@ -229,24 +277,24 @@ if [ "$WIPE_WORLD" = true ]; then
         else
             WORLDS_REMOVED=false
 
-            # Remove main world
-            if [ -d "server-data/world" ]; then
-                echo "Removing world/ (Overworld)..."
-                rm -rf server-data/world/
+            # Remove main world (profile-specific)
+            if [ -d "server-data/${WORLD_NAME}" ]; then
+                echo "Removing ${WORLD_NAME}/ (Overworld)..."
+                rm -rf "server-data/${WORLD_NAME}/"
                 WORLDS_REMOVED=true
             fi
 
-            # Remove nether world
-            if [ -d "server-data/world_nether" ]; then
-                echo "Removing world_nether/ (Nether)..."
-                rm -rf server-data/world_nether/
+            # Remove nether world (profile-specific)
+            if [ -d "server-data/${WORLD_NAME}_nether" ]; then
+                echo "Removing ${WORLD_NAME}_nether/ (Nether)..."
+                rm -rf "server-data/${WORLD_NAME}_nether/"
                 WORLDS_REMOVED=true
             fi
 
-            # Remove end world
-            if [ -d "server-data/world_the_end" ]; then
-                echo "Removing world_the_end/ (End)..."
-                rm -rf server-data/world_the_end/
+            # Remove end world (profile-specific)
+            if [ -d "server-data/${WORLD_NAME}_the_end" ]; then
+                echo "Removing ${WORLD_NAME}_the_end/ (End)..."
+                rm -rf "server-data/${WORLD_NAME}_the_end/"
                 WORLDS_REMOVED=true
             fi
 
@@ -295,32 +343,37 @@ echo "✓ Plugin version: ${PLUGIN_VERSION}"
 echo "✓ Admin username: ${ADMIN_USERNAME}"
 echo ""
 
+# Show mode-specific information BEFORE starting container
+if [ "$BLOCKING" = true ]; then
+    echo "================================"
+    echo "Starting Docker Container (BLOCKING MODE)"
+    echo "================================"
+    echo ""
+    echo "Server will be available on port 25565"
+    echo "RCON will be available on port 25575"
+    echo ""
+    echo "📺 Running in BLOCKING mode - logs will be shown below"
+    echo "   Press Ctrl+C to stop the server"
+    echo ""
+fi
+
 # Start Docker container with docker-compose
 echo "Starting Docker container..."
 if [ "$BLOCKING" = true ]; then
-    echo "Mode: BLOCKING (logs will be shown directly, Ctrl+C to stop)"
-    echo ""
     docker-compose up --remove-orphans
 else
     echo "Mode: DAEMON (background, use 'docker logs -f ${CONTAINER_NAME}' to view logs)"
     docker-compose up -d --remove-orphans
-fi
 
-echo ""
-echo "================================"
-echo "Server Starting!"
-echo "================================"
-echo ""
-echo "Server will be available on port 25565"
-echo "RCON will be available on port 25575"
-echo ""
-
-# Show mode-specific information
-if [ "$BLOCKING" = true ]; then
-    echo "📺 Running in BLOCKING mode - logs will be shown below"
-    echo "   Press Ctrl+C to stop the server"
     echo ""
-else
+    echo "================================"
+    echo "Server Starting!"
+    echo "================================"
+    echo ""
+    echo "Server will be available on port 25565"
+    echo "RCON will be available on port 25575"
+    echo ""
+
     echo "Useful commands:"
     echo "  View logs:       docker logs -f ${CONTAINER_NAME:-papermc-elementaldragon}"
     echo "  Server console:  docker attach ${CONTAINER_NAME:-papermc-elementaldragon}"
