@@ -64,8 +64,8 @@ java -Xms2G -Xmx2G -jar paper-1.21.8-latest.jar nogui
 /fire equip
 
 # Use abilities
-/fire 1    # Dragon's Wrath (fireball attack)
-/fire 2    # Infernal Dominion (fire ring)
+/fire 1    # Dragon's Wrath (homing fireball, 40s cooldown)
+/fire 2    # Infernal Dominion (fire ring, 60s cooldown)
 
 # Check status
 /fire status
@@ -93,30 +93,38 @@ Players can use these commands to manage and activate their fragments.
 
 # Agility Fragment (Wind Element)
 /agile equip       # Equip Agility Fragment
-/agile 1           # Draconic Surge (speed boost, 30s cooldown)
-/agile 2           # Wing Burst (levitation jump, 45s cooldown)
+/agile 1           # Draconic Surge (20-block dash, 30s cooldown)
+/agile 2           # Wing Burst (push entities 8-block radius, 45s cooldown)
 /agile status      # Show fragment status and cooldowns
 /agile help        # Show available commands
 
 # Immortal Fragment (Earth Element)
 /immortal equip    # Equip Immortal Fragment
-/immortal 1        # Draconic Reflex (damage reduction, 90s cooldown)
-/immortal 2        # Essence Rebirth (death protection, 5min cooldown)
+/immortal 1        # Draconic Reflex (20% dodge chance, 2min cooldown)
+/immortal 2        # Essence Rebirth (30-sec death protection window, 8min cooldown)
 /immortal status   # Show fragment status and cooldowns
 /immortal help     # Show available commands
 
 # Corrupted Core (Void Element)
 /corrupt equip     # Equip Corrupted Core
-/corrupt 1         # Dread Gaze (blindness & slow, 60s cooldown)
-/corrupt 2         # Life Devourer (health steal, 90s cooldown)
+/corrupt 1         # Dread Gaze (complete freeze on next hit, 3min cooldown)
+/corrupt 2         # Life Devourer (50% lifesteal, 2min cooldown)
 /corrupt status    # Show fragment status and cooldowns
 /corrupt help      # Show available commands
 ```
 
 #### **Lightning Command (Legacy)**
 ```bash
-/lightning 1       # Core lightning ability (60s cooldown)
+/lightning 1       # Core lightning ability (60s cooldown, 3-strike attack)
 ```
+
+**Lightning Ability Details**:
+- **Strikes**: 3 purple lightning bolts, 0.5 seconds apart
+- **Damage**: 4.0 (2 hearts) per strike - bypasses armor
+- **Total Damage**: 12.0 (6 hearts) if all strikes hit
+- **Targeting**: Auto-targets closest entity in viewing cone (50 block range)
+- **Intelligent Switching**: If target dies, moves to next closest target
+- **Requirement**: Dragon Egg must be in offhand
 
 #### **Utility Commands**
 ```bash
@@ -281,57 +289,70 @@ with unique abilities, passive bonuses, and visual themes.
 **Permission**: `elementaldragon.fragment.burning`
 
 **Abilities**:
-- **Dragon's Wrath** (`/fire 1`): Launch explosive fireball (40s cooldown)
-  - Damage: 4 hearts on impact
-  - Explosion power: 2.0 blocks radius
-  - Fire spread: Ignites targets
+- **Dragon's Wrath** (`/fire 1`): Launch homing fireball at target (40s cooldown)
+  - Damage: 6.0 (3 hearts) on impact - bypasses armor
+  - Explosion radius: 5 blocks
+  - Homing duration: 0.5 seconds (10 ticks)
+  - Target range: 50 blocks
+  - Fire spread: Ignites blocks at explosion location
   - Aliases: `wrath`, `dragons-wrath`
 
 - **Infernal Dominion** (`/fire 2`): Create fire ring around player (60s cooldown)
-  - Radius: 8 blocks
-  - Duration: 5 seconds
-  - Damage: 1 heart per tick to enemies in range
+  - Radius: 10 blocks
+  - Duration: 10 seconds (200 ticks)
+  - Damage: 1.0 (0.5 hearts) per tick to enemies in range
+  - Total damage: ~5 hearts per enemy
   - Aliases: `dominion`, `infernal-dominion`
 
 **Passive Bonus**: Fire Resistance when equipped
 
 ### **💨 Agility Fragment (Wind Element)**
-**Material**: Feather (light/swift visual)
+**Material**: Phantom Membrane (light/swift visual)
 **Theme Color**: Aqua
 **Permission**: `elementaldragon.fragment.agility`
 
 **Abilities**:
-- **Draconic Surge** (`/agile 1`): Speed II + Jump II boost (30s cooldown)
-  - Speed: Level II for 10 seconds
-  - Jump Boost: Level II for 10 seconds
+- **Draconic Surge** (`/agile 1`): Dash forward in facing direction (30s cooldown)
+  - Distance: 20 blocks forward
+  - Duration: 1 second (20 ticks)
+  - Fall protection: 10 seconds after dash
+  - Shows cloud particles during dash
   - Aliases: `surge`, `draconic-surge`
 
-- **Wing Burst** (`/agile 2`): Vertical launch with fall protection (45s cooldown)
-  - Vertical force: 1.5 blocks/tick
-  - Levitation: 2 seconds
-  - Slow Falling: 3 seconds (prevents fall damage)
+- **Wing Burst** (`/agile 2`): Push all entities away from player (45s cooldown)
+  - Push radius: 8 blocks
+  - Push distance: 20 blocks away from starting position
+  - Push duration: 2 seconds (40 ticks)
+  - Slow Falling: 10 seconds after push (prevents fall damage)
   - Aliases: `burst`, `wing-burst`
 
 **Passive Bonus**: Permanent Speed I when equipped
 
 ### **🛡️ Immortal Fragment (Earth Element)**
-**Material**: Totem of Undying (golden/life visual)
+**Material**: Diamond (golden/life visual)
 **Theme Color**: Green
 **Permission**: `elementaldragon.fragment.immortal`
 
 **Abilities**:
-- **Draconic Reflex** (`/immortal 1`): 75% damage reduction + reflection (90s cooldown)
-  - Damage reduction: 75% for 5 seconds
-  - Reflection: 25% melee damage reflected
+- **Draconic Reflex** (`/immortal 1`): 20% dodge chance for 15 seconds (2min cooldown)
+  - Dodge chance: 20% (1 in 5) to completely avoid damage
+  - Duration: 15 seconds (300 ticks)
+  - On successful dodge: Negates all damage, plays guardian hurt sound
+  - On failed dodge: Plays anvil sound (damage is taken normally)
   - Aliases: `reflex`, `draconic-reflex`
 
-- **Essence Rebirth** (`/immortal 2`): Enhanced respawn benefits (5min cooldown)
-  - Diamond armor piece: Random piece on respawn
-  - Full hunger: 20 food level
-  - Arrows: 32 arrows if bow in inventory
+- **Essence Rebirth** (`/immortal 2`): 30-second death protection window (8min cooldown)
+  - Active for: 30 seconds (600 ticks) after activation
+  - Effect: Prevents fatal damage and restores to full health
+  - Plays totem sound and particles when triggered
+  - If not consumed: Protection expires after 30 seconds
   - Aliases: `rebirth`, `essence-rebirth`
 
-**Passive Bonus**: 25% knockback reduction + 2 hearts when equipped
+**Passive Bonus**:
+- **Permanent Totem Protection**: While equipped, prevents death from fatal damage (same as totem, no cooldown)
+- **+2 Hearts**: Increases max health by 4.0 (2 hearts) when equipped
+- **Resistance I**: Minor damage reduction when equipped
+- **Knockback Reduction**: 25% knockback reduction when equipped
 
 ### **💀 Corrupted Core (Void Element)**
 **Material**: Nether Star (dark/powerful visual)
@@ -339,20 +360,24 @@ with unique abilities, passive bonuses, and visual themes.
 **Permission**: `elementaldragon.fragment.corrupted`
 
 **Abilities**:
-- **Dread Gaze** (`/corrupt 1`): Blind nearby enemies (60s cooldown)
-  - Radius: 10 blocks
-  - Effect: Blindness II for 5 seconds
-  - Targets: All hostile mobs in range
+- **Dread Gaze** (`/corrupt 1`): Complete freeze on next melee hit (3min cooldown)
+  - Activation: "READY TO STRIKE" state until you hit a target
+  - On hit: Freezes target completely for 4 seconds (80 ticks)
+  - Freeze effects: SLOW 255, MINING_FATIGUE 255, WEAKNESS 255, HUNGER 255
+  - Prevents: Movement, block placement/breaking, interactions, eating, dropping items
+  - Target: Single entity (first one you hit after activation)
   - Aliases: `gaze`, `dread-gaze`
 
-- **Life Devourer** (`/corrupt 2`): Drain health from enemies (90s cooldown)
-  - Range: 8 blocks
-  - Duration: 8 seconds
-  - Health steal: 50% of damage dealt
-  - Drain rate: 0.5 hearts per tick
+- **Life Devourer** (`/corrupt 2`): 50% lifesteal from all damage (2min cooldown)
+  - Duration: 20 seconds (400 ticks)
+  - Effect: Heal for 50% of all damage dealt
+  - Works with: Melee, ranged, spells - any damage source
   - Aliases: `devourer`, `life-devourer`
 
-**Passive Bonus**: Night Vision + invisible to creepers
+**Passive Bonus**:
+- **Night Vision**: Permanent night vision when equipped
+- **Creeper Invisibility**: Creepers will not target you
+- **Enderman Anti-Aggro**: Endermen won't attack when looked at
 
 ---
 
@@ -370,8 +395,8 @@ Each fragment ability has a carefully balanced default cooldown:
 | Lightning | 60s | - |
 | Fire | 40s | 60s |
 | Wind (Agility) | 30s | 45s |
-| Earth (Immortal) | 90s | 300s (5min) |
-| Void (Corrupted) | 60s | 90s |
+| Earth (Immortal) | 120s (2min) | 480s (8min) |
+| Void (Corrupted) | 180s (3min) | 120s (2min) |
 
 #### **Cooldown Persistence**
 - ✅ **Survives logout/login**: Prevents bypassing cooldowns
