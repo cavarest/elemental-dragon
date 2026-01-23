@@ -1010,6 +1010,7 @@ tail -f logs/latest.log | grep -i elementaldragon
 - **🐳 Docker Support**: Containerized development environment
 - **✅ CI/CD**: Automated testing on every commit
 - **📊 29% Coverage**: Focus on testable business logic (Bukkit API limits integration testing)
+- **📚 Pilaf**: JavaScript testing framework for PaperMC plugins - [https://cavarest.github.io/pilaf/](https://cavarest.github.io/pilaf/)
 
 ### **Code Quality**
 - **SOLID Principles**: Applied throughout codebase
