@@ -29,13 +29,34 @@ services:
       # Memory configuration
       - MEMORY=${MEMORYSIZE:-2G}
 
+      # World profile configuration
+      - LEVEL=${LEVEL:-world}
+      - LEVEL_TYPE=${LEVEL_TYPE:-default}
+      - SEED=${SEED:-}
+      - GENERATE_STRUCTURES=${GENERATE_STRUCTURES:-true}
+      - MAX_WORLD_SIZE=${MAX_WORLD_SIZE:-29999984}
+      - GENERATOR_SETTINGS=${GENERATOR_SETTINGS:-}
+
+      # Gameplay configuration
+      - GAMEMODE=${MODE:-survival}
+      - DIFFICULTY=${DIFFICULTY:-normal}
+      - PVP=${PVP:-true}
+      - SPAWN_PROTECTION=${SPAWN_PROTECTION:-16}
+      - ALLOW_NETHER=${ALLOW_NETHER:-true}
+      - ALLOW_END=${ALLOW_END:-true}
+
+      # Performance configuration
+      - VIEW_DISTANCE=${VIEW_DISTANCE:-10}
+      - SIMULATION_DISTANCE=${SIMULATION_DISTANCE:-10}
+
+      # Entity spawning
+      - SPAWN_ANIMALS=${SPAWN_ANIMALS:-true}
+      - SPAWN_MONSTERS=${SPAWN_MONSTERS:-true}
+      - SPAWN_NPCS=${SPAWN_NPCS:-true}
+
       # Server configuration
       - ONLINE_MODE=${ONLINE_MODE:-false}
       - MAX_PLAYERS=${MAX_PLAYERS:-10}
-      - DIFFICULTY=${DIFFICULTY:-normal}
-      - GAMEMODE=${GAMEMODE:-survival}
-      - PVP=${PVP:-true}
-      - SPAWN_PROTECTION=${SPAWN_PROTECTION:-16}
       - MOTD=${MOTD:-Elemental Dragon Plugin Server}
       - SERVER_NAME=${SERVER_NAME:-Dragon Egg Lightning Server}
 
@@ -62,9 +83,6 @@ services:
       - OFFLINE_OPS=${OFFLINE_OPS:-posiflow}
       # Skip mc-image-helper processing of ops.json
       - EXISTING_OPS_FILE=SKIP
-
-      # View distance
-      - VIEW_DISTANCE=${VIEW_DISTANCE:-10}
 
     volumes:
       # Persist all server data

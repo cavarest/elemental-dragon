@@ -631,29 +631,145 @@ The `start-server.sh` script supports several options for different development 
 
 | Option | Description |
 |--------|-------------|
+| `-p, --profile NAME` | Use world profile (default: 'default') |
 | `-r, --rebuild` | Rebuild Docker image and restart server (preserves server data) |
 | `-c, --clean` | Clean build (Gradle clean + fresh Docker image + delete all data) |
 | `-w, --wipe-world` | Clear world data only (preserves configs, plugins, player data) |
 | `-b, --blocking` | Start in blocking mode (logs shown directly, Ctrl+C to stop) |
 | `-h, --help` | Show help message with all options |
 
+### World Profiles
+
+World profiles allow you to switch between different server configurations, each with its own isolated world directory. This is useful for maintaining separate environments for real gameplay testing and quick plugin testing.
+
+**Available Profiles:**
+
+| Profile | Description | Use Case |
+|---------|-------------|----------|
+| `normal-survival-normal` | Normal terrain, survival mode, all mobs | Real gameplay testing, survival mechanics |
+| `flat-creative-none` | Flat terrain, creative mode, no mobs | Quick ability testing, plugin development |
+| `flat-survival-peaceful` | Flat terrain, survival mode, passive mobs only | Survival without hostile threats |
+| `flat-survival-normal` | Flat terrain, survival mode, all mobs | Survival with normal difficulty on flat terrain |
+
+**Naming Convention:** `{terrain}-{mode}-{mob-spawning}`
+- **Terrain:** `normal` (default) or `flat` (custom layers)
+- **Mode:** `survival` or `creative`
+- **Mob spawning:** `normal` (all mobs), `peaceful` (passive only), or `none` (no mobs)
+
+**Using Profiles:**
+
+```bash
+# Default profile (normal survival)
+./start-server.sh
+./start-server.sh -p normal-survival-normal
+
+# Quick testing profile (flat creative, no mobs)
+./start-server.sh -p flat-creative-none
+./start-server.sh -p flat-creative-none -b    # blocking mode
+./start-server.sh -p flat-creative-none -w    # wipe world first
+
+# Flat survival without hostile mobs
+./start-server.sh -p flat-survival-peaceful
+./start-server.sh -p flat-survival-peaceful -b    # blocking mode
+./start-server.sh -p flat-survival-peaceful -w    # wipe world first
+
+# Flat survival with hostile mobs
+./start-server.sh -p flat-survival-normal
+./start-server.sh -p flat-survival-normal -b    # blocking mode
+./start-server.sh -p flat-survival-normal -w    # wipe world first
+```
+
+**Profile Features:**
+
+`normal-survival-normal` profile:
+- Normal Minecraft terrain generation
+- Survival mode with normal difficulty
+- All mob spawning enabled (animals, monsters, NPCs)
+- Nether and End dimensions enabled
+- Full view distance (10 chunks)
+
+`flat-creative-none` profile:
+- Flat world with custom layers (bedrock, dirt, grass)
+- Creative mode with peaceful difficulty
+- No mob spawning (animals, monsters, NPCs)
+- Nether and End disabled
+- Small world border (50 blocks)
+- Minimal view distance (4 chunks) for performance
+- Fixed seed (1234567890) for reproducibility
+
+`flat-survival-peaceful` profile:
+- Flat world with custom layers (bedrock, dirt, grass)
+- Survival mode with peaceful difficulty
+- Passive mob spawning enabled (animals, NPCs)
+- Hostile mob spawning disabled
+- Nether and End dimensions enabled
+- Normal view distance (10 chunks)
+
+`flat-survival-normal` profile:
+- Flat world with custom layers (bedrock, dirt, grass)
+- Survival mode with normal difficulty
+- All mob spawning enabled (animals, monsters, NPCs)
+- Nether and End dimensions enabled
+- Normal view distance (10 chunks)
+
+**World Data Isolation:**
+
+Each profile uses its own world directory, preventing conflicts:
+
+```
+server-data/
+├── world/                           # normal-survival-normal profile world
+├── world-flat-creative-none/        # flat-creative-none profile world
+├── world-flat-survival-peaceful/    # flat-survival-peaceful profile world
+├── world-flat-survival-normal/      # flat-survival-normal profile world
+├── plugins/                         # shared across all profiles
+└── ...                              # shared configs
+```
+
+This means you can:
+- Switch between profiles without losing progress
+- Test different configurations independently
+- Maintain separate worlds for different purposes
+
+**Creating Custom Profiles:**
+
+To create a new profile, add a `.sh` file to `world-profiles/`:
+
+```bash
+#!/bin/bash
+export PROFILE_NAME="my-profile"
+export WORLD_NAME="world-my-profile"
+export LEVEL="my-world"
+export LEVEL_TYPE="FLAT"
+export MODE="creative"
+# ... override any settings from .env
+```
+
+See `world-profiles/README.md` for complete documentation.
+
 **Common Use Cases:**
 
 ```bash
-# Normal development start (fastest - uses cached Docker layers)
+# Normal development start (default profile - real gameplay)
 ./start-server.sh
+
+# Quick plugin testing (flat creative profile - minimal distractions)
+./start-server.sh -p flat-creative-none
 
 # Quick restart with rebuilt image (preserves world and configs)
 ./start-server.sh -r
 
-# Fresh world for testing (preserves server configuration)
+# Fresh world for testing in default profile
 ./start-server.sh -w
+
+# Fresh flat world for testing
+./start-server.sh -p flat-creative-none -w
 
 # Complete reset (new world, new configs, rebuild everything)
 ./start-server.sh -c
 
-# Testing with visible logs
-./start-server.sh -w -b
+# Testing with visible logs (flat creative profile)
+./start-server.sh -p flat-creative-none -b
 
 # Full reset with visible logs
 ./start-server.sh -c -b
@@ -663,6 +779,13 @@ The `start-server.sh` script supports several options for different development 
 ```
 
 **Option Details:**
+
+**`-p, --profile NAME`** (Profile Selection)
+- Selects which world profile to use
+- Each profile has its own isolated world directory
+- Profile sets world generation, gameplay, and performance settings
+- Default profile: `normal-survival-normal` (normal terrain, survival, all mobs)
+- See "World Profiles" section above for available profiles
 
 **`-r, --rebuild`** (Rebuild Mode)
 - Rebuilds Docker image with latest plugin JAR
@@ -677,7 +800,9 @@ The `start-server.sh` script supports several options for different development 
 - Use when Docker cache might be stale or corrupted
 
 **`-w, --wipe-world`** (World Wipe Mode)
-- Removes only world directories: `world/`, `world_nether/`, `world_the_end/`
+- Removes only world directories for the active profile
+- For `normal-survival-normal` profile: `world/`, `world_nether/`, `world_the_end/`
+- For `flat-creative-none` profile: `world-flat-creative-none/`, `world-flat-creative-none_nether/`, `world-flat-creative-none_the_end/`
 - Removes `session.lock` file
 - **Preserves**: Server configs, plugins, player data, OP settings
 - Use for quick world reset during testing without full reconfiguration
@@ -692,10 +817,19 @@ The `start-server.sh` script supports several options for different development 
 
 Options can be combined for different scenarios:
 
-- `-c -w`: Full reset (world already cleared by `-c`, skip redundant wipe)
-- `-r -w`: Rebuild image + fresh world
-- `-w -b`: Fresh world + visible logs
-- `-c -b`: Full reset + visible logs
+```bash
+# Rebuild image + fresh world (default profile)
+./start-server.sh -r -w
+
+# Fresh flat world + visible logs
+./start-server.sh -p flat-creative-none -w -b
+
+# Full reset (world already cleared by -c)
+./start-server.sh -c -w    # equivalent to -c alone
+
+# Rebuild + profile + blocking
+./start-server.sh -r -p flat-survival-normal -b
+```
 
 **Port Conflict Detection:**
 
