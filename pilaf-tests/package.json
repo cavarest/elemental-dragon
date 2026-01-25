@@ -1,0 +1,20 @@
+{
+  "name": "elemental-dragon-pilaf-tests",
+  "version": "1.0.0",
+  "description": "Pilaf integration tests for Elemental Dragon plugin",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config=jest.config.cjs",
+    "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config=jest.config.cjs --watch",
+    "test:ci": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config=jest.config.cjs --ci --coverage --maxWorkers=2",
+    "test:verbose": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config=jest.config.cjs --verbose"
+  },
+  "dependencies": {
+    "@jest/globals": "^29.7.0",
+    "@pilaf/framework": "^1.2.2"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
