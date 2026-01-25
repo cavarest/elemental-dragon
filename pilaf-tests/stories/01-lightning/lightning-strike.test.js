@@ -2,7 +2,7 @@
  * Lightning Strike Basic Test
  *
  * Tests the lightning strike ability (/lightning 1)
- * - Verifies Dragon Egg requirement
+ * - Verifies Dragon Egg requirement (Issue #28: any inventory slot)
  * - Verifies command execution
  */
 
@@ -41,7 +41,7 @@ describe('Lightning Ability', () => {
     }
   });
 
-  it('should fail without Dragon Egg in offhand', async () => {
+  it('should fail without Dragon Egg in inventory', async () => {
     // Try to use lightning without Dragon Egg
     context.bot.chat('/lightning');
     await wait(500);
@@ -50,12 +50,9 @@ describe('Lightning Ability', () => {
     // The command should fail silently or with an error message
   });
 
-  it('should accept Dragon Egg and execute lightning', async () => {
-    // Give Dragon Egg
+  it('should accept Dragon Egg in main inventory and execute lightning', async () => {
+    // Give Dragon Egg (goes to main inventory slot, not offhand)
     await giveItem(context.backend, TEST_PLAYER, 'dragon_egg');
-
-    // Put Dragon Egg in offhand
-    await context.backend.sendCommand(`item replace entity ${TEST_PLAYER} weapon.offhand with dragon_egg`);
     await wait(500);
 
     // Spawn target zombie
@@ -70,8 +67,7 @@ describe('Lightning Ability', () => {
     // Check if zombie was damaged (no longer at full health)
     const healthResult = await context.backend.sendCommand('data get entity @e[tag=lightning_target,limit=1] Health');
 
-    // Zombie should have taken damage (started at 20, should be less after 3 strikes of 4 damage each = 8 total)
-    // But might be dead from 12 damage (3 strikes × 4 damage = 12)
+    // Zombie should have taken damage (started at 20, should be less after 3 strikes of 4 damage each = 12 total)
     expect(healthResult).toBeDefined();
   });
 });

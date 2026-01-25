@@ -2,7 +2,7 @@
  * Life Devourer (Lifesteal) Test
  *
  * Tests the Life Devourer ability (/corrupt 2)
- * - 50% lifesteal from all damage
+ * - 25% lifesteal from all damage (Issue #28)
  * - Duration: 20 seconds
  * - 120 second (2 minute) cooldown
  */
@@ -43,7 +43,7 @@ describe('Corrupted Core - Life Devourer', () => {
     }
   });
 
-  it('should provide 50% lifesteal when activated', async () => {
+  it('should provide 25% lifesteal when activated', async () => {
     // Set player to low health
     await context.backend.sendCommand(`heal ${TEST_PLAYER}`);
     await context.backend.sendCommand(`execute as ${TEST_PLAYER} run damage @s 10`);
@@ -64,14 +64,14 @@ describe('Corrupted Core - Life Devourer', () => {
     // Spawn target
     await spawnFrozenEntity(context.backend, 'zombie', { x: 0, y: 64, z: -3 }, TARGET_TAG, 20);
 
-    // Deal damage and verify lifesteal
+    // Deal damage and verify lifesteal (Issue #28: 25% of 10 = 2.5 health gained)
     await context.backend.sendCommand(`execute as ${TEST_PLAYER} run damage @e[tag=${TARGET_TAG}] 10`);
     await wait(200);
 
-    // Check if player healed (50% of 10 = 5 health gained)
+    // Check if player healed
     const finalHealth = await context.backend.sendCommand(`data get entity ${TEST_PLAYER} Health`);
 
-    // Player should have more health than before
+    // Player should have more health than before (25% lifesteal from 10 damage = 2.5 hearts)
     expect(finalHealth).toBeDefined();
   });
 

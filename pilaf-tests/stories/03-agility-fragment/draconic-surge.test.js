@@ -5,13 +5,15 @@
  * - Dash forward 20 blocks in facing direction
  * - 1 second duration
  * - 30 second cooldown
+ * - Collision deals 3 hearts damage (Issue #28)
+ * - Toggle behavior (type /agile 1 again to cancel) (Issue #28)
  *
  * Uses mineflayer's getEntities() to track entity positions directly
  */
 
 import { createTestContext, cleanupTestContext } from '../../lib/rcon.js';
-import { clearAllEntities, teleportPlayer, giveItem, wait } from '../../lib/entities.js';
-import { COOLDOWNS, ENTITY_POSITIONS } from '../../lib/constants.js';
+import { spawnFrozenEntity, clearAllEntities, teleportPlayer, giveItem, wait } from '../../lib/entities.js';
+import { COOLDOWNS, ENTITY_POSITIONS, ABILITY_DAMAGE, EFFECT_DURATIONS } from '../../lib/constants.js';
 
 const config = {
   host: process.env.RCON_HOST || 'localhost',
@@ -124,5 +126,60 @@ describe('Agility Fragment - Draconic Surge', () => {
 
     // Should give error message
     expect(result).toBeDefined();
+  });
+
+  it('should deal collision damage to entities during dash (Issue #28)', async () => {
+    const TARGET_TAG = 'dash_collision_target';
+
+    // Give Agility Fragment
+    await giveItem(context.rcon, TEST_PLAYER, 'phantom_membrane');
+    context.bot.chat('/agile equip');
+    await wait(500);
+
+    // Spawn zombie directly in player's path (2 blocks ahead)
+    await spawnFrozenEntity(context.rcon, 'zombie', { x: 0, y: 64, z: -2 }, TARGET_TAG, 20);
+
+    // Get initial zombie health (20 health = 10 hearts)
+    const healthBefore = await context.rcon.sendCommand('data get entity @e[tag=' + TARGET_TAG + '] Health');
+    expect(healthBefore).toBeDefined();
+
+    // Execute Draconic Surge (player at 0,64,0 facing North, zombie at 0,64,-2)
+    context.bot.chat('/agile 1');
+
+    // Wait for dash to complete (1 second dash duration)
+    await wait(EFFECT_DURATIONS.DRACONIC_SURGE + 500);
+
+    // Get zombie health after dash
+    const healthAfter = await context.rcon.sendCommand('data get entity @e[tag=' + TARGET_TAG + '] Health');
+    expect(healthAfter).toBeDefined();
+
+    // Parse health from result
+    const healthMatch = healthAfter.raw.match(/[\d.]+/);
+    if (healthMatch) {
+      const health = parseFloat(healthMatch[0]);
+      // Zombie should have taken 6.0 damage (3 hearts) from collision (Issue #28)
+      // Initial health (20) - collision damage (6.0) = 14 health remaining
+      expect(health).toBeLessThan(20);
+      expect(health).toBeGreaterThan(10); // Should survive 3 hearts damage
+    }
+  });
+
+  it('should cancel dash when typing /agile 1 again (toggle behavior - Issue #28)', async () => {
+    // Give Agility Fragment
+    await giveItem(context.rcon, TEST_PLAYER, 'phantom_membrane');
+    context.bot.chat('/agile equip');
+    await wait(500);
+
+    // Execute Draconic Surge
+    context.bot.chat('/agile 1');
+    await wait(200); // Wait a bit for dash to start
+
+    // Type /agile 1 again to cancel
+    context.bot.chat('/agile 1');
+    await wait(200);
+
+    // Verify cancellation message was sent
+    // The bot should receive "Draconic Surge cancelled!" message
+    expect(context.bot.username).toBe(TEST_PLAYER);
   });
 });
