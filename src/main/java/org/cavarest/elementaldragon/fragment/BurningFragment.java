@@ -42,7 +42,7 @@ public class BurningFragment extends AbstractFragment implements Listener {
 
   // Dragon's Wrath constants (ORIGINAL SPECIFICATION)
   private static final long DRAGONS_WRATH_COOLDOWN = 120000L; // 2 minutes (original spec)
-  private static final double DRAGONS_WRATH_DAMAGE = 6.0; // 3 hearts (original spec: armor-ignoring)
+  private static final double DRAGONS_WRATH_DAMAGE = 8.0; // 4 hearts (Issue #28: armor-ignoring)
   private static final double DRAGONS_WRATH_AOE_RADIUS = 5.0; // 5 blocks (original spec: all players)
   private static final int DRAGONS_WRATH_HOMING_TICKS = 10; // 10 ticks = 0.5 seconds (original spec)
   private static final double DRAGONS_WRATH_TARGET_RANGE = 50.0; // Range to search for targets
