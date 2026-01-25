@@ -219,14 +219,14 @@ class AbilityManagerTest {
   // === HELPER METHODS ===
 
   /**
-   * Create a mock player with a dragon egg in offhand.
+   * Create a mock player with a dragon egg in inventory (Issue #28: any slot).
    */
   private Player createMockPlayerWithDragonEgg() {
     Player mockPlayer = mock(Player.class);
     UUID mockUUID = UUID.randomUUID();
     when(mockPlayer.getUniqueId()).thenReturn(mockUUID);
 
-    // Mock inventory with dragon egg in offhand
+    // Mock inventory with dragon egg (Issue #28: can be in any slot)
     PlayerInventory mockInventory = mock(PlayerInventory.class);
     ItemStack dragonEgg = mock(ItemStack.class);
     when(dragonEgg.getType()).thenReturn(Material.DRAGON_EGG);
@@ -234,11 +234,14 @@ class AbilityManagerTest {
     when(mockInventory.getItemInOffHand()).thenReturn(dragonEgg);
     when(mockPlayer.getInventory()).thenReturn(mockInventory);
 
+    // Mock contains() to return true for DRAGON_EGG (Issue #28)
+    when(mockInventory.contains(Material.DRAGON_EGG)).thenReturn(true);
+
     return mockPlayer;
   }
 
   /**
-   * Create a mock player without a dragon egg.
+   * Create a mock player without a dragon egg (Issue #28: not in inventory).
    */
   private Player createMockPlayerWithoutDragonEgg() {
     Player mockPlayer = mock(Player.class);
@@ -252,6 +255,9 @@ class AbilityManagerTest {
     when(emptyItem.isEmpty()).thenReturn(true);
     when(mockInventory.getItemInOffHand()).thenReturn(emptyItem);
     when(mockPlayer.getInventory()).thenReturn(mockInventory);
+
+    // Mock contains() to return false for DRAGON_EGG (Issue #28)
+    when(mockInventory.contains(Material.DRAGON_EGG)).thenReturn(false);
 
     return mockPlayer;
   }

@@ -58,7 +58,8 @@ class ImmortalFragmentTest {
         if (line.contains("90s") || line.contains("90 second")) {
           mentionsCooldown = true;
         }
-        if (line.contains("knockback") || line.contains("hearts")) {
+        // Issue #28: Check for Totem Protection passive instead of knockback/hearts
+        if (line.contains("Totem") || line.contains("death") || line.contains("passive")) {
           mentionsPassive = true;
         }
       }
@@ -67,7 +68,7 @@ class ImmortalFragmentTest {
     assertTrue(hasDraconicReflex, "Lore should mention Draconic Reflex");
     assertTrue(hasEssenceRebirth, "Lore should mention Essence Rebirth");
     assertTrue(mentionsCooldown, "Lore should mention cooldown");
-    assertTrue(mentionsPassive, "Lore should mention passive bonuses");
+    assertTrue(mentionsPassive, "Lore should mention passive bonuses (Issue #28: Totem Protection)");
   }
 
   @Test
