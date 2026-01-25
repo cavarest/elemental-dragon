@@ -36,7 +36,7 @@ import java.util.Random;
  * - Draconic Reflex: Temporary damage reduction with melee attack reflection
  * - Essence Rebirth: Enhanced respawn with diamond armor and supplies
  *
- * Passive Bonus: 25% knockback reduction and +2 hearts permanent health boost
+ * Passive Bonus: Acts as permanent Totem of Undying when equipped
  */
 public class ImmortalFragment extends AbstractFragment implements Listener {
 
@@ -92,7 +92,7 @@ public class ImmortalFragment extends AbstractFragment implements Listener {
         "Ability 1: Draconic Reflex - 75% DMG reduction (90s cooldown)",
         "Ability 2: Essence Rebirth - Second life (8min cooldown)",
         "",
-        "Passive: 25% knockback reduction, +2 hearts"
+        "Passive: Acts as permanent Totem of Undying when equipped"
       )
     );
     this.plugin = plugin;
@@ -128,7 +128,7 @@ public class ImmortalFragment extends AbstractFragment implements Listener {
     return "Active Abilities:\n" +
       "1. Draconic Reflex - 75% damage reduction, reflects melee (90s cooldown)\n" +
       "2. Essence Rebirth - Spawn with diamond armor, full hunger (5min cooldown)\n" +
-      "Passive: 25% knockback reduction and +2 hearts when equipped";
+      "Passive: Acts as permanent Totem of Undying when equipped";
   }
 
   @Override
@@ -160,7 +160,7 @@ public class ImmortalFragment extends AbstractFragment implements Listener {
       Component.text(getName() + " activated!", NamedTextColor.GOLD)
     );
     player.sendMessage(
-      Component.text("Passive: 25% knockback reduction and +2 hearts granted!",
+      Component.text("Passive: Totem of Undying protection granted!",
         NamedTextColor.GRAY)
     );
     player.sendMessage(
@@ -564,7 +564,7 @@ public class ImmortalFragment extends AbstractFragment implements Listener {
   }
 
   /**
-   * Apply passive knockback reduction and health boost effects.
+   * Apply passive effects (none, other than totem protection in event handler).
    *
    * @param player The player
    */
@@ -574,29 +574,8 @@ public class ImmortalFragment extends AbstractFragment implements Listener {
       return;
     }
 
-    // Apply DAMAGE_RESISTANCE for knockback reduction (amplifier 0 = ~20% reduction)
-    // Note: DAMAGE_RESISTANCE doesn't directly reduce knockback,
-    // but it does provide some damage reduction which helps with survivability
-    player.addPotionEffect(
-      new PotionEffect(
-        PotionEffectType.RESISTANCE,
-        Integer.MAX_VALUE, // Permanent while equipped
-        0, // Amplifier 0 = minimal damage reduction
-        false, // Not ambient
-        true, // Show particles
-        true // Show icon
-      )
-    );
-
-    // Increase max health by 2 hearts (4.0)
-    if (player.getAttribute(Attribute.MAX_HEALTH) != null) {
-      double currentMaxHealth = player.getAttribute(Attribute.MAX_HEALTH).getValue();
-      player.getAttribute(Attribute.MAX_HEALTH).setBaseValue(currentMaxHealth + 4.0);
-
-      // Also add the health to current health so player immediately gets the benefit
-      double newMaxHealth = player.getAttribute(Attribute.MAX_HEALTH).getValue();
-      player.setHealth(Math.min(player.getHealth() + 4.0, newMaxHealth));
-    }
+    // No passive potion effects or stat boosts needed
+    // The passive totem protection is handled in onEntityDamageForEssenceRebirth()
 
     // Show passive effect particles
     if (player.getWorld() != null) {
@@ -611,23 +590,11 @@ public class ImmortalFragment extends AbstractFragment implements Listener {
         0.02,
         new Particle.DustOptions(BROWN_COLOR, 1.0f)
       );
-
-      // Green particles for health boost
-      player.getWorld().spawnParticle(
-        Particle.DUST,
-        player.getLocation(),
-        3,
-        0.3,
-        0.3,
-        0.3,
-        0.02,
-        new Particle.DustOptions(GREEN_COLOR, 1.0f)
-      );
     }
   }
 
   /**
-   * Remove passive knockback reduction and health boost effects.
+   * Remove passive effects (none, other than totem protection in event handler).
    *
    * @param player The player
    */
@@ -637,22 +604,8 @@ public class ImmortalFragment extends AbstractFragment implements Listener {
       return;
     }
 
-    // Remove damage resistance
-    player.removePotionEffect(PotionEffectType.RESISTANCE);
-
-    // Reset max health to default (20.0)
-    if (player.getAttribute(Attribute.MAX_HEALTH) != null) {
-      double currentMaxHealth = player.getAttribute(Attribute.MAX_HEALTH).getValue();
-      double extraHealth = currentMaxHealth - 20.0;
-
-      // First, reduce health if it exceeds the new max
-      if (player.getHealth() > 20.0) {
-        player.setHealth(20.0);
-      }
-
-      // Then reset base max health
-      player.getAttribute(Attribute.MAX_HEALTH).setBaseValue(20.0);
-    }
+    // No passive potion effects or stat boosts to remove
+    // The passive totem protection is handled in onEntityDamageForEssenceRebirth()
   }
 
   /**
@@ -666,31 +619,6 @@ public class ImmortalFragment extends AbstractFragment implements Listener {
   public void onPlayerRespawn(PlayerRespawnEvent event) {
     // No special handling needed - DIAMOND material has no vanilla death behavior
     // The fragment will simply be dropped on death like any other item
-  }
-
-  /**
-   * Event handler for knockback reduction during Draconic Reflex.
-   * This provides additional knockback reduction beyond the passive.
-   *
-   * @param event The entity damage event
-   */
-  @EventHandler
-  public void onEntityDamage(EntityDamageEvent event) {
-    if (!(event.getEntity() instanceof Player)) {
-      return;
-    }
-
-    Player player = (Player) event.getEntity();
-
-    // Apply knockback reduction from passive
-    if (player.hasPotionEffect(PotionEffectType.RESISTANCE)) {
-      // Check if this is an attack that would cause knockback
-      if (event.getCause() == EntityDamageEvent.DamageCause.ENTITY_ATTACK) {
-        // Reduce knockback by approximately 25%
-        // Note: This is an approximation since Bukkit doesn't have direct knockback reduction
-        // The actual knockback is handled by the client's physics
-      }
-    }
   }
 
   /**

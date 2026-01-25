@@ -53,11 +53,11 @@ public class LightningAbility implements Ability {
       return false;
     }
 
-    // Check if player still has dragon egg in offhand
+    // Check if player still has dragon egg in inventory
     if (!hasRequiredItem(player)) {
       player.sendMessage(
         Component.text(
-          "The dragon's power fades without the Dragon Egg in your offhand! 🥚❌",
+          "The dragon's power fades without the Dragon Egg in your inventory! 🥚❌",
           NamedTextColor.RED
         )
       );
@@ -79,8 +79,8 @@ public class LightningAbility implements Ability {
     if (player == null) {
       return false;
     }
-    ItemStack offhand = player.getInventory().getItemInOffHand();
-    return offhand != null && offhand.getType() == Material.DRAGON_EGG;
+    // Check if player has dragon egg anywhere in inventory (not just offhand)
+    return player.getInventory().contains(Material.DRAGON_EGG);
   }
 
   @Override

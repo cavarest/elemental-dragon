@@ -52,7 +52,7 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
   // Life Devourer constants (ORIGINAL SPECIFICATION)
   private static final long LIFE_DEVOURER_COOLDOWN = 120000L; // 2 minutes (120 seconds) (original spec)
   private static final int LIFE_DEVOURER_DURATION = 400; // 20 seconds (400 ticks) (original spec)
-  private static final double LIFE_DEVOURER_STEAL_PERCENT = 0.5; // 50% health steal
+  private static final double LIFE_DEVOURER_STEAL_PERCENT = 0.25; // 25% health steal (Issue #28)
 
   // Metadata keys
   private static final String DREAD_GAZE_ACTIVE_KEY = "corrupted_dread_gaze_active";
@@ -113,7 +113,7 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
         "Ability 1: Dread Gaze - Complete freeze on hit (3min cooldown)",
         "Ability 2: Life Devourer - Life steal from all damage (2min cooldown)",
         "",
-        "Passive: Night Vision when equipped",
+        "Passive: Suspended Sustenance (no hunger) when equipped",
         "Passive: Invisible to creepers"
       )
     );
@@ -171,8 +171,8 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
   protected String getAbilitiesDescription() {
     return "Active Abilities:\n" +
       "1. Dread Gaze - Blind nearby enemies for 10s (60s cooldown)\n" +
-      "2. Life Devourer - Drain health from enemies, 50% stolen (90s cooldown)\n" +
-      "Passive: Night Vision when equipped, invisible to creepers";
+      "2. Life Devourer - Drain health from enemies, 25% stolen (90s cooldown)\n" +
+      "Passive: Suspended Sustenance (no hunger) when equipped, invisible to creepers";
   }
 
   @Override
@@ -204,7 +204,7 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
       Component.text(getName() + " activated!", NamedTextColor.DARK_PURPLE)
     );
     player.sendMessage(
-      Component.text("Passive: Night Vision granted!", NamedTextColor.GRAY)
+      Component.text("Passive: Suspended Sustenance granted!", NamedTextColor.GRAY)
     );
     player.sendMessage(
       Component.text("Use /corrupt 1 or /corrupt 2 to use abilities",
@@ -455,7 +455,7 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
   }
 
   /**
-   * Apply passive Night Vision effect.
+   * Apply passive Suspended Sustenance effect (no hunger).
    *
    * @param player The player
    */
@@ -465,12 +465,13 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
       return;
     }
 
-    // Apply NIGHT_VISION potion effect (infinite duration, no particles)
+    // Apply SATURATION potion effect (infinite duration, no particles)
+    // Suspended Sustenance: hunger does not apply when fragment is equipped
     player.addPotionEffect(
       new PotionEffect(
-        PotionEffectType.NIGHT_VISION,
+        PotionEffectType.SATURATION,
         Integer.MAX_VALUE, // Permanent while equipped
-        0, // Amplifier 0 = normal night vision
+        0, // Amplifier 0 = normal saturation
         false, // Not ambient (no particles)
         false // Don't show icon
       )
@@ -489,7 +490,7 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
   }
 
   /**
-   * Remove passive Night Vision effect.
+   * Remove passive Suspended Sustenance effect.
    *
    * @param player The player
    */
@@ -498,7 +499,7 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
     if (player == null) {
       return;
     }
-    player.removePotionEffect(PotionEffectType.NIGHT_VISION);
+    player.removePotionEffect(PotionEffectType.SATURATION);
   }
 
   /**

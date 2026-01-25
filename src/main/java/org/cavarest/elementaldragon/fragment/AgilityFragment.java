@@ -21,6 +21,8 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
+import org.bukkit.damage.DamageSource;
+import org.bukkit.damage.DamageType;
 
 import java.util.Arrays;
 import java.util.List;
@@ -42,10 +44,13 @@ public class AgilityFragment extends AbstractFragment implements Listener {
   private static final int DRACONIC_SURGE_DURATION = 20; // 1 second = 20 ticks (user spec)
   private static final double DRACONIC_SURGE_VELOCITY = DRACONIC_SURGE_DISTANCE / DRACONIC_SURGE_DURATION; // 1.0 blocks/tick
   private static final int DRACONIC_SURGE_FALL_PROTECTION = 200; // 10 seconds (200 ticks) of fall damage protection
+  private static final double DRACONIC_SURGE_COLLISION_DAMAGE = 6.0; // 3 hearts damage on collision (Issue #28, ignores armor)
+  private static final double DRACONIC_SURGE_COLLISION_RADIUS = 2.0; // Radius for collision detection
 
   // Metadata keys for tracking Draconic Surge state
   private static final String DRACONIC_SURGE_ACTIVE_KEY = "agile_draconic_surge_active";
   private static final String DRACONIC_SURGE_START_TIME_KEY = "agile_draconic_surge_start_time";
+  private static final String DRACONIC_SURGE_TASK_KEY = "agile_draconic_surge_task"; // Store task for cancellation
 
   // Wing Burst constants (ORIGINAL SPECIFICATION)
   private static final long WING_BURST_COOLDOWN = 120000L; // 2 minutes (original spec)
@@ -230,10 +235,25 @@ public class AgilityFragment extends AbstractFragment implements Listener {
    * - Negates damage while flying and during landing
    * - Cooldown: 45 seconds
    *
+   * Issue #28 additions:
+   * - Deals 3 hearts damage to entities collided with (ignores armor)
+   * - Toggle behavior: type /agile 1 again to stop the dash
+   *
    * @param player The player executing the ability
    */
   private void executeDraconicSurge(Player player) {
     // No cooldown check needed - FragmentManager.useFragmentAbility() already checked
+
+    // Check if dash is already active (toggle behavior - Issue #28)
+    if (player.hasMetadata(DRACONIC_SURGE_TASK_KEY)) {
+      // Cancel the existing dash
+      player.removeMetadata(DRACONIC_SURGE_TASK_KEY, plugin);
+      player.sendMessage(
+        Component.text("Draconic Surge cancelled!", NamedTextColor.YELLOW)
+      );
+      // Fall damage protection continues for the full 10 seconds
+      return;
+    }
 
     Location playerLocation = player.getLocation();
 
@@ -254,25 +274,77 @@ public class AgilityFragment extends AbstractFragment implements Listener {
       1.5f
     );
 
+    // Track entities we've already hit this dash (to avoid multiple hits on same entity)
+    java.util.Set<java.util.UUID> hitEntities = new java.util.HashSet<>();
+
     // Apply continuous velocity over DRACONIC_SURGE_DURATION ticks (1 second)
-    new BukkitRunnable() {
+    BukkitRunnable dashTask = new BukkitRunnable() {
       private int ticks = 0;
 
       @Override
       public void run() {
+        // Check if task was cancelled (toggle behavior)
+        if (!player.hasMetadata(DRACONIC_SURGE_TASK_KEY)) {
+          cancel();
+          return;
+        }
+
         if (ticks >= DRACONIC_SURGE_DURATION) {
           // Dash complete - fall damage protection continues separately
+          player.removeMetadata(DRACONIC_SURGE_TASK_KEY, plugin);
           cancel();
           return;
         }
 
         if (player.isDead() || !player.isValid()) {
+          player.removeMetadata(DRACONIC_SURGE_TASK_KEY, plugin);
           cancel();
           return;
         }
 
         // Apply velocity each tick for smooth dash
         player.setVelocity(dashVelocity);
+
+        // Check for entity collisions (Issue #28)
+        for (Entity entity : player.getWorld().getNearbyEntities(
+            player.getLocation(), DRACONIC_SURGE_COLLISION_RADIUS, DRACONIC_SURGE_COLLISION_RADIUS, DRACONIC_SURGE_COLLISION_RADIUS)) {
+          // Skip non-living entities
+          if (!(entity instanceof LivingEntity)) {
+            continue;
+          }
+
+          LivingEntity target = (LivingEntity) entity;
+
+          // Skip the dashing player
+          if (target.getUniqueId().equals(player.getUniqueId())) {
+            continue;
+          }
+
+          // Skip entities we've already hit this dash
+          if (hitEntities.contains(target.getUniqueId())) {
+            continue;
+          }
+
+          // Deal damage that ignores armor (Issue #28)
+          DamageSource damageSource = DamageSource.builder(DamageType.MAGIC)
+              .withDirectEntity(player)
+              .build();
+          target.damage(DRACONIC_SURGE_COLLISION_DAMAGE, damageSource);
+
+          // Mark as hit so we don't hit them again
+          hitEntities.add(target.getUniqueId());
+
+          // Visual feedback for collision
+          target.getWorld().spawnParticle(
+            Particle.CLOUD,
+            target.getLocation().add(0, 1, 0),
+            10,
+            0.3,
+            0.5,
+            0.3,
+            0.05
+          );
+        }
 
         // Show wind trail particles
         player.getWorld().spawnParticle(
@@ -287,7 +359,10 @@ public class AgilityFragment extends AbstractFragment implements Listener {
 
         ticks++;
       }
-    }.runTaskTimer(plugin, 0L, 1L);
+    };
+
+    // Store task reference for cancellation (toggle behavior)
+    player.setMetadata(DRACONIC_SURGE_TASK_KEY, new org.bukkit.metadata.FixedMetadataValue(plugin, dashTask));
 
     // Schedule removal of fall damage protection after 10 seconds
     new BukkitRunnable() {
@@ -299,13 +374,17 @@ public class AgilityFragment extends AbstractFragment implements Listener {
         if (player.hasMetadata(DRACONIC_SURGE_START_TIME_KEY)) {
           player.removeMetadata(DRACONIC_SURGE_START_TIME_KEY, plugin);
         }
+        // Also clean up task metadata in case it wasn't cleaned up
+        if (player.hasMetadata(DRACONIC_SURGE_TASK_KEY)) {
+          player.removeMetadata(DRACONIC_SURGE_TASK_KEY, plugin);
+        }
       }
     }.runTaskLater(plugin, DRACONIC_SURGE_FALL_PROTECTION);
 
     // Cooldown is set by FragmentManager.useFragmentAbility()
 
     player.sendMessage(
-      Component.text("Draconic Surge activated! Fall damage protected for 10 seconds!",
+      Component.text("Draconic Surge activated! Type /agile 1 again to cancel. Fall damage protected for 10 seconds!",
         NamedTextColor.GREEN)
     );
 
@@ -319,6 +398,9 @@ public class AgilityFragment extends AbstractFragment implements Listener {
       0.5,
       0.1
     );
+
+    // Start the dash task
+    dashTask.runTaskTimer(plugin, 0L, 1L);
   }
 
   /**
