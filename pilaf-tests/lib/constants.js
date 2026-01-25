@@ -62,6 +62,17 @@ export const ENTITY_HEALTH = {
 };
 
 /**
+ * Ability damage values (Issue #28)
+ * Source: Individual Fragment/Ability classes
+ */
+export const ABILITY_DAMAGE = {
+  LIGHTNING_STRIKE: 12.0,         // 3 strikes × 4 damage = 12 total (LightningAbility.java)
+  DRAGONS_WRATH: 8.0,            // 4 hearts (BurningFragment.java - Issue #28)
+  DRACONIC_SURGE_COLLISION: 6.0,  // 3 hearts dash collision (AgilityFragment.java - Issue #28)
+  LIFE_DEVOURER_STEAL_PERCENT: 0.25, // 25% lifesteal (CorruptedCoreFragment.java - Issue #28)
+};
+
+/**
  * Effect durations (in milliseconds)
  * Source: Individual Fragment classes
  */

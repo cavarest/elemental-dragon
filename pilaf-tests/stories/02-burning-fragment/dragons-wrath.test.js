@@ -3,7 +3,7 @@
  *
  * Tests the Dragon's Wrath ability (/fire 1)
  * - Fireball chases target
- * - Deals 6.0 damage (3 hearts)
+ * - Deals 8.0 damage (4 hearts) - Issue #28
  * - Bypasses armor
  */
 
@@ -60,7 +60,7 @@ describe('Burning Fragment - Dragons Wrath', () => {
     await wait(2000);
 
     // Check if zombie took damage (health < 20)
-    // Fireball deals 6.0 damage, so zombie should have 14 health remaining
+    // Fireball deals 8.0 damage (Issue #28: 4 hearts), so zombie should have 12 health remaining
     const healthResult = await context.backend.sendCommand('data get entity @e[tag=fireball_target] Health');
 
     // Zombie should have been damaged
@@ -71,7 +71,7 @@ describe('Burning Fragment - Dragons Wrath', () => {
     if (healthMatch) {
       const health = parseFloat(healthMatch[0]);
       expect(health).toBeLessThan(20);
-      expect(health).toBeGreaterThan(0); // Should survive 6 damage
+      expect(health).toBeGreaterThan(0); // Should survive 8 damage (20 - 8 = 12)
     }
   });
 
