@@ -49,15 +49,6 @@ jobs:
     steps:
     - name: Checkout Elemental Dragon plugin
       uses: actions/checkout@v4
-      with:
-        path: dragon-egg
-
-    - name: Checkout Pilaf framework
-      uses: actions/checkout@v4
-      with:
-        repository: cavarest/pilaf
-        path: pilaf
-        ref: main
 
     - name: Set up JDK 21
       uses: actions/setup-java@v4
@@ -73,7 +64,7 @@ jobs:
     - name: Get pnpm store directory
       id: pnpm-cache
       shell: bash
-      working-directory: pilaf/mineflayer-bridge
+      working-directory: pilaf-tests
       run: |
         echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
 
@@ -81,7 +72,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pilaf/mineflayer-bridge/package.json') }}
+        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pilaf-tests/package.json') }}
         restore-keys: |
           ${{ runner.os }}-pnpm-store-
 
@@ -94,20 +85,19 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/.gradle/caches
-        key: ${{ runner.os }}-gradle-${{ hashFiles('dragon-egg/**/*.gradle*', 'dragon-egg/gradle.properties') }}
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', 'gradle.properties') }}
         restore-keys: |
           ${{ runner.os }}-gradle-
 
     - name: Install Pilaf dependencies
-      working-directory: pilaf/mineflayer-bridge
+      working-directory: pilaf-tests
       run: pnpm install
 
     - name: Build Elemental Dragon plugin
-      working-directory: dragon-egg
       run: |
         echo "🔨 Building Elemental Dragon plugin..."
         chmod +x build.sh
-        ./build.sh --production
+        ./build.sh
         ls -la build/libs/
 
     - name: Fix Docker volume permissions
@@ -119,7 +109,7 @@ jobs:
       run: |
         echo "📦 Copying Elemental Dragon plugin to server..."
         mkdir -p /tmp/mc-plugins
-        cp dragon-egg/build/libs/elemental-dragon-*.jar /tmp/mc-plugins/elemental-dragon.jar
+        cp build/libs/elemental-dragon-*.jar /tmp/mc-plugins/elemental-dragon.jar
         ls -la /tmp/mc-plugins/
 
     - name: Verify RCON is accessible
@@ -158,7 +148,7 @@ jobs:
         fi
 
     - name: Run Pilaf integration tests
-      working-directory: pilaf/mineflayer-bridge
+      working-directory: pilaf-tests
       env:
         RCON_HOST: localhost
         RCON_PORT: 25575
@@ -170,8 +160,8 @@ jobs:
       run: |
         echo "🧪 Running Elemental Dragon integration tests with Pilaf..."
 
-        # Run tests - skip disconnect/reconnect tests in CI
-        pnpm test tests/dragon-egg-integration.pilaf.test.js || {
+        # Run tests
+        pnpm test || {
           echo "⚠️ Some tests failed, but continuing..."
           exit 0
         }
@@ -180,7 +170,7 @@ jobs:
       uses: EnricoMi/publish-unit-test-result-action@v2
       if: always() && !cancelled()
       with:
-        files: "pilaf/mineflayer-bridge/target/test-results/**/*.xml"
+        files: "pilaf-tests/test-results/**/*.xml"
         check_name: Dragon Egg Integration Test Report
         comment_mode: "off"
 
@@ -189,7 +179,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: dragon-egg-pilaf-reports
-        path: pilaf/mineflayer-bridge/target/pilaf-reports/
+        path: pilaf-tests/pilaf-reports/
         retention-days: 30
         if-no-files-found: ignore
 
@@ -198,7 +188,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: elemental-dragon-plugin-jar
-        path: dragon-egg/build/libs/elemental-dragon-*.jar
+        path: build/libs/elemental-dragon-*.jar
         retention-days: 30
         if-no-files-found: ignore
 
@@ -208,7 +198,7 @@ jobs:
         echo "## Elemental Dragon Integration Test Summary" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "✅ Integration tests completed." >> $GITHUB_STEP_SUMMARY
-        if [ -d pilaf/mineflayer-bridge/target/pilaf-reports ]; then
+        if [ -d pilaf-tests/pilaf-reports ]; then
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Pilaf HTML Reports" >> $GITHUB_STEP_SUMMARY
           echo "HTML reports have been uploaded as artifacts." >> $GITHUB_STEP_SUMMARY
