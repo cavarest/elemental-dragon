@@ -109,8 +109,15 @@ jobs:
       run: |
         echo "📦 Copying Elemental Dragon plugin to server..."
         mkdir -p /tmp/mc-plugins
-        # Use -T to specify target as file (not directory) when using wildcards
-        cp -T build/libs/elemental-dragon-*.jar /tmp/mc-plugins/elemental-dragon.jar
+        # Find and copy the JAR file (handles both jar variants)
+        JAR=$(ls build/libs/elemental-dragon-*.jar 2>/dev/null | head -1)
+        if [ -z "$JAR" ]; then
+          echo "❌ ERROR: No JAR file found in build/libs/"
+          ls -la build/libs/
+          exit 1
+        fi
+        echo "Found JAR: $JAR"
+        cp "$JAR" /tmp/mc-plugins/elemental-dragon.jar
         ls -la /tmp/mc-plugins/
 
     - name: Verify RCON is accessible
