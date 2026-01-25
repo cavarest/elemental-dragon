@@ -109,7 +109,8 @@ jobs:
       run: |
         echo "📦 Copying Elemental Dragon plugin to server..."
         mkdir -p /tmp/mc-plugins
-        cp build/libs/elemental-dragon-*.jar /tmp/mc-plugins/elemental-dragon.jar
+        # Use -T to specify target as file (not directory) when using wildcards
+        cp -T build/libs/elemental-dragon-*.jar /tmp/mc-plugins/elemental-dragon.jar
         ls -la /tmp/mc-plugins/
 
     - name: Verify RCON is accessible
