@@ -1,0 +1,24 @@
+module.exports = {
+  testEnvironment: 'node',
+  testMatch: ['**/stories/**/*.test.js'],
+  testTimeout: 120000, // 2 minutes per test
+
+  // Verbose output in CI
+  verbose: process.env.CI === 'true',
+
+  // Module paths
+  moduleDirectories: ['node_modules'],
+
+  // Test file extensions
+  moduleFileExtensions: ['js'],
+
+  // Run tests serially to avoid connection throttling
+  maxWorkers: 1,
+
+  // Coverage configuration
+  collectCoverageFrom: [
+    'stories/**/*.js',
+    '!stories/**/*.test.js'
+  ],
+  coverageThreshold: null
+};

@@ -52,7 +52,8 @@ public class AgilityFragment extends AbstractFragment implements Listener {
   private static final double WING_BURST_RADIUS = 8.0; // 8 blocks (original spec)
   private static final double WING_BURST_DISTANCE = 20.0; // 20 blocks (original spec)
   private static final int WING_BURST_PUSH_DURATION = 40; // 2 seconds = 40 ticks (original spec)
-  private static final double WING_BURST_VELOCITY = WING_BURST_DISTANCE / WING_BURST_PUSH_DURATION; // 0.5 blocks/tick
+  // Velocity multiplier: higher value needed to compensate for friction (2.0 instead of 0.5)
+  private static final double WING_BURST_VELOCITY = (WING_BURST_DISTANCE / WING_BURST_PUSH_DURATION) * 4.0; // 2.0 blocks/tick (4x to overcome friction)
   private static final int WING_BURST_FALL_SLOW_DURATION = 200; // 10 seconds (200 ticks)
 
   // Visual constants
@@ -425,8 +426,15 @@ public class AgilityFragment extends AbstractFragment implements Listener {
             continue;
           }
 
-          // Apply knockback velocity
-          target.setVelocity(affectedEntities.get(uuid));
+          // Apply knockback velocity - ADD to current velocity for cumulative effect
+          // Preserve Y component (gravity/falling) while adding horizontal push
+          Vector additionalVelocity = affectedEntities.get(uuid);
+          Vector currentVelocity = target.getVelocity();
+          target.setVelocity(new Vector(
+            currentVelocity.getX() + additionalVelocity.getX(),
+            currentVelocity.getY(),
+            currentVelocity.getZ() + additionalVelocity.getZ()
+          ));
 
           // Show wind trail particles
           target.getWorld().spawnParticle(
