@@ -122,7 +122,7 @@ describe('Agility Fragment - Wing Burst', () => {
     console.log(`Cooldown status after ability: ${cooldownResult.raw}`);
 
     // Verify Wing Burst executed by checking if ability 2 is on cooldown
-    expect(cooldownResult.raw).toContain(/cooldown|active|ready/i);
+    expect(cooldownResult.raw.toLowerCase()).toMatch(/cooldown|active|ready/);
 
     // Check final positions - we just need to verify at least some pigs moved
     // The exact position tracking is unreliable due to data command limitations
