@@ -33,13 +33,13 @@ function calculateHorizontalDistance(pos1, pos2) {
 }
 
 /**
- * Get position of a named pig using data command
+ * Get position of a tagged pig using data command
  * @param {Object} rcon - RCON backend
- * @param {string} pigName - Name of the pig
+ * @param {string} tag - Unique tag for the pig
  * @returns {Promise<Object>} Position {x, y, z}
  */
-async function getPigPosition(rcon, pigName) {
-  const result = await rcon.send(`data get entity @e[name=${pigName},limit=1] Pos`);
+async function getPigPosition(rcon, tag) {
+  const result = await rcon.send(`data get entity @e[tag=${tag},limit=1] Pos`);
   return parsePosition(result);
 }
 
@@ -68,10 +68,10 @@ describe('Agility Fragment - Wing Burst', () => {
   });
 
   it('should push entities away within 8 block radius', async () => {
-    // Spawn 4 named pigs in front of player (facing North, so negative Z)
+    // Spawn 4 pigs in front of player (facing North, so negative Z)
     // Placed at varying distances within 8-block radius: 2, 4, 6, 8 blocks away
-    // Using CustomName to track them even if blown beyond bot entity tracking range
-    const pigNames = ['Pig1', 'Pig2', 'Pig3', 'Pig4'];
+    // Using unique tags for reliable tracking via data commands
+    const pigTags = ['wing_test_pig_1', 'wing_test_pig_2', 'wing_test_pig_3', 'wing_test_pig_4'];
     const spawnPositions = [
       { x: 0, y: 64, z: -2 },   // 2 blocks North
       { x: 0, y: 64, z: -4 },   // 4 blocks North
@@ -81,9 +81,9 @@ describe('Agility Fragment - Wing Burst', () => {
 
     for (let i = 0; i < spawnPositions.length; i++) {
       const pos = spawnPositions[i];
-      const name = pigNames[i];
-      // Summon with custom name for tracking
-      await context.rcon.send(`summon pig ${pos.x} ${pos.y} ${pos.z} {CustomName:'"${name}"',Tags:["wing_test_pig"]}`);
+      const tag = pigTags[i];
+      // Summon with unique tag for tracking
+      await context.rcon.send(`summon pig ${pos.x} ${pos.y} ${pos.z} {Tags:["${tag}"]}`);
     }
     await wait(1000); // Wait for entities to spawn
 
@@ -94,14 +94,14 @@ describe('Agility Fragment - Wing Burst', () => {
     // Record initial distances using data commands (reliable tracking)
     const initialDistances = [];
 
-    for (const pigName of pigNames) {
+    for (const tag of pigTags) {
       try {
-        const pigPos = await getPigPosition(context.rcon, pigName);
+        const pigPos = await getPigPosition(context.rcon, tag);
         const dist = calculateHorizontalDistance(playerPos, pigPos);
-        initialDistances.push({ name: pigName, distance: dist });
-        console.log(`${pigName} initial: pos=(${pigPos.x.toFixed(1)}, ${pigPos.y.toFixed(1)}, ${pigPos.z.toFixed(1)}) dist=${dist.toFixed(1)}`);
+        initialDistances.push({ tag, distance: dist });
+        console.log(`Pig ${tag}: pos=(${pigPos.x.toFixed(1)}, ${pigPos.y.toFixed(1)}, ${pigPos.z.toFixed(1)}) dist=${dist.toFixed(1)}`);
       } catch (e) {
-        console.error(`Failed to get position for ${pigName}: ${e.message}`);
+        console.error(`Failed to get position for ${tag}: ${e.message}`);
       }
     }
 
@@ -135,17 +135,17 @@ describe('Agility Fragment - Wing Burst', () => {
     let pushedPigs = 0;
     let trackedPigs = 0;
 
-    for (const pigName of pigNames) {
+    for (const tag of pigTags) {
       try {
-        const pigPosAfter = await getPigPosition(context.rcon, pigName);
-        const beforeData = initialDistances.find(d => d.name === pigName);
+        const pigPosAfter = await getPigPosition(context.rcon, tag);
+        const beforeData = initialDistances.find(d => d.tag === tag);
 
         if (beforeData) {
           trackedPigs++;
           const afterDistance = calculateHorizontalDistance(playerPosAfter, pigPosAfter);
           const distanceMoved = afterDistance - beforeData.distance;
 
-          console.log(`${pigName} after: pos=(${pigPosAfter.x.toFixed(1)}, ${pigPosAfter.y.toFixed(1)}, ${pigPosAfter.z.toFixed(1)}) was ${beforeData.distance.toFixed(1)} away, now ${afterDistance.toFixed(1)} away, moved ${distanceMoved.toFixed(1)} blocks`);
+          console.log(`Pig ${tag} after: pos=(${pigPosAfter.x.toFixed(1)}, ${pigPosAfter.y.toFixed(1)}, ${pigPosAfter.z.toFixed(1)}) was ${beforeData.distance.toFixed(1)} away, now ${afterDistance.toFixed(1)} away, moved ${distanceMoved.toFixed(1)} blocks`);
 
           // Pigs should be pushed further away (positive distance moved)
           if (distanceMoved > 0.5) {
@@ -153,14 +153,14 @@ describe('Agility Fragment - Wing Burst', () => {
           }
         }
       } catch (e) {
-        console.warn(`Could not track ${pigName} after Wing Burst: ${e.message}`);
+        console.warn(`Could not track ${tag} after Wing Burst: ${e.message}`);
       }
     }
 
-    console.log(`Pigs tracked: ${trackedPigs}/${pigNames.length}, Pigs pushed: ${pushedPigs}`);
+    console.log(`Pigs tracked: ${trackedPigs}/${pigTags.length}, Pigs pushed: ${pushedPigs}`);
 
     // All pigs should still be trackable via data command (they can't go beyond world bounds)
-    expect(trackedPigs).toBe(pigNames.length);
+    expect(trackedPigs).toBe(pigTags.length);
 
     // At least some pigs should have been pushed away
     expect(pushedPigs).toBeGreaterThan(0);
@@ -175,13 +175,13 @@ describe('Agility Fragment - Wing Burst', () => {
     const playerPos = context.bot.entity.position;
 
     // Spawn pig at 15 blocks away (outside the 8-block Wing Burst radius)
-    // Using CustomName for reliable tracking via data commands
-    const farPigName = 'FarPig';
+    // Using unique tag for reliable tracking via data commands
+    const farPigTag = 'wing_test_pig_far';
     const pigX = Math.floor(playerPos.x) + 15;
     const pigY = 64;
     const pigZ = Math.floor(playerPos.z);
 
-    await context.rcon.send(`summon pig ${pigX} ${pigY} ${pigZ} {CustomName:'"${farPigName}"',Tags:["wing_test_pig"]}`);
+    await context.rcon.send(`summon pig ${pigX} ${pigY} ${pigZ} {Tags:["${farPigTag}"]}`);
     await wait(1000);
 
     // Give Agility Fragment
@@ -190,7 +190,7 @@ describe('Agility Fragment - Wing Burst', () => {
     await wait(500);
 
     // Get initial position using data command
-    const pigPosBefore = await getPigPosition(context.rcon, farPigName);
+    const pigPosBefore = await getPigPosition(context.rcon, farPigTag);
     const beforeDistance = calculateHorizontalDistance(playerPos, pigPosBefore);
 
     console.log(`Player at: x=${playerPos.x.toFixed(1)}, z=${playerPos.z.toFixed(1)}`);
@@ -209,7 +209,7 @@ describe('Agility Fragment - Wing Burst', () => {
 
     // Get position after using data command
     const playerPosAfter = context.bot.entity.position;
-    const pigPosAfter = await getPigPosition(context.rcon, farPigName);
+    const pigPosAfter = await getPigPosition(context.rcon, farPigTag);
     const afterDistance = calculateHorizontalDistance(playerPosAfter, pigPosAfter);
     const distanceMoved = Math.abs(afterDistance - beforeDistance);
 
