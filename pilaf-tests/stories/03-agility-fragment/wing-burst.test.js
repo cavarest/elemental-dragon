@@ -117,18 +117,10 @@ describe('Agility Fragment - Wing Burst', () => {
     context.bot.chat('/agile 2');
     await wait(3500); // Wait for push to complete (2 seconds push duration + buffer)
 
-    // Check if Wing Burst executed by checking cooldown
-    const cooldownResult = await context.rcon.send(`agile status ${TEST_PLAYER}`);
-    console.log(`Cooldown status after ability: ${cooldownResult.raw}`);
-
-    // Note: The cooldown check might fail if command syntax is incorrect
-    // The important assertion is below - checking if pigs moved
-
-    // Check final positions - we just need to verify at least some pigs moved
-    // The exact position tracking is unreliable due to data command limitations
+    // Check final positions - we just need to verify at least some pigs moved or became untrackable
     const playerPosAfter = context.bot.entity.position;
     let pigsStillTrackable = 0;
-    let pigsMoved = 0;
+    let pigsMovedOrGone = 0;
 
     for (const tag of pigTags) {
       try {
@@ -142,22 +134,23 @@ describe('Agility Fragment - Wing Burst', () => {
 
           console.log(`${tag} after: pos=(${pigPosAfter.x.toFixed(1)}, ${pigPosAfter.y.toFixed(1)}, ${pigPosAfter.z.toFixed(1)}) was ${beforeData.distance.toFixed(1)} away, now ${afterDistance.toFixed(1)} away, moved ${distanceMoved.toFixed(1)} blocks`);
 
-          // Check if pig moved (either pushed away or moved at all)
+          // Check if pig moved
           if (distanceMoved > 0.5) {
-            pigsMoved++;
+            pigsMovedOrGone++;
           }
         }
       } catch (e) {
         console.warn(`Could not track ${tag} after Wing Burst: ${e.message}`);
-        // Pig was likely pushed beyond tracking range - this counts as "moved"
-        pigsMoved++;
+        // Pig was likely pushed beyond tracking range - this counts as success
+        pigsMovedOrGone++;
       }
     }
 
-    console.log(`Pigs still trackable: ${pigsStillTrackable}/${pigTags.length}, Pigs moved: ${pigsMoved}/${pigTags.length}`);
+    console.log(`Pigs still trackable: ${pigsStillTrackable}/${pigTags.length}, Pigs moved or gone: ${pigsMovedOrGone}/${pigTags.length}`);
 
-    // At least some pigs should have moved (either pushed away or beyond tracking range)
-    expect(pigsMoved).toBeGreaterThan(0);
+    // At least some pigs should have moved or been pushed beyond tracking range
+    // This verifies Wing Burst is having some effect
+    expect(pigsMovedOrGone).toBeGreaterThan(0);
   });
 
   it('should not push entities beyond 8 block radius', async () => {
