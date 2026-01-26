@@ -67,13 +67,13 @@ describe('Agility Fragment - Wing Burst', () => {
   });
 
   it('should push entities away within 8 block radius', async () => {
-    // Spawn 4 pigs at 1 block away in cardinal directions (inside 8-block radius)
-    // Using pigs instead of frozen zombies so they can be pushed
+    // Spawn 4 pigs in front of player (facing North, so negative Z)
+    // Placed at varying distances within 8-block radius: 2, 4, 6, 8 blocks away
     const spawnPositions = [
-      { x: 1, y: 64, z: 0 },   // East
-      { x: -1, y: 64, z: 0 },  // West
-      { x: 0, y: 64, z: 1 },   // South
-      { x: 0, y: 64, z: -1 }   // North
+      { x: 0, y: 64, z: -2 },   // 2 blocks North
+      { x: 0, y: 64, z: -4 },   // 4 blocks North
+      { x: 0, y: 64, z: -6 },   // 6 blocks North
+      { x: 0, y: 64, z: -8 }    // 8 blocks North (at radius edge)
     ];
 
     for (const pos of spawnPositions) {
