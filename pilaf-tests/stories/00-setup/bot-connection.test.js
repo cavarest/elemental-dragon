@@ -30,13 +30,20 @@ describe('Bot Player Connection', () => {
     }
   });
 
-  it('should create offline bot player', async () => {
+  beforeAll(async () => {
+    // Connect to RCON first
     backend = new MineflayerBackend();
     await backend.connect(config);
 
-    // Wait for server to be ready
+    // Wait for server to be ready with additional delay to prevent throttling
     const ready = await backend.waitForServerReady({ timeout: 60000 });
     expect(ready.success).toBe(true);
+
+    // Additional delay to prevent connection throttling
+    await new Promise(resolve => setTimeout(resolve, 2000));
+  });
+
+  it('should create offline bot player', async () => {
 
     // Create bot player
     bot = await backend.createBot({
