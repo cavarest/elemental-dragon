@@ -9,8 +9,8 @@ module.exports = {
   // Module paths
   moduleDirectories: ['node_modules'],
 
-  // Test file extensions
-  moduleFileExtensions: ['js'],
+  // Test file extensions - include json for prismarine-physics features.json
+  moduleFileExtensions: ['js', 'json'],
 
   // Run tests serially to avoid connection throttling
   maxWorkers: 1,
