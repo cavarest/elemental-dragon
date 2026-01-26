@@ -7,7 +7,7 @@
 
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const { RconBackend } = require('/Users/mulgogi/src/cavarest/pilaf/packages/backends/lib/rcon-backend.js');
+const { RconBackend } = require('@pilaf/backends');
 
 const config = {
   host: process.env.RCON_HOST || 'localhost',
