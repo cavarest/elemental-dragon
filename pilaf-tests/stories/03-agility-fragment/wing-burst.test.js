@@ -82,8 +82,8 @@ describe('Agility Fragment - Wing Burst', () => {
     for (let i = 0; i < spawnPositions.length; i++) {
       const pos = spawnPositions[i];
       const tag = pigTags[i];
-      // Summon with unique tag for tracking
-      await context.rcon.send(`summon pig ${pos.x} ${pos.y} ${pos.z} {Tags:["${tag}"]}`);
+      // Summon with unique tag for tracking, NoAI to prevent movement
+      await context.rcon.send(`summon pig ${pos.x} ${pos.y} ${pos.z} {Tags:["${tag}"],NoAI:1b}`);
     }
     await wait(1000); // Wait for entities to spawn
 
@@ -181,7 +181,7 @@ describe('Agility Fragment - Wing Burst', () => {
     const pigY = 64;
     const pigZ = Math.floor(playerPos.z);
 
-    await context.rcon.send(`summon pig ${pigX} ${pigY} ${pigZ} {Tags:["${farPigTag}"]}`);
+    await context.rcon.send(`summon pig ${pigX} ${pigY} ${pigZ} {Tags:["${farPigTag}"],NoAI:1b}`);
     await wait(1000);
 
     // Give Agility Fragment
