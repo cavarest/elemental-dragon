@@ -3,6 +3,7 @@ package org.cavarest.elementaldragon.item;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Material;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -225,5 +226,109 @@ public class ElementalItems {
     }
 
     return null;
+  }
+
+  // ==================== DRY Inventory Checking Helpers ====================
+
+  /**
+   * Check if player has a specific fragment type in their inventory OR offhand.
+   * This is the DRY helper for all inventory+offhand checking.
+   * Bukkit's getContents() does NOT include offhand, so we check both.
+   *
+   * @param player The player to check
+   * @param fragmentType The fragment type to look for
+   * @return true if the fragment is found in main inventory or offhand
+   */
+  public static boolean hasFragmentInInventory(Player player, FragmentType fragmentType) {
+    if (player == null || player.getInventory() == null) {
+      return false;
+    }
+
+    // Check main inventory
+    for (ItemStack item : player.getInventory().getContents()) {
+      if (item != null && getFragmentType(item) == fragmentType) {
+        return true;
+      }
+    }
+
+    // Check offhand explicitly (getContents() doesn't include offhand!)
+    ItemStack offhandItem = player.getInventory().getItemInOffHand();
+    if (offhandItem != null && getFragmentType(offhandItem) == fragmentType) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Find ANY fragment in player's inventory (excluding a specific type).
+   * Used for one-fragment limit enforcement.
+   * Checks main inventory, offhand, AND cursor (for inventory operations).
+   *
+   * @param player The player to check
+   * @param excludeType Fragment type to exclude (null to check for any fragment)
+   * @return The fragment type found, or null if none
+   */
+  public static FragmentType getAnyFragmentExcept(Player player, FragmentType excludeType) {
+    if (player == null || player.getInventory() == null) {
+      return null;
+    }
+
+    // Check main inventory
+    for (ItemStack item : player.getInventory().getContents()) {
+      if (item != null) {
+        FragmentType fragmentType = getFragmentType(item);
+        if (fragmentType != null && fragmentType != excludeType) {
+          return fragmentType;
+        }
+      }
+    }
+
+    // Check offhand explicitly (getContents() doesn't include offhand!)
+    ItemStack offhandItem = player.getInventory().getItemInOffHand();
+    if (offhandItem != null) {
+      FragmentType fragmentType = getFragmentType(offhandItem);
+      if (fragmentType != null && fragmentType != excludeType) {
+        return fragmentType;
+      }
+    }
+
+    // Check cursor item (when player is holding an item during inventory operations)
+    ItemStack cursorItem = player.getItemOnCursor();
+    if (cursorItem != null) {
+      FragmentType fragmentType = getFragmentType(cursorItem);
+      if (fragmentType != null && fragmentType != excludeType) {
+        return fragmentType;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Check if player's inventory contains a specific material (including offhand).
+   * DRY helper for inventory-wide material checking.
+   *
+   * @param player The player to check
+   * @param material The material to look for
+   * @return true if the material is found in main inventory or offhand
+   */
+  public static boolean hasMaterialInInventory(Player player, Material material) {
+    if (player == null || player.getInventory() == null) {
+      return false;
+    }
+
+    // Check main inventory (contains() doesn't include offhand!)
+    if (player.getInventory().contains(material)) {
+      return true;
+    }
+
+    // Check offhand explicitly
+    ItemStack offhandItem = player.getInventory().getItemInOffHand();
+    if (offhandItem != null && offhandItem.getType() == material) {
+      return true;
+    }
+
+    return false;
   }
 }

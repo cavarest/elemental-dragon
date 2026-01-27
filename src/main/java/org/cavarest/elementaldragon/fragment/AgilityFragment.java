@@ -75,7 +75,7 @@ public class AgilityFragment extends AbstractFragment implements Listener {
   private final List<AbilityDefinition> abilities = List.of(
     new AbilityDefinition(1, "Draconic Surge", "speed boost",
       List.of("surge", "draconic-surge"),
-      "Speed courses through your veins like the wind! 💨⚡", "⚡"),
+      "Speed courses through your veins! Whoever blocks you will be hurt! 💨⚡", "⚡"),
     new AbilityDefinition(2, "Wing Gust", "repulsion wave",
       List.of("burst", "wing-burst", "gust"),
       "A powerful gust pushes all nearby foes 20 blocks away! 💨🌊", "🌊")
@@ -243,17 +243,7 @@ public class AgilityFragment extends AbstractFragment implements Listener {
    */
   private void executeDraconicSurge(Player player) {
     // No cooldown check needed - FragmentManager.useFragmentAbility() already checked
-
-    // Check if dash is already active (toggle behavior - Issue #28)
-    if (player.hasMetadata(DRACONIC_SURGE_TASK_KEY)) {
-      // Cancel the existing dash
-      player.removeMetadata(DRACONIC_SURGE_TASK_KEY, plugin);
-      player.sendMessage(
-        Component.text("Draconic Surge cancelled!", NamedTextColor.YELLOW)
-      );
-      // Fall damage protection continues for the full 10 seconds
-      return;
-    }
+    // Toggle behavior is also handled by FragmentManager (before cooldown check)
 
     Location playerLocation = player.getLocation();
 
@@ -334,15 +324,23 @@ public class AgilityFragment extends AbstractFragment implements Listener {
           // Mark as hit so we don't hit them again
           hitEntities.add(target.getUniqueId());
 
-          // Visual feedback for collision
+          // Play impact sound
+          target.getWorld().playSound(
+              target.getLocation(),
+              Sound.ENTITY_PLAYER_HURT,
+              1.0f,  // volume
+              1.0f   // pitch
+          );
+
+          // Show heart particles indicating damage (Issue #28)
           target.getWorld().spawnParticle(
-            Particle.CLOUD,
-            target.getLocation().add(0, 1, 0),
-            10,
-            0.3,
-            0.5,
-            0.3,
-            0.05
+              Particle.HEART,
+              target.getLocation().add(0, 1, 0),  // Slightly above entity
+              10,    // number of particles
+              0.3,   // offset X
+              0.5,   // offset Y (spread upward)
+              0.3,   // offset Z
+              0.02   // speed
           );
         }
 
@@ -384,7 +382,7 @@ public class AgilityFragment extends AbstractFragment implements Listener {
     // Cooldown is set by FragmentManager.useFragmentAbility()
 
     player.sendMessage(
-      Component.text("Draconic Surge activated! Type /agile 1 again to cancel. Fall damage protected for 10 seconds!",
+      Component.text("Draconic Surge activated! Type '/agile 1' again to halt dash. Fall damage protected for 10 seconds!",
         NamedTextColor.GREEN)
     );
 

@@ -93,7 +93,7 @@ Players can use these commands to manage and activate their fragments.
 
 # Agility Fragment (Wind Element)
 /agile equip       # Equip Agility Fragment
-/agile 1           # Draconic Surge (20-block dash, 30s cooldown)
+/agile 1           # Draconic Surge (dash, 30s cooldown)
 /agile 2           # Wing Burst (push entities 8-block radius, 45s cooldown)
 /agile status      # Show fragment status and cooldowns
 /agile help        # Show available commands
@@ -317,6 +317,8 @@ with unique abilities, passive bonuses, and visual themes.
   - Duration: 1 second (20 ticks)
   - Fall protection: 10 seconds after dash
   - Shows cloud particles during dash
+  - **Toggle**: Type `/agile 1` again while dashing to halt immediately
+  - Collision: Deals 3 hearts damage to entities you hit (ignores armor)
   - Aliases: `surge`, `draconic-surge`
 
 - **Wing Burst** (`/agile 2`): Push all entities away from player (45s cooldown)

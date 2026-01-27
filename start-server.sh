@@ -138,6 +138,7 @@ echo ""
 
 # Check if server is already running and stop it
 CONTAINER_NAME="${CONTAINER_NAME:-papermc-elementaldragon}-${PROFILE}"
+export CONTAINER_NAME
 echo "🔍 Checking if server is already running..."
 
 # Check for our container

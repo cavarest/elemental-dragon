@@ -25,6 +25,7 @@ import org.bukkit.event.player.PlayerItemHeldEvent;
 import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import io.papermc.paper.event.player.PlayerInventorySlotChangeEvent;
 import org.bukkit.plugin.Plugin;
 import me.catcoder.sidebar.ProtocolSidebar;
 import me.catcoder.sidebar.Sidebar;
@@ -224,7 +225,7 @@ public class HudManager implements Listener {
   }
 
   /**
-   * Handle inventory clicks - update HUD when player puts dragon egg in offhand.
+   * Handle inventory clicks - update HUD when player moves dragon egg.
    */
   @EventHandler
   public void onInventoryClick(InventoryClickEvent event) {
@@ -234,24 +235,26 @@ public class HudManager implements Listener {
 
     Player player = (Player) event.getWhoClicked();
 
-    // Check if the click is on the player's inventory (not a container)
-    // and if it involves the offhand slot (slot 40)
-    if (event.getClickedInventory() == player.getInventory() && event.getSlot() == 40) {
-      // Offhand slot changed - update HUD
+    // Check if clicked item, cursor item, or current item is dragon egg
+    org.bukkit.inventory.ItemStack clickedItem = event.getCurrentItem();
+    org.bukkit.inventory.ItemStack cursorItem = event.getCursor();
+
+    if ((clickedItem != null && clickedItem.getType() == org.bukkit.Material.DRAGON_EGG) ||
+        (cursorItem != null && cursorItem.getType() == org.bukkit.Material.DRAGON_EGG)) {
       scheduleHudUpdate(player);
     }
   }
 
   /**
-   * Handle creative mode item placement - update HUD when player puts dragon egg in offhand.
+   * Handle player interact - update HUD when player right-clicks with dragon egg.
    */
   @EventHandler
   public void onPlayerInteract(PlayerInteractEvent event) {
-    // Check if player is holding dragon egg and interacting with offhand
+    // Check if player is holding dragon egg and interacting
     Player player = event.getPlayer();
     if (event.getAction() == org.bukkit.event.block.Action.RIGHT_CLICK_AIR ||
         event.getAction() == org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK) {
-      // Check if the item being placed is a dragon egg
+      // Check if the item in hand is a dragon egg (main hand or offhand)
       org.bukkit.inventory.ItemStack item = event.getItem();
       if (item != null && item.getType() == org.bukkit.Material.DRAGON_EGG) {
         scheduleHudUpdate(player);
@@ -260,7 +263,7 @@ public class HudManager implements Listener {
   }
 
   /**
-   * Handle drag operations - update HUD when player drags items to offhand.
+   * Handle drag operations - update HUD when player drags dragon egg.
    */
   @EventHandler
   public void onInventoryDrag(InventoryDragEvent event) {
@@ -270,8 +273,27 @@ public class HudManager implements Listener {
 
     Player player = (Player) event.getWhoClicked();
 
-    // Check if the drag involves the offhand slot (slot 40)
-    if (event.getRawSlots().contains(40)) {
+    // Check if the drag involves a dragon egg (any slot)
+    for (org.bukkit.inventory.ItemStack item : event.getNewItems().values()) {
+      if (item != null && item.getType() == org.bukkit.Material.DRAGON_EGG) {
+        scheduleHudUpdate(player);
+        return;
+      }
+    }
+  }
+
+  /**
+   * Handle item pickup - update HUD when player picks up dragon egg.
+   */
+  @EventHandler
+  public void onItemPickup(org.bukkit.event.entity.EntityPickupItemEvent event) {
+    if (!(event.getEntity() instanceof Player)) {
+      return;
+    }
+
+    Player player = (Player) event.getEntity();
+
+    if (event.getItem().getItemStack().getType() == org.bukkit.Material.DRAGON_EGG) {
       scheduleHudUpdate(player);
     }
   }
@@ -283,6 +305,38 @@ public class HudManager implements Listener {
   public void onPlayerSwapHandItems(PlayerSwapHandItemsEvent event) {
     Player player = event.getPlayer();
     scheduleHudUpdate(player);
+  }
+
+  /**
+   * Handle item drops - update HUD when player drops dragon egg.
+   */
+  @EventHandler
+  public void onPlayerDropItem(org.bukkit.event.player.PlayerDropItemEvent event) {
+    Player player = event.getPlayer();
+    if (event.getItemDrop().getItemStack().getType() == org.bukkit.Material.DRAGON_EGG) {
+      scheduleHudUpdate(player);
+    }
+  }
+
+  /**
+   * Handle inventory slot changes - update HUD when player's inventory changes.
+   * This catches /give command, item pickup, and any other inventory modifications.
+   * Uses Paper-specific PlayerInventorySlotChangeEvent.
+   */
+  @EventHandler
+  public void onPlayerInventorySlotChange(PlayerInventorySlotChangeEvent event) {
+    // Check if either old or new item is a dragon egg
+    // This handles both giving (old=null, new=egg) and removing (old=egg, new=null/other)
+    org.bukkit.inventory.ItemStack oldItem = event.getOldItemStack();
+    org.bukkit.inventory.ItemStack newItem = event.getNewItemStack();
+
+    boolean wasEgg = oldItem != null && oldItem.getType() == org.bukkit.Material.DRAGON_EGG;
+    boolean isEgg = newItem != null && newItem.getType() == org.bukkit.Material.DRAGON_EGG;
+
+    // Only update if dragon egg status changed (egg added or removed)
+    if (wasEgg || isEgg) {
+      scheduleHudUpdate(event.getPlayer());
+    }
   }
 
   /**
@@ -841,7 +895,8 @@ public class HudManager implements Listener {
   }
 
   /**
-   * Check if player has lightning ability available (dragon egg in offhand).
+   * Check if player has lightning ability available (dragon egg in inventory or offhand).
+   * Uses DRY helper from ElementalItems.
    */
   private boolean hasLightningAbility(Player player) {
     if (abilityManager == null) {
@@ -849,9 +904,10 @@ public class HudManager implements Listener {
       return false;
     }
 
-    // Check if player has dragon egg in offhand
-    org.bukkit.inventory.ItemStack offhand = player.getInventory().getItemInOffHand();
-    return offhand != null && offhand.getType() == org.bukkit.Material.DRAGON_EGG;
+    return org.cavarest.elementaldragon.item.ElementalItems.hasMaterialInInventory(
+      player,
+      org.bukkit.Material.DRAGON_EGG
+    );
   }
 
   /**

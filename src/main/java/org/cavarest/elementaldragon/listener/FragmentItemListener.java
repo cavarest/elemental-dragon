@@ -136,8 +136,8 @@ public class FragmentItemListener implements Listener {
   // ===== Pickup Restriction =====
 
   /**
-   * Enforce one-fragment limit - prevent pickup of additional fragments.
-   * Players can only carry one fragment type at a time (not counting duplicates of same type).
+   * Enforce one-fragment limit - prevent pickup of ANY fragment when player already has one.
+   * Players can only carry ONE fragment at a time (regardless of type).
    * Uses modern EntityPickupItemEvent instead of deprecated PlayerPickupItemEvent.
    */
   @EventHandler(priority = EventPriority.HIGH)
@@ -155,21 +155,38 @@ public class FragmentItemListener implements Listener {
       return;
     }
 
-    // Count how many of this SAME fragment type the player already has
-    int existingCount = countFragmentType(player.getInventory().getContents(), pickupType);
-    if (existingCount > 0) {
-      // Cancel pickup - player already has this fragment type
+    // Check if player has ANY fragment in their inventory (main + offhand + cursor)
+    // Use DRY helper from ElementalItems
+    FragmentType existingFragment = ElementalItems.getAnyFragmentExcept(player, null);
+
+    if (existingFragment != null) {
+      // Player already has a fragment - cancel pickup
       event.setCancelled(true);
-      player.sendMessage(net.kyori.adventure.text.Component.text()
-          .append(net.kyori.adventure.text.Component.text("⚠ You can only possess ONE ", net.kyori.adventure.text.format.NamedTextColor.RED))
-          .append(net.kyori.adventure.text.Component.text(pickupType.getDisplayName(), net.kyori.adventure.text.format.NamedTextColor.WHITE))
-          .append(net.kyori.adventure.text.Component.text(" at a time!", net.kyori.adventure.text.format.NamedTextColor.RED))
-          .append(net.kyori.adventure.text.Component.newline())
-          .append(net.kyori.adventure.text.Component.text("Drop or store your existing ", net.kyori.adventure.text.format.NamedTextColor.GRAY))
-          .append(net.kyori.adventure.text.Component.text(pickupType.getDisplayName(), net.kyori.adventure.text.format.NamedTextColor.WHITE))
-          .append(net.kyori.adventure.text.Component.text(" before picking up another.", net.kyori.adventure.text.format.NamedTextColor.GRAY))
-          .build()
-      );
+
+      // Different message depending on whether it's the same or different fragment
+      if (existingFragment == pickupType) {
+        player.sendMessage(net.kyori.adventure.text.Component.text()
+            .append(net.kyori.adventure.text.Component.text("⚠ You can only possess ONE ", net.kyori.adventure.text.format.NamedTextColor.RED))
+            .append(net.kyori.adventure.text.Component.text(pickupType.getDisplayName(), net.kyori.adventure.text.format.NamedTextColor.WHITE))
+            .append(net.kyori.adventure.text.Component.text(" at a time!", net.kyori.adventure.text.format.NamedTextColor.RED))
+            .append(net.kyori.adventure.text.Component.newline())
+            .append(net.kyori.adventure.text.Component.text("Drop your existing ", net.kyori.adventure.text.format.NamedTextColor.GRAY))
+            .append(net.kyori.adventure.text.Component.text(pickupType.getDisplayName(), net.kyori.adventure.text.format.NamedTextColor.WHITE))
+            .append(net.kyori.adventure.text.Component.text(" before picking up another.", net.kyori.adventure.text.format.NamedTextColor.GRAY))
+            .build()
+        );
+      } else {
+        player.sendMessage(net.kyori.adventure.text.Component.text()
+            .append(net.kyori.adventure.text.Component.text("⚠ You can only carry ONE fragment at a time!", net.kyori.adventure.text.format.NamedTextColor.RED))
+            .append(net.kyori.adventure.text.Component.newline())
+            .append(net.kyori.adventure.text.Component.text("You already have: ", net.kyori.adventure.text.format.NamedTextColor.GRAY))
+            .append(net.kyori.adventure.text.Component.text(existingFragment.getDisplayName(), net.kyori.adventure.text.format.NamedTextColor.WHITE))
+            .append(net.kyori.adventure.text.Component.text(". Drop it before picking up: ", net.kyori.adventure.text.format.NamedTextColor.GRAY))
+            .append(net.kyori.adventure.text.Component.text(pickupType.getDisplayName(), net.kyori.adventure.text.format.NamedTextColor.WHITE))
+            .append(net.kyori.adventure.text.Component.text(".", net.kyori.adventure.text.format.NamedTextColor.GRAY))
+            .build()
+        );
+      }
     }
   }
 

@@ -19,6 +19,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
@@ -73,6 +74,11 @@ public class FragmentManagerOneFragmentLimitTest {
                 .thenReturn(null); // Player doesn't have Corrupted Core
             mockedElementalItems.when(() -> ElementalItems.getFragmentType(nonFragmentItem))
                 .thenReturn(null);
+
+            // Mock: getAnyFragmentExcept returns Burning Fragment when checking inventory
+            // This simulates the inventory check that prevents having multiple fragments
+            mockedElementalItems.when(() -> ElementalItems.getAnyFragmentExcept(eq(player), eq(FragmentType.CORRUPTED)))
+                .thenReturn(FragmentType.BURNING);
 
             // Set up inventory to contain Burning Fragment
             ItemStack[] inventoryContents = new ItemStack[36];
