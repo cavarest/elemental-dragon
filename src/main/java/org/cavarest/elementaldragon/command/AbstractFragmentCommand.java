@@ -140,17 +140,23 @@ public abstract class AbstractFragmentCommand implements CommandExecutor, TabCom
     boolean success = fragmentManager.useFragmentAbility(player, abilityNumber);
 
     if (success) {
-      // Query fragment for ability metadata
-      AbilityDefinition ability = fragment.getAbility(abilityNumber);
-      if (ability != null) {
-        player.sendMessage(
-          Component.text("Used " + ability.getName() + "!",
-            fragment.getThemeColor())
-        );
-        player.sendMessage(
-          Component.text(ability.getSuccessMessage(),
-            NamedTextColor.GRAY)
-        );
+      // Check if this was a toggle operation (for Draconic Surge)
+      // If toggle flag is set, don't show success messages
+      boolean isToggle = player.hasMetadata("agile_toggle_flag");
+
+      if (!isToggle) {
+        // Query fragment for ability metadata
+        AbilityDefinition ability = fragment.getAbility(abilityNumber);
+        if (ability != null) {
+          player.sendMessage(
+            Component.text("Used " + ability.getName() + "!",
+              fragment.getThemeColor())
+          );
+          player.sendMessage(
+            Component.text(ability.getSuccessMessage(),
+              NamedTextColor.GRAY)
+          );
+        }
       }
     }
 
@@ -191,7 +197,21 @@ public abstract class AbstractFragmentCommand implements CommandExecutor, TabCom
     boolean hasFragment = hasFragmentItem(player, fragment.getType());
 
     if (!hasFragment) {
-      // Player doesn't have the fragment - check if admin (auto-give)
+      // Player doesn't have the fragment - check if they have ANY OTHER fragment first
+      // This prevents admins from getting duplicate fragments via /equip command
+      FragmentType existingFragment = ElementalItems.getAnyFragmentExcept(player, fragment.getType());
+      if (existingFragment != null) {
+        player.sendMessage(
+          Component.text("You can only carry one fragment at a time!", NamedTextColor.RED)
+        );
+        player.sendMessage(
+          Component.text("You already have: " + existingFragment.getDisplayName() +
+            ". Drop it before equipping the " + fragment.getType().getDisplayName() + ".", NamedTextColor.GRAY)
+        );
+        return false;
+      }
+
+      // Player doesn't have any fragments - check if admin (auto-give)
       if (player.hasPermission("elementaldragon.fragment.admin")) {
         // Give the fragment item to player
         ItemStack fragmentItem = createFragmentItem(fragment.getType());
@@ -245,18 +265,14 @@ public abstract class AbstractFragmentCommand implements CommandExecutor, TabCom
 
   /**
    * Check if player has a specific fragment item in inventory.
+   * Uses DRY helper from ElementalItems (checks main inventory + offhand).
    *
    * @param player The player
    * @param fragmentType The fragment type to check
    * @return true if player has the fragment
    */
   private boolean hasFragmentItem(Player player, FragmentType fragmentType) {
-    for (ItemStack item : player.getInventory().getContents()) {
-      if (item != null && ElementalItems.getFragmentType(item) == fragmentType) {
-        return true;
-      }
-    }
-    return false;
+    return ElementalItems.hasFragmentInInventory(player, fragmentType);
   }
 
   /**

@@ -75,6 +75,9 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
   private final NamespacedKey DEBUFF_PERSIST_KEY;
   private final NamespacedKey DEBUFF_START_PERSIST_KEY;
   private final NamespacedKey FREEZE_LOCATION_PERSIST_KEY;
+  // Metadata key for tracking Suspended Sustenance effect
+  private static final String SUSPENDED_SUSTENANCE_KEY = "corrupted_suspended_sustenance_active";
+
   private final NamespacedKey SATURATION_PERSIST_KEY;
 
   // Fragment metadata (Single Source of Truth)
@@ -477,6 +480,12 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
       )
     );
 
+    // Mark that we applied this effect (so we can properly remove it later)
+    player.setMetadata(
+      SUSPENDED_SUSTENANCE_KEY,
+      new org.bukkit.metadata.FixedMetadataValue(plugin, true)
+    );
+
     // Show void particles around player
     player.getWorld().spawnParticle(
       Particle.REVERSE_PORTAL,
@@ -499,7 +508,23 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
     if (player == null) {
       return;
     }
+
+    // Remove the SATURATION potion effect
     player.removePotionEffect(PotionEffectType.SATURATION);
+
+    // Remove our tracking metadata
+    player.removeMetadata(SUSPENDED_SUSTENANCE_KEY, plugin);
+
+    // Force saturation to 0 to ensure hunger depletion resumes immediately
+    // This is needed because the infinite SATURATION effect may have left
+    // the saturation bar at a high value
+    player.setSaturation(0);
+
+    // Also reset food level to maximum if it was above normal
+    // (SATURATION effect keeps food at 20 constantly)
+    if (player.getFoodLevel() > 20) {
+      player.setFoodLevel(20);
+    }
   }
 
   /**

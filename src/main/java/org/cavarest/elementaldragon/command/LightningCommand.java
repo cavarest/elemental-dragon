@@ -62,7 +62,7 @@ public class LightningCommand implements CommandExecutor, TabCompleter {
         Component.text("How to use the Lightning ability:", NamedTextColor.WHITE)
       );
       player.sendMessage(
-        Component.text("1. Hold a Dragon Egg in your offhand", NamedTextColor.GRAY)
+        Component.text("1. Have a Dragon Egg in your inventory (any slot)", NamedTextColor.GRAY)
       );
       player.sendMessage(
         Component.text("2. Use /lightning 1 to cast lightning strike", NamedTextColor.GRAY)
@@ -120,7 +120,7 @@ public class LightningCommand implements CommandExecutor, TabCompleter {
     if (!ability.hasRequiredItem(player)) {
       player.sendMessage(
         Component.text(
-          "You must hold a Dragon Egg in your offhand to use this ability!",
+          "You must have a Dragon Egg in your inventory to use this ability!",
           NamedTextColor.RED
         )
       );

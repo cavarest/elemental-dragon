@@ -1,11 +1,14 @@
 package org.cavarest.elementaldragon.unit.fragment;
 
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Item;
+import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.cavarest.elementaldragon.ElementalDragon;
 import org.cavarest.elementaldragon.fragment.FragmentManager;
 import org.cavarest.elementaldragon.listener.FragmentItemListener;
@@ -49,12 +52,31 @@ public class FragmentItemListenerTest {
     @Mock
     private ItemStack nonFragmentItem;
 
+    @Mock
+    private PlayerInventory playerInventory;
+
+    @Mock
+    private ItemStack burningFragment;
+
+    @Mock
+    private ItemStack immortalFragment;
+
+    @Mock
+    private ItemStack emptyItem;
+
+    @Mock
+    private Item pickupItemEntity;
+
     private FragmentItemListener fragmentItemListener;
 
     @BeforeEach
     public void setUp() {
         MockitoAnnotations.openMocks(this);
         fragmentItemListener = new FragmentItemListener(plugin, fragmentManager);
+
+        // Initialize empty item mock
+        lenient().when(emptyItem.getType()).thenReturn(org.bukkit.Material.AIR);
+        lenient().when(emptyItem.getAmount()).thenReturn(0);
     }
 
     // ==================== Constructor tests ====================
@@ -315,6 +337,240 @@ public class FragmentItemListenerTest {
 
             // Should NOT unequip since no fragment equipped
             verify(fragmentManager, never()).unequipFragment(player);
+        }
+    }
+
+    // ==================== One-Fragment Pickup Limit Tests ====================
+    // Critical: These tests ensure players can NEVER pick up a second fragment
+
+    @Test
+    @DisplayName("CANNOT pick up different fragment when holding one in main inventory")
+    public void testCannotPickUpDifferentFragmentWhenHoldingOneInMainInventory() {
+        try (MockedStatic<ElementalItems> mockedElementalItems = mockStatic(ElementalItems.class)) {
+            // Setup: Player has Immortal Fragment in main inventory
+            mockedElementalItems.when(() -> ElementalItems.getFragmentType(immortalFragment))
+                .thenReturn(FragmentType.IMMORTAL);
+            mockedElementalItems.when(() -> ElementalItems.getFragmentType(burningFragment))
+                .thenReturn(FragmentType.BURNING);
+            mockedElementalItems.when(() -> ElementalItems.getAnyFragmentExcept(any(), eq(null)))
+                .thenReturn(FragmentType.IMMORTAL);
+
+            // Mock player inventory
+            when(player.getInventory()).thenReturn(playerInventory);
+            when(playerInventory.getContents()).thenReturn(new ItemStack[]{immortalFragment});
+            when(player.getItemOnCursor()).thenReturn(emptyItem);
+
+            // Setup: Trying to pick up Burning Fragment
+            EntityPickupItemEvent event = mock(EntityPickupItemEvent.class);
+            when(event.getEntity()).thenReturn(player);
+            when(event.getItem()).thenReturn(pickupItemEntity);
+            when(pickupItemEntity.getItemStack()).thenReturn(burningFragment);
+            when(burningFragment.hasItemMeta()).thenReturn(true);
+
+            // Execute
+            fragmentItemListener.onEntityPickupItem(event);
+
+            // Verify pickup was CANCELLED
+            verify(event).setCancelled(true);
+            // Verify error message sent
+            verify(player).sendMessage(any(net.kyori.adventure.text.Component.class));
+        }
+    }
+
+    @Test
+    @DisplayName("CANNOT pick up different fragment when holding one in offhand")
+    public void testCannotPickUpDifferentFragmentWhenHoldingOneInOffhand() {
+        try (MockedStatic<ElementalItems> mockedElementalItems = mockStatic(ElementalItems.class)) {
+            // Setup: Player has Immortal Fragment in offhand
+            mockedElementalItems.when(() -> ElementalItems.getFragmentType(immortalFragment))
+                .thenReturn(FragmentType.IMMORTAL);
+            mockedElementalItems.when(() -> ElementalItems.getFragmentType(burningFragment))
+                .thenReturn(FragmentType.BURNING);
+            mockedElementalItems.when(() -> ElementalItems.getAnyFragmentExcept(any(), eq(null)))
+                .thenReturn(FragmentType.IMMORTAL);
+
+            // Mock player inventory
+            when(player.getInventory()).thenReturn(playerInventory);
+            when(playerInventory.getContents()).thenReturn(new ItemStack[0]); // Empty main inventory
+            when(player.getItemOnCursor()).thenReturn(emptyItem);
+
+            // Setup: Trying to pick up Burning Fragment
+            EntityPickupItemEvent event = mock(EntityPickupItemEvent.class);
+            when(event.getEntity()).thenReturn(player);
+            when(event.getItem()).thenReturn(pickupItemEntity);
+            when(pickupItemEntity.getItemStack()).thenReturn(burningFragment);
+            when(burningFragment.hasItemMeta()).thenReturn(true);
+
+            // Execute
+            fragmentItemListener.onEntityPickupItem(event);
+
+            // Verify pickup was CANCELLED
+            verify(event).setCancelled(true);
+            // Verify error message sent
+            verify(player).sendMessage(any(net.kyori.adventure.text.Component.class));
+        }
+    }
+
+    @Test
+    @DisplayName("CANNOT pick up different fragment when holding one on cursor")
+    public void testCannotPickUpDifferentFragmentWhenHoldingOneOnCursor() {
+        try (MockedStatic<ElementalItems> mockedElementalItems = mockStatic(ElementalItems.class)) {
+            // Setup: Player has Immortal Fragment on cursor
+            mockedElementalItems.when(() -> ElementalItems.getFragmentType(immortalFragment))
+                .thenReturn(FragmentType.IMMORTAL);
+            mockedElementalItems.when(() -> ElementalItems.getFragmentType(burningFragment))
+                .thenReturn(FragmentType.BURNING);
+            mockedElementalItems.when(() -> ElementalItems.getAnyFragmentExcept(any(), eq(null)))
+                .thenReturn(FragmentType.IMMORTAL);
+
+            // Mock player inventory
+            when(player.getInventory()).thenReturn(playerInventory);
+            when(playerInventory.getContents()).thenReturn(new ItemStack[0]); // Empty inventory
+            when(player.getItemOnCursor()).thenReturn(immortalFragment); // Has fragment on cursor
+
+            // Setup: Trying to pick up Burning Fragment
+            EntityPickupItemEvent event = mock(EntityPickupItemEvent.class);
+            when(event.getEntity()).thenReturn(player);
+            when(event.getItem()).thenReturn(pickupItemEntity);
+            when(pickupItemEntity.getItemStack()).thenReturn(burningFragment);
+            when(burningFragment.hasItemMeta()).thenReturn(true);
+
+            // Execute
+            fragmentItemListener.onEntityPickupItem(event);
+
+            // Verify pickup was CANCELLED
+            verify(event).setCancelled(true);
+            // Verify error message sent
+            verify(player).sendMessage(any(net.kyori.adventure.text.Component.class));
+        }
+    }
+
+    @Test
+    @DisplayName("CANNOT pick up same fragment type when already holding one")
+    public void testCannotPickUpSameFragmentTypeWhenAlreadyHoldingOne() {
+        try (MockedStatic<ElementalItems> mockedElementalItems = mockStatic(ElementalItems.class)) {
+            // Setup: Player has Immortal Fragment in inventory
+            mockedElementalItems.when(() -> ElementalItems.getFragmentType(immortalFragment))
+                .thenReturn(FragmentType.IMMORTAL);
+            mockedElementalItems.when(() -> ElementalItems.getAnyFragmentExcept(any(), eq(null)))
+                .thenReturn(FragmentType.IMMORTAL);
+
+            // Mock player inventory
+            when(player.getInventory()).thenReturn(playerInventory);
+            when(playerInventory.getContents()).thenReturn(new ItemStack[]{immortalFragment});
+            when(player.getItemOnCursor()).thenReturn(emptyItem);
+
+            // Setup: Trying to pick up another Immortal Fragment
+            EntityPickupItemEvent event = mock(EntityPickupItemEvent.class);
+            when(event.getEntity()).thenReturn(player);
+            when(event.getItem()).thenReturn(pickupItemEntity);
+            when(pickupItemEntity.getItemStack()).thenReturn(immortalFragment);
+            when(immortalFragment.hasItemMeta()).thenReturn(true);
+
+            // Execute
+            fragmentItemListener.onEntityPickupItem(event);
+
+            // Verify pickup was CANCELLED
+            verify(event).setCancelled(true);
+            // Verify error message sent
+            verify(player).sendMessage(any(net.kyori.adventure.text.Component.class));
+        }
+    }
+
+    @Test
+    @DisplayName("CAN pick up fragment when player has NO fragments")
+    public void testCanPickUpFragmentWhenPlayerHasNoFragments() {
+        try (MockedStatic<ElementalItems> mockedElementalItems = mockStatic(ElementalItems.class)) {
+            // Setup: Player has NO fragments
+            mockedElementalItems.when(() -> ElementalItems.getFragmentType(burningFragment))
+                .thenReturn(FragmentType.BURNING);
+            mockedElementalItems.when(() -> ElementalItems.getAnyFragmentExcept(any(), eq(null)))
+                .thenReturn(null); // No fragments found
+
+            // Mock player inventory
+            when(player.getInventory()).thenReturn(playerInventory);
+            when(playerInventory.getContents()).thenReturn(new ItemStack[0]); // Empty inventory
+            when(player.getItemOnCursor()).thenReturn(emptyItem);
+
+            // Setup: Trying to pick up Burning Fragment
+            EntityPickupItemEvent event = mock(EntityPickupItemEvent.class);
+            when(event.getEntity()).thenReturn(player);
+            when(event.getItem()).thenReturn(pickupItemEntity);
+            when(pickupItemEntity.getItemStack()).thenReturn(burningFragment);
+            when(burningFragment.hasItemMeta()).thenReturn(true);
+
+            // Execute
+            fragmentItemListener.onEntityPickupItem(event);
+
+            // Verify pickup was NOT cancelled
+            verify(event, never()).setCancelled(true);
+            // No error message sent
+            verify(player, never()).sendMessage(any(net.kyori.adventure.text.Component.class));
+        }
+    }
+
+    @Test
+    @DisplayName("Picking up non-fragment item is allowed")
+    public void testPickingUpNonFragmentItemIsAllowed() {
+        try (MockedStatic<ElementalItems> mockedElementalItems = mockStatic(ElementalItems.class)) {
+            // Setup: Non-fragment item
+            mockedElementalItems.when(() -> ElementalItems.getFragmentType(nonFragmentItem))
+                .thenReturn(null); // Not a fragment
+            mockedElementalItems.when(() -> ElementalItems.getAnyFragmentExcept(any(), eq(null)))
+                .thenReturn(null);
+
+            // Mock player inventory
+            when(player.getInventory()).thenReturn(playerInventory);
+            when(playerInventory.getContents()).thenReturn(new ItemStack[0]);
+            when(player.getItemOnCursor()).thenReturn(emptyItem);
+
+            // Setup: Trying to pick up non-fragment item
+            EntityPickupItemEvent event = mock(EntityPickupItemEvent.class);
+            when(event.getEntity()).thenReturn(player);
+            when(event.getItem()).thenReturn(pickupItemEntity);
+            when(pickupItemEntity.getItemStack()).thenReturn(nonFragmentItem);
+            when(nonFragmentItem.hasItemMeta()).thenReturn(false);
+
+            // Execute
+            fragmentItemListener.onEntityPickupItem(event);
+
+            // Verify pickup was NOT cancelled
+            verify(event, never()).setCancelled(true);
+        }
+    }
+
+    @Test
+    @DisplayName("One-fragment limit works when fragment is in offhand")
+    public void testOneFragmentLimitWorksWhenFragmentIsInOffhand() {
+        try (MockedStatic<ElementalItems> mockedElementalItems = mockStatic(ElementalItems.class)) {
+            // This is the critical test for the offhand bug fix
+            // Player has Immortal Fragment in OFFHAND
+            mockedElementalItems.when(() -> ElementalItems.getFragmentType(immortalFragment))
+                .thenReturn(FragmentType.IMMORTAL);
+            mockedElementalItems.when(() -> ElementalItems.getFragmentType(burningFragment))
+                .thenReturn(FragmentType.BURNING);
+            mockedElementalItems.when(() -> ElementalItems.getAnyFragmentExcept(any(), eq(null)))
+                .thenReturn(FragmentType.IMMORTAL); // Found in offhand!
+
+            // Mock player inventory with OFFHAND fragment
+            when(player.getInventory()).thenReturn(playerInventory);
+            when(playerInventory.getContents()).thenReturn(new ItemStack[0]); // Empty main inventory
+            when(player.getItemOnCursor()).thenReturn(emptyItem);
+
+            // Setup: Trying to pick up Burning Fragment
+            EntityPickupItemEvent event = mock(EntityPickupItemEvent.class);
+            when(event.getEntity()).thenReturn(player);
+            when(event.getItem()).thenReturn(pickupItemEntity);
+            when(pickupItemEntity.getItemStack()).thenReturn(burningFragment);
+            when(burningFragment.hasItemMeta()).thenReturn(true);
+
+            // Execute
+            fragmentItemListener.onEntityPickupItem(event);
+
+            // CRITICAL: Verify pickup was CANCELLED
+            // This is the regression test for the offhand bug
+            verify(event).setCancelled(true);
+            verify(player).sendMessage(any(net.kyori.adventure.text.Component.class));
         }
     }
 }

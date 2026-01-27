@@ -357,6 +357,42 @@ public class FragmentManager implements Listener {
     // Get element name for cooldown checking
     String elementName = getElementName(equipped);
 
+    // Issue #28: Special case for Draconic Surge toggle behavior
+    // When player is dashing and types /agile 1 again, cancel the dash
+    // This must happen BEFORE cooldown check, otherwise toggle is blocked
+    if (equipped == FragmentType.AGILITY && abilityNumber == 1) {
+      String DRACONIC_SURGE_TASK_KEY = "agile_draconic_surge_task";
+      String TOGGLE_FLAG_KEY = "agile_toggle_flag";
+      if (player.hasMetadata(DRACONIC_SURGE_TASK_KEY)) {
+        // Cancel the existing dash (toggle behavior)
+        // Get the BukkitRunnable task and cancel it
+        org.bukkit.metadata.MetadataValue value = player.getMetadata(DRACONIC_SURGE_TASK_KEY).get(0);
+        if (value != null) {
+          Object taskObj = value.value();
+          if (taskObj instanceof org.bukkit.scheduler.BukkitRunnable) {
+            ((org.bukkit.scheduler.BukkitRunnable) taskObj).cancel();
+          }
+        }
+        player.removeMetadata(DRACONIC_SURGE_TASK_KEY, plugin);
+
+        // Set toggle flag so AbstractFragmentCommand knows not to show success messages
+        player.setMetadata(TOGGLE_FLAG_KEY, new org.bukkit.metadata.FixedMetadataValue(plugin, true));
+
+        // Schedule removal of toggle flag after a short delay (so AbstractFragmentCommand can check it)
+        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+          player.removeMetadata(TOGGLE_FLAG_KEY, plugin);
+        }, 1L);
+
+        player.sendMessage(
+          net.kyori.adventure.text.Component.text("Draconic Surge halted!",
+            net.kyori.adventure.text.format.NamedTextColor.YELLOW)
+        );
+        // Fall damage protection continues for the full 10 seconds
+        // Return true without setting cooldown (toggle doesn't affect cooldown)
+        return true;
+      }
+    }
+
     // Check cooldown for THIS SPECIFIC ABILITY (not all abilities)
     if (elementName != null && cooldownManager.isOnCooldown(player, elementName, abilityNumber)) {
       int remaining = cooldownManager.getRemainingCooldown(player, elementName, abilityNumber);
@@ -543,7 +579,7 @@ public class FragmentManager implements Listener {
 
   /**
    * Check if player has the fragment item in inventory.
-   * Uses ElementalItems.getFragmentType() - Single Source of Truth.
+   * Uses DRY helper from ElementalItems (checks main inventory + offhand + cursor).
    *
    * @param player The player
    * @param fragmentType The fragment type
@@ -554,11 +590,9 @@ public class FragmentManager implements Listener {
       return false;
     }
 
-    // Check inventory contents
-    for (ItemStack item : player.getInventory().getContents()) {
-      if (item != null && ElementalItems.getFragmentType(item) == fragmentType) {
-        return true;
-      }
+    // Use DRY helper (checks main inventory + offhand)
+    if (ElementalItems.hasFragmentInInventory(player, fragmentType)) {
+      return true;
     }
 
     // CRITICAL FIX (Issue #22): Also check cursor item
@@ -574,26 +608,14 @@ public class FragmentManager implements Listener {
 
   /**
    * Check if player has ANY fragment in their inventory (except the specified type).
-   * This is used to enforce the one-fragment limit at equip time.
+   * Uses DRY helper from ElementalItems to enforce the one-fragment limit at equip time.
    *
    * @param player The player
-   * @param excludeType The fragment type to exclude from check (the one being equipped)
-   * @return The fragment type found in inventory, or null if none
+   * @param excludeType The fragment type to exclude from check
+   * @return fragment type if found, null otherwise
    */
   private FragmentType hasAnyFragmentInInventory(Player player, FragmentType excludeType) {
-    if (player.getInventory() == null) {
-      return null;
-    }
-
-    for (ItemStack item : player.getInventory().getContents()) {
-      if (item != null) {
-        FragmentType fragmentType = ElementalItems.getFragmentType(item);
-        if (fragmentType != null && fragmentType != excludeType) {
-          return fragmentType;
-        }
-      }
-    }
-    return null;
+    return ElementalItems.getAnyFragmentExcept(player, excludeType);
   }
 
   /**
