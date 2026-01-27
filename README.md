@@ -5,7 +5,7 @@
 ![Dragon Egg Lightning Banner](https://img.shields.io/badge/Minecraft-Paper%201.21.8-blue?logo=minecraft&style=for-the-badge)
 ![Java](https://img.shields.io/badge/Java-21+-ED8B00?logo=openjdk&logoColor=white&style=for-the-badge)
 <!-- Version badge: Keep in sync with gradle.properties project.version -->
-![Version](https://img.shields.io/badge/Version-1.3.6-green?style=for-the-badge)
+![Version](https://img.shields.io/badge/Version-1.3.7-green?style=for-the-badge)
 ![Build](https://img.shields.io/badge/Build-Passing-brightgreen?style=for-the-badge)
 
 **Transform your server with elemental powers from ancient dragon fragments!**
@@ -23,7 +23,7 @@
 # Download the latest JAR from releases
 # Place in your Paper server's plugins directory
 # Note: Version in gradle.properties is the single source of truth
-cp ElementalDragon-1.3.6.jar /path/to/your/paper-server/plugins/
+cp ElementalDragon-1.3.7.jar /path/to/your/paper-server/plugins/
 
 # Restart your Paper 1.21.8+ server
 java -Xms2G -Xmx2G -jar paper-1.21.8-latest.jar nogui
@@ -35,7 +35,7 @@ java -Xms2G -Xmx2G -jar paper-1.21.8-latest.jar nogui
 # Give yourself a Dragon Egg
 /give @p minecraft:dragon_egg
 
-# Move to offhand (press F key)
+# Just have it in your inventory (doesn't need to be in offhand!)
 
 # Strike with lightning!
 /lightning 1
@@ -124,7 +124,7 @@ Players can use these commands to manage and activate their fragments.
 - **Total Damage**: 12.0 (6 hearts) if all strikes hit
 - **Targeting**: Auto-targets closest entity in viewing cone (50 block range)
 - **Intelligent Switching**: If target dies, moves to next closest target
-- **Requirement**: Dragon Egg must be in offhand
+- **Requirement**: Dragon Egg must be in inventory (any slot)
 
 #### **Utility Commands**
 ```bash
@@ -289,10 +289,9 @@ with unique abilities, passive bonuses, and visual themes.
 **Permission**: `elementaldragon.fragment.burning`
 
 **Abilities**:
-- **Dragon's Wrath** (`/fire 1`): Launch homing fireball at target (40s cooldown)
-  - Damage: 6.0 (3 hearts) on impact - bypasses armor
+- **Dragon's Wrath** (`/fire 1`): Launch fireball at target (40s cooldown)
+  - Damage: 8.0 (4 hearts) on impact - bypasses armor
   - Explosion radius: 5 blocks
-  - Homing duration: 0.5 seconds (10 ticks)
   - Target range: 50 blocks
   - Fire spread: Ignites blocks at explosion location
   - Aliases: `wrath`, `dragons-wrath`
@@ -551,7 +550,7 @@ open build/reports/jacoco/test/html/index.html
 ```
 
 **Current Test Coverage:**
-- **Total Tests**: 741 (all passing ✅)
+- **Total Tests**: 783 (all passing )
 - **Overall Coverage**: 29%
 - **High Coverage Areas**: command.util (100%), command.base (100%), Achievement (91%)
 
@@ -1032,7 +1031,7 @@ tail -f logs/latest.log | grep -i elementaldragon
 ## 📈 Architecture & Testing
 
 ### **Testing Framework**
-- **🧪 749 Unit Tests**: Complete coverage with JUnit and Mockito
+- **🧪 783 Unit Tests**: Complete coverage with JUnit and Mockito
 - **🔧 Integration Tests**: End-to-end YAML-driven scenarios
 - **🐳 Docker Support**: Containerized development environment
 - **✅ CI/CD**: Automated testing on every commit
@@ -1066,7 +1065,7 @@ tail -f logs/latest.log | grep -i elementaldragon
 **License**: MIT License - Free for personal and commercial use
 
 **Author**: The Cavarest project
-**Version**: 1.3.6 (see gradle.properties)
+**Version**: 1.3.7 (see gradle.properties)
 **Minecraft Version**: 1.21.8+
 **Paper API**: 1.21.8-R0.1-SNAPSHOT
 
