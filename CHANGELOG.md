@@ -8,93 +8,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### [1.3.7] - 2026-01-27
-## New Features
 
-### Combat Improvements (Issue #28 Balance Changes)
+## Added
 
-**Agility Fragment - Draconic Surge (`/agile 1`)**
-- **Toggle Behavior**: Type `/agile 1` again while dashing to halt immediately
-- **Collision Damage**: Deals 3 hearts damage to entities you hit during the dash
-  - Ignores armor - pure damage
-  - 2-block collision radius
-  - Each entity can only be hit once per dash
+- Draconic Surge toggle behavior (type `/agile 1` again to halt)
+- Draconic Surge collision damage (3 hearts, ignores armor)
+- Dragon's Wrath homing fireball
+- Wing Burst improved velocity (20 block knockback)
 
-**Burning Fragment - Dragon's Wrath (`/fire 1`)**
-- **Homing Fireball**: Fireball now seeks targets for 0.5 seconds
-  - Better hit rate against moving targets
-  - 50-block targeting range
-  - Still bypasses armor
+## Changed
 
-**Lightning Ability (`/lightning 1`)**
-- **Instant Cast**: Lightning strikes immediately (was 0.5s delay)
+- **Lightning Ability**: Dragon egg no longer needs to be in offhand - as long as it's anywhere in your inventory, you can use `/lightning 1`
+- **Dragon's Wrath**: Now deals 4 hearts damage (armor-piercing)
 
-**Agility Fragment - Wing Burst (`/agile 2`)**
-- **Improved Velocity**: Knockback increased to 20 blocks (more reliable)
+## Fixed
 
-## Bug Fixes
+- `/equip` command allowing admins to bypass one-fragment limit
+- Wing Burst velocity too low due to friction
+- HUD not updating on inventory slot changes
 
-- Fixed `/equip` command allowing admins to bypass the one-fragment limit
-- Fixed Wing Burst velocity too low due to friction
-- Fixed HUD not updating on inventory slot changes
+## Technical
 
-## For Players
-
-**One-Fragment Limit Enforcement**
-- You can now only carry ONE fragment at a time (inventory + equipped)
-- Clear error messages tell you which fragment to drop first
-
-**Improved Combat Feel**
-- Draconic Surge can now be stopped mid-dash by recasting
-- Dragon's Wrath fireballs track targets better
-- Lightning strikes instantly
-- Wing Burst pushes enemies further
-
-## For Server Operators
-
-**Internal Improvements**
-- Consolidated duplicate event listeners
-- Modernized Bukkit/Paper API usage
-- Added DRY helper methods for inventory checking
-- Enhanced HUD system with better event handling
-
-**Testing Framework**
+- Consolidated duplicate event listeners into single FragmentItemListener
+- Added DRY helper methods for inventory checking (ElementalItems class)
 - Added Pilaf integration test suite (17 test scenarios)
 - Added world profile system for development testing
 
-**Test Coverage**
-- Unit Tests: 783 tests passing
-- Integration Tests: 17 Pilaf scenarios passing
-
 ---
-
-## Installation
-
-1. Download the plugin JAR from the release below
-2. Place it in your Paper/Folia server's `plugins/` directory
-3. **Install required dependencies**:
-   - [ProtocolSidebar](https://jitpack.io/com/github/CatCoderr/ProtocolSidebar/master-SNAPSHOT/ProtocolSidebar-master-SNAPSHOT.jar)
-   - [FoliaLib](https://repo.tcoded.com/releases/com/tcoded/FoliaLib/0.5.1/FoliaLib-0.5.1.jar)
-4. Restart your server
-
-## Requirements
-
-- Paper 1.21.x or Folia
-- Java 21 or higher
-- Minecraft 1.21.x
-
-## Upgrading
-
-From previous versions:
-- No config changes required
-- Existing fragments remain equipped
-- No data migration needed
-
-
----
-
 
 ### [1.3.6] - 2026-01-21
-# Release v1.3.6
 
 ## New Features
 
@@ -116,11 +58,6 @@ From previous versions:
 - Separated template (`RELEASE_NOTES.md.in`) from actual release notes
 - Automated CHANGELOG.md updates after release
 - Automated cleanup of RELEASE_NOTES.md after release
-
-### Documentation
-- Added comprehensive release process documentation (`docs/dev/releases.md`)
-- Clear step-by-step instructions for developers
-- Troubleshooting guide for common release issues
 
 ## For Players
 
@@ -153,102 +90,3 @@ From previous versions:
 - No config changes required
 - Existing fragments remain equipped
 - No data migration needed
-
-
----
-
-
-### [1.3.0] - 2026-01-20
-
-#### For Players (Gameplay Changes)
-
-##### ⚠️ Important: One-Fragment Limit
-- **You can now only carry ONE fragment type at a time!**
-  - If you have a Burning Fragment, you cannot pick up or equip any other fragment (Agility, Immortal, Corrupted Core)
-  - To switch fragments, you must DROP your current fragment first
-  - Use `/withdrawability` to unequip your current fragment without dropping it
-  - This applies to ALL methods of acquiring fragments: crafting, pickup, equip commands
-
-##### 🔥 Fire Fragment Fixes
-- **Dragon's Wrath** (`/fire 1`) now deals consistent damage
-  - Always deals exactly 3 hearts of damage
-  - Damage ignores armor (as originally intended)
-  - No longer variable damage based on armor
-
-##### 👁 Corrupted Core Fixes
-- **Dread Gaze** (`/corrupt 1`) duration changed to **4 seconds** (was 10 seconds)
-- Frozen targets now properly cannot:
-  - Move or walk
-  - Eat food
-  - Open/move items in their inventory
-- Improved freeze mechanics to avoid triggering anti-cheat warnings
-
-#### For Server Operators (Technical Changes)
-
-##### 🛡️ One-Fragment Limit Implementation
-- **FragmentItemListener** (new in `listener` package):
-  - Added comprehensive fragment checking across inventory, equipped, and cursor
-  - Players can no longer bypass limit by:
-    - Picking up fragments while holding another on cursor
-    - Clicking equipped fragment while standing on another
-    - Using equip commands with fragments in containers
-- **FragmentManager**:
-  - Added `hasAnyFragmentInInventory()` method
-  - Equip commands now check entire inventory before allowing equip
-  - Admin bypass still available with `elementaldragon.fragment.admin` permission
-
-##### 🔧 Bug Fixes
-- **BurningFragment**:
-  - Simplified Dragon's Wrath damage calculation
-  - Now uses `EntityDamageByEntityEvent` with `setDamage(6.0)` for consistent armor-ignoring damage
-  - Reduced from 93 lines to 11 lines in damage handler
-- **CorruptedCoreFragment**:
-  - Added debuff metadata keys for tracking frozen players
-  - Implemented persistent freeze using Bukkit teleportation (anti-cheat compatible)
-  - Added freeze location tracking to prevent escaping
-  - Added saturation tracking for proper freeze mechanics
-  - Fixed freeze duration to 4 seconds (80 ticks)
-  - Added event handlers for block break/place prevention while frozen
-  - Added event handler for inventory interaction prevention while frozen
-
-##### 🧪 Testing
-- Added `FragmentManagerOneFragmentLimitTest` with 5 comprehensive test cases
-- Updated `FragmentItemListenerTest` for new API usage
-- Fixed import path: `fragment.FragmentItemListener` → `listener.FragmentItemListener`
-
-##### 📚 Documentation
-- Updated user documentation (`docs/user/fragments.md`):
-  - Clarified one-fragment limit rules
-  - Removed references to non-existent `/unequip` command
-  - Updated to use `/withdrawability` command
-- Updated admin documentation (`docs/admin/commands.md`):
-  - Removed hallucinated `/unequip` command references
-
-##### 🐳 Integration Tests
-- Fixed Docker volume permissions
-- Improved caching strategy for integration tests
-- Added retry logic for flaky tests
-
----
-
-### [1.2.5] - Previous Release
-
-#### For Players
-- Initial fragment system implementation
-- Fire, Agility, Immortal, and Corrupted Core fragments
-- Active abilities and passive bonuses
-- HUD display for abilities and cooldowns
-
-#### For Server Operators
-- Basic fragment management
-- Cooldown system
-- Ability execution framework
-
----
-
-## Version History
-
-| Version | Date | Description |
-|---------|------|-------------|
-| 1.3.0 | 2026-01-20 | One-fragment limit, ability fixes |
-| 1.2.5 | Previous | Initial release |
