@@ -108,7 +108,7 @@ Players can use these commands to manage and activate their fragments.
 # Corrupted Core (Void Element)
 /corrupt equip     # Equip Corrupted Core
 /corrupt 1         # Dread Gaze (complete freeze on next hit, 3min cooldown)
-/corrupt 2         # Life Devourer (50% lifesteal, 2min cooldown)
+/corrupt 2         # Life Devourer (25% lifesteal, 2min cooldown)
 /corrupt status    # Show fragment status and cooldowns
 /corrupt help      # Show available commands
 ```
@@ -351,9 +351,7 @@ with unique abilities, passive bonuses, and visual themes.
 
 **Passive Bonus**:
 - **Permanent Totem Protection**: While equipped, prevents death from fatal damage (same as totem, no cooldown)
-- **+2 Hearts**: Increases max health by 4.0 (2 hearts) when equipped
 - **Resistance I**: Minor damage reduction when equipped
-- **Knockback Reduction**: 25% knockback reduction when equipped
 
 ### **💀 Corrupted Core (Void Element)**
 **Material**: Nether Star (dark/powerful visual)
@@ -369,14 +367,13 @@ with unique abilities, passive bonuses, and visual themes.
   - Target: Single entity (first one you hit after activation)
   - Aliases: `gaze`, `dread-gaze`
 
-- **Life Devourer** (`/corrupt 2`): 50% lifesteal from all damage (2min cooldown)
+- **Life Devourer** (`/corrupt 2`): 25% lifesteal from all damage (2min cooldown)
   - Duration: 20 seconds (400 ticks)
-  - Effect: Heal for 50% of all damage dealt
+  - Effect: Heal for 25% of all damage dealt
   - Works with: Melee, ranged, spells - any damage source
   - Aliases: `devourer`, `life-devourer`
 
 **Passive Bonus**:
-- **Night Vision**: Permanent night vision when equipped
 - **Creeper Invisibility**: Creepers will not target you
 - **Enderman Anti-Aggro**: Endermen won't attack when looked at
 
