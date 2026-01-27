@@ -19,7 +19,7 @@ const config = {
 
 describe('One Fragment Limit - Edge Cases', () => {
   let context;
-  const TEST_PLAYER = 'FragmentLimitTester';
+  const TEST_PLAYER = 'FragLimitTest';
 
   beforeAll(async () => {
     context = await createTestContext({ ...config, username: TEST_PLAYER });

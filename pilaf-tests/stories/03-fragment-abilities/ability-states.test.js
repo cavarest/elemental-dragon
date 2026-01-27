@@ -19,7 +19,7 @@ const config = {
 
 describe('Fragment Ability State Machine', () => {
   let context;
-  const TEST_PLAYER = 'StateMachineTester';
+  const TEST_PLAYER = 'StateTester';
 
   beforeAll(async () => {
     context = await createTestContext({ ...config, username: TEST_PLAYER });
