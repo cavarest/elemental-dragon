@@ -1,0 +1,25 @@
+# Bukkit configuration for PaperMC server
+# Disables connection throttling for integration testing
+settings:
+  # Connection throttle in milliseconds. Set to 0 to disable.
+  # This is needed for Pilaf tests that create bots in quick succession.
+  connection-throttle: 0
+
+spawn-limits:
+  # Default spawn limits
+  monsters: 70
+  animals: 10
+  water-animals: 5
+  water-ambient: 20
+  ambient: 15
+
+chunk-gc:
+  period-in-ticks: 600
+
+ticks-per:
+  hopper-transfer: 8
+  hopper-check: 1
+
+world-settings:
+  default:
+    verbose: false
