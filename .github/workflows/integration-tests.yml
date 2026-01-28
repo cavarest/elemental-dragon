@@ -40,6 +40,7 @@ jobs:
         options: >-
           --name elemental-dragon-minecraft
           --volume /tmp/mc-plugins:/plugins
+          --volume /tmp/mc-config:/data/config
           --health-cmd "mc-health"
           --health-interval 30s
           --health-timeout 10s
@@ -86,6 +87,14 @@ jobs:
       run: |
         echo "🔧 Fixing Docker volume permissions..."
         sudo chmod 777 /tmp/mc-plugins || sudo mkdir -p /tmp/mc-plugins && sudo chmod 777 /tmp/mc-plugins
+        sudo chmod 777 /tmp/mc-config || sudo mkdir -p /tmp/mc-config && sudo chmod 777 /tmp/mc-config
+
+    - name: Copy server configuration files
+      run: |
+        echo "📋 Copying Bukkit configuration to disable connection throttling..."
+        mkdir -p /tmp/mc-config
+        cp pilaf-tests/config/bukkit.yml /tmp/mc-config/bukkit.yml
+        echo "✅ bukkit.yml configured with connection-throttle: 0"
 
     - name: Copy plugin to server plugins directory
       run: |

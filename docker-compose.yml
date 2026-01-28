@@ -87,6 +87,8 @@ services:
     volumes:
       # Persist all server data
       - ./server-data:/data:rw
+      # Mount Bukkit configuration to disable connection throttling for integration tests
+      - ./pilaf-tests/config:/data/config:ro
 
     stdin_open: true
     tty: true
