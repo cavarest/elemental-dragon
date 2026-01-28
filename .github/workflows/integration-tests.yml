@@ -38,7 +38,7 @@ jobs:
           # Auto-load plugins from /plugins directory
           AUTO_UPDATE_PLUGINS: 'true'
         options: >-
-          --name dragon-egg-minecraft
+          --name elemental-dragon-minecraft
           --volume /tmp/mc-plugins:/plugins
           --health-cmd "mc-health"
           --health-interval 30s
@@ -161,14 +161,14 @@ jobs:
       if: always() && !cancelled()
       with:
         files: "pilaf-tests/test-results/**/*.xml"
-        check_name: Dragon Egg Integration Test Report
+        check_name: Elemental Dragon Integration Test Report
         comment_mode: "off"
 
     - name: Upload Pilaf HTML reports
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: dragon-egg-pilaf-reports
+        name: elemental-dragon-pilaf-reports
         path: pilaf-tests/pilaf-reports/
         retention-days: 30
         if-no-files-found: ignore
