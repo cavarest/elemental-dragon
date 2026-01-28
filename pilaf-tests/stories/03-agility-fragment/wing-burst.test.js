@@ -104,6 +104,17 @@ describe('Agility Fragment - Wing Burst', () => {
     context.bot.chat('/agile equip');
     await wait(1000); // Wait for equip to complete
 
+    // DEBUG: Verify bot is still connected
+    console.log(`Bot still connected: ${context.bot.entity !== null}, bot health: ${context.bot.health}`);
+
+    // DEBUG: Check inventory to verify fragment equipped
+    try {
+      const inventoryResult = await context.rcon.send(`data get entity @e[type=item,limit=1] Slot 0`);
+      console.log(`Player main hand item: ${inventoryResult.raw || inventoryResult}`);
+    } catch (e) {
+      console.log(`Could not check inventory: ${e.message}`);
+    }
+
     // Get player position for reference
     const playerPos = context.bot.entity.position;
     console.log(`Player at: x=${playerPos.x.toFixed(1)}, y=${playerPos.y.toFixed(1)}, z=${playerPos.z.toFixed(1)}`);
@@ -127,7 +138,20 @@ describe('Agility Fragment - Wing Burst', () => {
     // Execute Wing Burst
     console.log(`Executing Wing Burst...`);
     context.bot.chat('/agile 2');
-    await wait(3500); // Wait for push to complete (2 seconds push duration + buffer)
+
+    // DEBUG: Verify command was sent
+    console.log(`Bot entity after command: ${context.bot.entity !== null}, position: ${context.bot.entity?.position}`);
+
+    // DEBUG: Check for server response via tellraw
+    await wait(100);
+    try {
+      const testMsg = await context.rcon.send(`tellraw ${TEST_PLAYER} {"text":"DEBUG: Wing Burst command executed","color":"yellow"}`);
+      console.log(`Server responsive: ${testMsg.raw || testMsg}`);
+    } catch (e) {
+      console.log(`Server not responsive: ${e.message}`);
+    }
+
+    await wait(3400); // Wait for push to complete (2 seconds push duration + buffer)
 
     // Check final positions - we just need to verify at least some pigs moved or became untrackable
     const playerPosAfter = context.bot.entity.position;
