@@ -79,10 +79,7 @@ plugins/
 logs/
 
 # Test Reports
-build/reports/
-build/test-results/
-target/pilaf-reports/
-build/pilaf-reports/
+pilaf-tests/test-results
 
 # Temporary files
 tmp/
@@ -151,10 +148,6 @@ server-data/
 docs/.lycheecache
 _site
 
-
-# Pilaf testing artifacts (Issue #28)
-PILAF_INTEGRATION_TESTING_PLAN.md
-elementaldragon-pilaf-integration-guide.md
-package-lock.json
+# Pilaf testing artifacts
 world-profiles/
 

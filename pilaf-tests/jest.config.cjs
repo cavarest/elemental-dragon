@@ -20,5 +20,23 @@ module.exports = {
     'stories/**/*.js',
     '!stories/**/*.test.js'
   ],
-  coverageThreshold: null
+  coverageThreshold: null,
+
+  // JUnit XML reporter for CI
+  reporters: [
+    'default',
+    [
+      'jest-junit',
+      {
+        outputDirectory: 'test-results',
+        outputName: 'junit.xml',
+        ancestorSeparator: ' › ',
+        uniqueOutputName: false,
+        suiteNameTemplate: '{filepath}',
+        classNameTemplate: '{classname}',
+        titleTemplate: '{title}',
+        addFileAttribute: true
+      }
+    ]
+  ]
 };
