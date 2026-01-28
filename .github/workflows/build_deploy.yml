@@ -4,12 +4,13 @@ on:
   push:
     branches:
     - main
-    # - staging
     paths:
       - 'docs/**'
+      - '!docs/testing/**'
   pull_request:
     paths:
       - 'docs/**'
+      - '!docs/testing/**'
   repository_dispatch:
   workflow_dispatch:
 
