@@ -40,7 +40,6 @@ jobs:
         options: >-
           --name elemental-dragon-minecraft
           --volume /tmp/mc-plugins:/plugins
-          --volume /tmp/mc-config:/data/config
           --health-cmd "mc-health"
           --health-interval 30s
           --health-timeout 10s
@@ -87,14 +86,6 @@ jobs:
       run: |
         echo "🔧 Fixing Docker volume permissions..."
         sudo chmod 777 /tmp/mc-plugins || sudo mkdir -p /tmp/mc-plugins && sudo chmod 777 /tmp/mc-plugins
-        sudo chmod 777 /tmp/mc-config || sudo mkdir -p /tmp/mc-config && sudo chmod 777 /tmp/mc-config
-
-    - name: Copy server configuration files
-      run: |
-        echo "📋 Copying Bukkit configuration to disable connection throttling..."
-        mkdir -p /tmp/mc-config
-        cp pilaf-tests/config/bukkit.yml /tmp/mc-config/bukkit.yml
-        echo "✅ bukkit.yml configured with connection-throttle: 0"
 
     - name: Copy plugin to server plugins directory
       run: |
@@ -145,6 +136,19 @@ jobs:
         else
           echo "⚠️ Warning: Could not confirm Elemental Dragon plugin is loaded"
         fi
+
+    - name: Configure Bukkit to disable connection throttling
+      run: |
+        echo "📋 Configuring Bukkit to disable connection throttling..."
+        # Copy bukkit.yml into the running container
+        docker cp pilaf-tests/config/bukkit.yml elemental-dragon-minecraft:/data/bukkit.yml
+        echo "✅ bukkit.yml configured with connection-throttle: 0"
+        # Restart server to pick up new configuration
+        echo "🔄 Restarting server to apply configuration..."
+        docker restart elemental-dragon-minecraft
+        # Wait for server to restart
+        sleep 90
+        echo "✅ Server restarted with connection throttling disabled"
 
     - name: Run Pilaf integration tests
       working-directory: pilaf-tests
