@@ -11,6 +11,7 @@ import org.cavarest.elementaldragon.command.FireCommand;
 import org.cavarest.elementaldragon.command.ImmortalCommand;
 import org.cavarest.elementaldragon.command.LightningCommand;
 import org.cavarest.elementaldragon.command.WithdrawabilityCommand;
+import org.cavarest.elementaldragon.command.subcommands.PossessionLimitSubcommand;
 import org.cavarest.elementaldragon.cooldown.CooldownManager;
 import org.cavarest.elementaldragon.crafting.CraftedCountManager;
 import org.cavarest.elementaldragon.crafting.CraftingListener;
@@ -44,6 +45,7 @@ public class ElementalDragon extends JavaPlugin {
   private ElementalPlayerTracker playerTracker;
   private WithdrawabilityCommand withdrawabilityCommand;
   private PlayerPreferenceManager playerPreferenceManager;
+  private PossessionLimitSubcommand possessionLimitSubcommand;
 
   @Override
   public void onEnable() {
@@ -60,6 +62,7 @@ public class ElementalDragon extends JavaPlugin {
     this.craftingManager = new CraftingManager(this);
     this.craftedCountManager = new CraftedCountManager(this);
     this.playerPreferenceManager = new PlayerPreferenceManager();
+    this.possessionLimitSubcommand = new PossessionLimitSubcommand();
 
     registerCommands();
     registerListeners();
@@ -185,6 +188,10 @@ public class ElementalDragon extends JavaPlugin {
 
   public PlayerPreferenceManager getPlayerPreferenceManager() {
     return playerPreferenceManager;
+  }
+
+  public PossessionLimitSubcommand getPossessionLimitSubcommand() {
+    return possessionLimitSubcommand;
   }
 
   /**
