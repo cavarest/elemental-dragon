@@ -1,0 +1,88 @@
+# Corrupted Core Suspended Sustenance Test - Issue #32 Issue 3
+# Tests that Corrupted Core wielder does not lose hunger
+# Previous bug: SATURATION potion effect only restored food, didn't prevent drain
+# Fix: Now uses scheduler to maintain maximum saturation
+
+name: "Corrupted Core Suspended Sustenance Test"
+description: "Test that Corrupted Core wielder doesn't lose hunger from sprinting"
+
+setup:
+  - action: "connect_player"
+    player: "fragment_tester"
+    name: "Connect test player"
+
+  - action: "make_operator"
+    player: "fragment_tester"
+    name: "Make test player operator"
+
+  # Set initial food level to 10
+  - action: "execute_rcon_command"
+    command: "food set 10 fragment_tester"
+    player: "fragment_tester"
+    name: "Set food level to 10"
+
+  # Set initial saturation to 0
+  - action: "execute_rcon_command"
+    command: "effect give fragment_tester saturation 0 1"
+    player: "fragment_tester"
+    name: "Set saturation to 0 (removes any existing)"
+
+  - action: "wait"
+    duration: 1000
+    name: "Wait for effects to apply"
+
+steps:
+  # Record initial food level
+  - action: "record_food_level"
+    player: "fragment_tester"
+    name: "Record initial food level (should be 10)"
+
+  - action: "assertion"
+    assertion: "food_level"
+    player: "fragment_tester"
+    condition: "EQUALS"
+    value: 10
+    name: "Verify initial food level is 10"
+
+  # Give Corrupted Core
+  - action: "execute_rcon_command"
+    command: "fragment give fragment_tester corrupt"
+    player: "fragment_tester"
+    name: "Give Corrupted Core"
+
+  - action: "wait"
+    duration: 1000
+    name: "Wait for fragment"
+
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/fragment equip corrupt"
+    name: "Equip Corrupted Core"
+
+  - action: "wait"
+    duration: 2000
+    name: "Wait for Suspended Sustenance passive effect"
+
+  # Make player sprint continuously (which normally drains hunger)
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/effect give fragment_tester speed 999999 3"
+    name: "Give Speed III for continuous sprinting"
+
+  - action: "wait"
+    duration: 10000
+    name: "Wait 10 seconds while sprinting (normally would drain hunger)"
+
+  # With Suspended Sustenance, food level should NOT decrease
+  # (The scheduler maintains maximum saturation, preventing hunger depletion)
+  - assertion: "food_level"
+    player: "fragment_tester"
+    condition: "EQUALS"
+    value: 10
+    name: "Verify food level did NOT decrease (Suspended Sustenance working)"
+
+  # Cleanup - unequip fragment
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/fragment unequip"
+    name: "Unequip Corrupted Core"
