@@ -1,0 +1,162 @@
+# True Damage Tests - Issue #32
+# Tests that true damage bypasses all protection (armor, potions, enchantments)
+# Issue 1: Fireball should deal exactly 4 hearts (8 damage) true damage
+# Issue 2: Wind dash should deal exactly 3 hearts (6 damage) true damage
+
+name: "True Damage Tests"
+description: "Test that abilities deal true damage ignoring armor, potions, and enchantments"
+
+setup:
+  - action: "connect_player"
+    player: "fragment_tester"
+    name: "Connect test player"
+
+  - action: "make_operator"
+    player: "fragment_tester"
+    name: "Make test player operator"
+
+  # Give player full diamond armor for protection testing
+  - action: "execute_rcon_command"
+    command: "item equip fragment_tester diamond_helmet"
+    player: "fragment_tester"
+    name: "Equip diamond helmet"
+
+  - action: "execute_rcon_command"
+    command: "item equip fragment_tester diamond_chestplate"
+    player: "fragment_tester"
+    name: "Equip diamond chestplate"
+
+  - action: "execute_rcon_command"
+    command: "item equip fragment_tester diamond_leggings"
+    player: "fragment_tester"
+    name: "Equip diamond leggings"
+
+  - action: "execute_rcon_command"
+    command: "item equip fragment_tester diamond_boots"
+    player: "fragment_tester"
+    name: "Equip diamond boots"
+
+  - action: "execute_rcon_command"
+    command: "effect give fragment_tester resistance 999999 2"
+    player: "fragment_tester"
+    name: "Give Resistance II potion effect"
+
+  # Spawn a test zombie with high health
+  - action: "execute_rcon_command"
+    command: "summon zombie ~5 ~ ~5 {CustomName:'{\"text\":\"ArmorTestZombie\"}',CustomNameVisible:1b,Attributes:[{Name:\"generic.max_health\",Base:100}]}"
+    player: "fragment_tester"
+    name: "Spawn armored test zombie with 100 health"
+
+  - action: "wait"
+    duration: 1000
+    name: "Wait for zombie spawn"
+
+steps:
+  # Test 1: Fireball true damage (Issue 1)
+  - action: "execute_rcon_command"
+    command: "fragment give fragment_tester burning"
+    player: "fragment_tester"
+    name: "Give Burning Fragment"
+
+  - action: "wait"
+    duration: 1000
+    name: "Wait for fragment"
+
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/fragment equip burning"
+    name: "Equip Burning Fragment"
+
+  - action: "wait"
+    duration: 2000
+    name: "Wait for fragment equip and passive effects"
+
+  # Fire Dragon's Wrath at the armored zombie
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/burn 1"
+    name: "Execute Dragon's Wrath"
+
+  - action: "wait"
+    duration: 3000
+    name: "Wait for fireball to hit"
+
+  # Zombie has 100 health (50 hearts), should take 8 damage (4 hearts) of TRUE damage
+  # With diamond armor and Resistance II, normal damage would be heavily reduced
+  # But TRUE damage ignores everything
+  - assertion: "entity_health"
+    entity: "ArmorTestZombie"
+    condition: "LESS_THAN"
+    value: 92.0
+    name: "Verify true damage - zombie should have ~92 health (100 - 8)"
+
+  # Test 2: Wind dash true damage (Issue 2)
+  - action: "execute_rcon_command"
+    command: "kill @e[type=zombie]"
+    player: "fragment_tester"
+    name: "Clean up test zombie"
+
+  - action: "execute_rcon_command"
+    command: "fragment give fragment_tester agile"
+    player: "fragment_tester"
+    name: "Give Agility Fragment"
+
+  - action: "wait"
+    duration: 1000
+    name: "Wait for fragment"
+
+  - action: "execute_rcon_command"
+    command: "fragment unequip fragment_tester"
+    player: "fragment_tester"
+    name: "Unequip Burning Fragment"
+
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/fragment equip agile"
+    name: "Equip Agility Fragment"
+
+  - action: "wait"
+    duration: 2000
+    name: "Wait for fragment equip"
+
+  - action: "execute_rcon_command"
+    command: "summon zombie ~5 ~ ~5 {CustomName:'{\"text\":\"DashTestZombie\"}',CustomNameVisible:1b,Attributes:[{Name:\"generic.max_health\",Base:100}]}"
+    player: "fragment_tester"
+    name: "Spawn second test zombie"
+
+  - action: "wait"
+    duration: 1000
+    name: "Wait for zombie spawn"
+
+  # Move close to zombie for dash collision
+  - action: "execute_rcon_command"
+    command: "tp fragment_tester ~1 ~ ~"
+    player: "fragment_tester"
+    name: "Move closer to zombie for dash"
+
+  - action: "wait"
+    duration: 500
+    name: "Wait for teleport"
+
+  # Start Draconic Surge
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/agile 1"
+    name: "Start Draconic Surge dash"
+
+  - action: "wait"
+    duration: 5000
+    name: "Wait for dash to complete"
+
+  # Zombie should have taken 6 damage (3 hearts) of TRUE damage
+  - assertion: "entity_health"
+    entity: "DashTestZombie"
+    condition: "LESS_THAN"
+    value: 94.0
+    name: "Verify dash true damage - zombie should have ~94 health (100 - 6)"
+
+  # Cleanup
+  - action: "execute_rcon_command"
+    command: "kill @e[type=zombie]"
+    player: "fragment_tester"
+    name: "Clean up test zombies"

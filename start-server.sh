@@ -37,33 +37,38 @@ PLUGIN_VERSION=$(grep "^project.version=" gradle.properties | cut -d'=' -f2)
 export PLUGIN_VERSION
 export ADMIN_USERNAME
 
-# Parse arguments
+# Parse arguments using while loop (for loop doesn't work with shift)
 RESET=false
 CLEAN=false
 BLOCKING=false
 WIPE_WORLD=false
 PROFILE="normal-survival-normal"
 
-for arg in "$@"; do
-    case $arg in
+while [[ $# -gt 0 ]]; do
+    case $1 in
         -p=*|--profile=*)
-            PROFILE="${arg#*=}"
+            PROFILE="${1#*=}"
+            shift
             ;;
         -p|--profile)
-            shift
-            PROFILE="$1"
+            PROFILE="$2"
+            shift 2
             ;;
         -r|--rebuild)
             RESET=true
+            shift
             ;;
         -c|--clean)
             CLEAN=true
+            shift
             ;;
         -b|--blocking)
             BLOCKING=true
+            shift
             ;;
         -w|--wipe-world)
             WIPE_WORLD=true
+            shift
             ;;
         -h|--help)
             echo "Usage: $0 [OPTIONS]"
@@ -74,25 +79,19 @@ for arg in "$@"; do
             echo "  -c, --clean         Clean build (Gradle clean + fresh Docker image)"
             echo "  -w, --wipe-world    Clear world data before starting (preserves config)"
             echo "  -b, --blocking      Start in blocking mode (logs shown directly)"
-            echo "  -h, --help         Show this help message"
-            echo ""
-            echo "World Profiles:"
-            echo "  normal-survival-normal      Normal terrain, survival, all mobs"
-            echo "  flat-creative-none          Flat terrain, creative, no mobs"
-            echo "  flat-survival-peaceful      Flat terrain, survival, passive mobs only"
-            echo "  flat-survival-normal        Flat terrain, survival, all mobs"
+            echo "  -h, --help          Show this help message"
             echo ""
             echo "Modes:"
             echo "  Daemon (default)    Server runs in background, use 'docker logs -f' to view"
-            echo "  Blocking (-b)        Server logs shown directly, Ctrl+C to stop"
+            echo "  Blocking (-b)       Server logs shown directly, Ctrl+C to stop"
             echo ""
             echo "Examples:"
-            echo "  $0                     # Start server with default profile"
-            echo "  $0 -p flat-creative-none         # Start server with flat creative profile"
-            echo "  $0 -p flat-creative-none -b      # Flat creative profile, blocking mode"
-            echo "  $0 -p flat-creative-none -w      # Flat creative profile, wipe world first"
-            echo "  $0 -r                   # Rebuild and start (default profile)"
-            echo "  $0 -r -p flat-survival-normal -b    # Rebuild, flat survival profile, blocking mode"
+            echo "  $0                                # Start server with default profile"
+            echo "  $0 -p flat-creative-none          # Start server with flat creative profile"
+            echo "  $0 -p flat-creative-none -b       # Flat creative profile, blocking mode"
+            echo "  $0 -p flat-creative-none -w       # Flat creative profile, wipe world first"
+            echo "  $0 -r                             # Rebuild and start (default profile)"
+            echo "  $0 -r -p flat-survival-normal -b  # Rebuild, flat survival profile, blocking mode"
             echo ""
             echo "Available Profiles:"
             if [ -d "world-profiles" ]; then
@@ -105,6 +104,11 @@ for arg in "$@"; do
                 done
             fi
             exit 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Use -h or --help for usage information"
+            exit 1
             ;;
     esac
 done

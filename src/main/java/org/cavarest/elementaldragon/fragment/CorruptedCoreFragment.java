@@ -65,6 +65,7 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
   private static final String DREAD_GAZE_DEBUFF_START_KEY = "corrupted_dread_gaze_debuff_start_time";
   private static final String DREAD_GAZE_FREEZE_LOCATION_KEY = "corrupted_dread_gaze_freeze_location";
   private static final String DREAD_GAZE_SATURATION_KEY = "corrupted_dread_gaze_saturation";
+  private static final String DREAD_GAZE_FOOD_LEVEL_KEY = "corrupted_dread_gaze_food_level";
 
   // Attacker metadata keys (set on ATTACKER when they freeze someone with Dread Gaze)
   private static final String DREAD_GAZE_FOE_FROZEN_KEY = "corrupted_dread_gaze_foe_frozen";
@@ -75,10 +76,10 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
   private final NamespacedKey DEBUFF_PERSIST_KEY;
   private final NamespacedKey DEBUFF_START_PERSIST_KEY;
   private final NamespacedKey FREEZE_LOCATION_PERSIST_KEY;
+  private final NamespacedKey SATURATION_PERSIST_KEY;
+  private final NamespacedKey FOOD_LEVEL_PERSIST_KEY;
   // Metadata key for tracking Suspended Sustenance effect
   private static final String SUSPENDED_SUSTENANCE_KEY = "corrupted_suspended_sustenance_active";
-
-  private final NamespacedKey SATURATION_PERSIST_KEY;
 
   // Fragment metadata (Single Source of Truth)
   // Using NETHER_STAR instead of HEAVY_CORE to avoid default right-click block placement behavior
@@ -101,6 +102,10 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
   // Freeze task - processes frozen players every tick using teleportation
   // This prevents Paper anti-cheat from flagging as "flying" since we use server-initiated teleport
   private BukkitRunnable freezeTask;
+
+  // Suspended Sustenance scheduler task - prevents hunger drain by maintaining saturation
+  // Using scheduler because SATURATION potion effect only restores, doesn't prevent drain
+  private org.bukkit.scheduler.BukkitTask suspendedSustenanceTask;
 
   /**
    * Create a new Corrupted Core fragment.
@@ -130,12 +135,14 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
       this.DEBUFF_START_PERSIST_KEY = new NamespacedKey(plugin, "dread_gaze_debuff_start_persist");
       this.FREEZE_LOCATION_PERSIST_KEY = new NamespacedKey(plugin, "dread_gaze_freeze_location_persist");
       this.SATURATION_PERSIST_KEY = new NamespacedKey(plugin, "dread_gaze_saturation_persist");
+      this.FOOD_LEVEL_PERSIST_KEY = new NamespacedKey(plugin, "dread_gaze_food_level_persist");
     } else {
       // For tests with null plugin or mocked plugin, use placeholder keys
       this.DEBUFF_PERSIST_KEY = null;
       this.DEBUFF_START_PERSIST_KEY = null;
       this.FREEZE_LOCATION_PERSIST_KEY = null;
       this.SATURATION_PERSIST_KEY = null;
+      this.FOOD_LEVEL_PERSIST_KEY = null;
     }
 
     // Start the freeze monitoring task (runs every tick)
@@ -248,6 +255,9 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
     }
     if (player.hasMetadata(DREAD_GAZE_SATURATION_KEY)) {
       player.removeMetadata(DREAD_GAZE_SATURATION_KEY, plugin);
+    }
+    if (player.hasMetadata(DREAD_GAZE_FOOD_LEVEL_KEY)) {
+      player.removeMetadata(DREAD_GAZE_FOOD_LEVEL_KEY, plugin);
     }
     if (player.hasMetadata(LIFE_DEVOURER_ACTIVE_KEY)) {
       player.removeMetadata(LIFE_DEVOURER_ACTIVE_KEY, plugin);
@@ -460,6 +470,10 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
   /**
    * Apply passive Suspended Sustenance effect (no hunger).
    *
+   * Uses scheduler to maintain maximum saturation (prevents hunger drain).
+   * The SATURATION potion effect only restores food level, it does NOT prevent
+   * hunger depletion from sprinting, regenerating, etc.
+   *
    * @param player The player
    */
   @Override
@@ -468,23 +482,15 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
       return;
     }
 
-    // Apply SATURATION potion effect (infinite duration, no particles)
-    // Suspended Sustenance: hunger does not apply when fragment is equipped
-    player.addPotionEffect(
-      new PotionEffect(
-        PotionEffectType.SATURATION,
-        Integer.MAX_VALUE, // Permanent while equipped
-        0, // Amplifier 0 = normal saturation
-        false, // Not ambient (no particles)
-        false // Don't show icon
-      )
-    );
-
-    // Mark that we applied this effect (so we can properly remove it later)
+    // Mark that we applied this effect
     player.setMetadata(
       SUSPENDED_SUSTENANCE_KEY,
       new org.bukkit.metadata.FixedMetadataValue(plugin, true)
     );
+
+    // Start scheduler to maintain maximum saturation (prevents hunger drain)
+    // Using scheduler because SATURATION potion effect only restores, doesn't prevent drain
+    startSuspendedSustenanceScheduler(player);
 
     // Show void particles around player
     player.getWorld().spawnParticle(
@@ -499,6 +505,37 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
   }
 
   /**
+   * Start the Suspended Sustenance scheduler task.
+   * Runs every tick to maintain maximum saturation, preventing hunger depletion.
+   *
+   * @param player The player
+   */
+  private void startSuspendedSustenanceScheduler(Player player) {
+    // Cancel existing task if running
+    stopSuspendedSustenanceScheduler();
+
+    suspendedSustenanceTask = org.bukkit.Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+      if (!player.isOnline() || !player.hasMetadata(SUSPENDED_SUSTENANCE_KEY)) {
+        stopSuspendedSustenanceScheduler();
+        return;
+      }
+
+      // Maintain maximum saturation to prevent hunger depletion
+      player.setSaturation(20.0f);
+    }, 0L, 1L); // Run every tick
+  }
+
+  /**
+   * Stop the Suspended Sustenance scheduler task.
+   */
+  private void stopSuspendedSustenanceScheduler() {
+    if (suspendedSustenanceTask != null && !suspendedSustenanceTask.isCancelled()) {
+      suspendedSustenanceTask.cancel();
+      suspendedSustenanceTask = null;
+    }
+  }
+
+  /**
    * Remove passive Suspended Sustenance effect.
    *
    * @param player The player
@@ -509,22 +546,14 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
       return;
     }
 
-    // Remove the SATURATION potion effect
-    player.removePotionEffect(PotionEffectType.SATURATION);
-
     // Remove our tracking metadata
     player.removeMetadata(SUSPENDED_SUSTENANCE_KEY, plugin);
 
-    // Force saturation to 0 to ensure hunger depletion resumes immediately
-    // This is needed because the infinite SATURATION effect may have left
-    // the saturation bar at a high value
-    player.setSaturation(0);
+    // Stop the scheduler
+    stopSuspendedSustenanceScheduler();
 
-    // Also reset food level to maximum if it was above normal
-    // (SATURATION effect keeps food at 20 constantly)
-    if (player.getFoodLevel() > 20) {
-      player.setFoodLevel(20);
-    }
+    // Reset saturation to 0 so hunger depletion resumes normally
+    player.setSaturation(0);
   }
 
   /**
@@ -677,16 +706,7 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
         true
       )
     );
-    victim.addPotionEffect(
-      new PotionEffect(
-        PotionEffectType.HUNGER,
-        DREAD_GAZE_DURATION,
-        MAX_AMPLIFIER,
-        false,
-        true,
-        true
-      )
-    );
+    // REMOVED: HUNGER effect - frozen targets should NOT drain hunger (Issue #4a)
 
     // Mark victim with debuff metadata for HUD display
     victim.setMetadata(
@@ -706,14 +726,21 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
       new org.bukkit.metadata.FixedMetadataValue(plugin, freezeLocation)
     );
 
-    // Store initial saturation value (for saturation freezing)
+    // Store initial saturation AND food level (for freezing)
     // Only applies to players, not mobs
     float initialSaturation = 0.0f;
+    int initialFoodLevel = 20; // Default max food level
     if (victim instanceof Player) {
-      initialSaturation = ((Player) victim).getSaturation();
+      Player victimPlayer = (Player) victim;
+      initialSaturation = victimPlayer.getSaturation();
+      initialFoodLevel = victimPlayer.getFoodLevel();
       victim.setMetadata(
         DREAD_GAZE_SATURATION_KEY,
         new org.bukkit.metadata.FixedMetadataValue(plugin, initialSaturation)
+      );
+      victim.setMetadata(
+        DREAD_GAZE_FOOD_LEVEL_KEY,
+        new org.bukkit.metadata.FixedMetadataValue(plugin, initialFoodLevel)
       );
     }
 
@@ -729,6 +756,7 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
       pdc.set(FREEZE_LOCATION_PERSIST_KEY, PersistentDataType.STRING,
               serializeLocation(freezeLocation));
       pdc.set(SATURATION_PERSIST_KEY, PersistentDataType.FLOAT, initialSaturation);
+      pdc.set(FOOD_LEVEL_PERSIST_KEY, PersistentDataType.INTEGER, initialFoodLevel);
     }
 
     // Mark attacker with foe frozen metadata for HUD countdown display
@@ -763,6 +791,7 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
           victim.removeMetadata(DREAD_GAZE_DEBUFF_START_KEY, plugin);
           victim.removeMetadata(DREAD_GAZE_FREEZE_LOCATION_KEY, plugin);
           victim.removeMetadata(DREAD_GAZE_SATURATION_KEY, plugin);
+          victim.removeMetadata(DREAD_GAZE_FOOD_LEVEL_KEY, plugin);
 
           // PERSISTENCE: Remove debuff data from PersistentDataContainer
           if (victim instanceof Player && DEBUFF_PERSIST_KEY != null) {
@@ -771,6 +800,7 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
             pdc.remove(DEBUFF_START_PERSIST_KEY);
             pdc.remove(FREEZE_LOCATION_PERSIST_KEY);
             pdc.remove(SATURATION_PERSIST_KEY);
+            pdc.remove(FOOD_LEVEL_PERSIST_KEY);
           }
         }
 
@@ -1059,6 +1089,15 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
               player.setSaturation(storedSaturation);
             }
           }
+
+          // NEW: Freeze food level to prevent hunger drain (Issue #4a)
+          if (player.hasMetadata(DREAD_GAZE_FOOD_LEVEL_KEY)) {
+            Object foodLevelObj = player.getMetadata(DREAD_GAZE_FOOD_LEVEL_KEY).get(0).value();
+            if (foodLevelObj instanceof Integer) {
+              int storedFoodLevel = (Integer) foodLevelObj;
+              player.setFoodLevel(storedFoodLevel);
+            }
+          }
         }
       }
     };
@@ -1112,6 +1151,8 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
 
   /**
    * Prevent frozen players from interacting with blocks/items.
+   * ALLOW: Eating food (Issue #4b)
+   * BLOCK: All other interactions
    */
   @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
   public void onPlayerInteractWhileFrozen(org.bukkit.event.player.PlayerInteractEvent event) {
@@ -1119,11 +1160,21 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
 
     // Check if player is frozen by Dread Gaze (checks VICTIM's debuff metadata)
     if (player.hasMetadata(DREAD_GAZE_DEBUFF_KEY)) {
-      // Cancel all interactions (right-click actions)
-      if (event.getAction() == org.bukkit.event.block.Action.RIGHT_CLICK_AIR ||
-          event.getAction() == org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK ||
-          event.getAction() == org.bukkit.event.block.Action.LEFT_CLICK_AIR ||
-          event.getAction() == org.bukkit.event.block.Action.LEFT_CLICK_BLOCK) {
+      org.bukkit.event.block.Action action = event.getAction();
+      org.bukkit.inventory.ItemStack item = event.getItem();
+
+      // ALLOW: Eating food (right-click with food item) - Issue #4b
+      if (item != null && item.getType().isEdible() &&
+          (action == org.bukkit.event.block.Action.RIGHT_CLICK_AIR ||
+           action == org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK)) {
+        return; // Allow eating
+      }
+
+      // BLOCK: All other interactions
+      if (action == org.bukkit.event.block.Action.RIGHT_CLICK_AIR ||
+          action == org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK ||
+          action == org.bukkit.event.block.Action.LEFT_CLICK_AIR ||
+          action == org.bukkit.event.block.Action.LEFT_CLICK_BLOCK) {
         event.setCancelled(true);
         player.sendMessage(
           Component.text("⛶ You cannot interact while frozen by Dread Gaze!", NamedTextColor.DARK_PURPLE)
@@ -1156,6 +1207,7 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
     Long startTime = pdc.get(DEBUFF_START_PERSIST_KEY, PersistentDataType.LONG);
     String locationStr = pdc.get(FREEZE_LOCATION_PERSIST_KEY, PersistentDataType.STRING);
     Float saturation = pdc.get(SATURATION_PERSIST_KEY, PersistentDataType.FLOAT);
+    Integer foodLevel = pdc.get(FOOD_LEVEL_PERSIST_KEY, PersistentDataType.INTEGER);
 
     if (startTime == null) {
       return; // Invalid data, clear it
@@ -1171,6 +1223,7 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
       pdc.remove(DEBUFF_START_PERSIST_KEY);
       pdc.remove(FREEZE_LOCATION_PERSIST_KEY);
       pdc.remove(SATURATION_PERSIST_KEY);
+      pdc.remove(FOOD_LEVEL_PERSIST_KEY);
       return;
     }
 
@@ -1193,15 +1246,21 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
                        new org.bukkit.metadata.FixedMetadataValue(plugin, saturation));
     }
 
-    // Reapply potion effects
+    // Restore food level value (Issue #4a)
+    if (foodLevel != null) {
+      player.setMetadata(DREAD_GAZE_FOOD_LEVEL_KEY,
+                       new org.bukkit.metadata.FixedMetadataValue(plugin, foodLevel));
+      player.setFoodLevel(foodLevel);
+    }
+
+    // Reapply potion effects (SLOWNESS, MINING_FATIGUE, WEAKNESS - NO HUNGER)
     player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, (int) remainingMillis / 50,
                                            MAX_AMPLIFIER, false, true, true));
     player.addPotionEffect(new PotionEffect(PotionEffectType.MINING_FATIGUE, (int) remainingMillis / 50,
                                            MAX_AMPLIFIER, false, true, true));
     player.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, (int) remainingMillis / 50,
                                            MAX_AMPLIFIER, false, true, true));
-    player.addPotionEffect(new PotionEffect(PotionEffectType.HUNGER, (int) remainingMillis / 50,
-                                           MAX_AMPLIFIER, false, true, true));
+    // REMOVED: HUNGER effect - frozen targets should NOT drain hunger (Issue #4a)
 
     // Schedule cleanup for remaining duration
     new BukkitRunnable() {
@@ -1214,12 +1273,14 @@ public class CorruptedCoreFragment extends AbstractFragment implements Listener 
         player.removeMetadata(DREAD_GAZE_DEBUFF_START_KEY, plugin);
         player.removeMetadata(DREAD_GAZE_FREEZE_LOCATION_KEY, plugin);
         player.removeMetadata(DREAD_GAZE_SATURATION_KEY, plugin);
+        player.removeMetadata(DREAD_GAZE_FOOD_LEVEL_KEY, plugin);
 
         PersistentDataContainer pdc2 = player.getPersistentDataContainer();
         pdc2.remove(DEBUFF_PERSIST_KEY);
         pdc2.remove(DEBUFF_START_PERSIST_KEY);
         pdc2.remove(FREEZE_LOCATION_PERSIST_KEY);
         pdc2.remove(SATURATION_PERSIST_KEY);
+        pdc2.remove(FOOD_LEVEL_PERSIST_KEY);
       }
     }.runTaskLater(plugin, remainingMillis / 50L);
 

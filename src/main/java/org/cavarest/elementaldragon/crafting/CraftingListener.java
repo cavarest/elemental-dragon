@@ -113,7 +113,9 @@ public class CraftingListener implements Listener {
   /**
    * Validate Heavy Core in fragment crafting recipes.
    * Checks that the center ingredient is actually a vanilla Heavy Core.
-   * Also validates crafting quantity limits per the original specification.
+   * Also validates possession limit per fragment type (Issue #5).
+   *
+   * Default limits: 1 per elemental fragment type (can have all 4 types simultaneously)
    */
   @EventHandler(priority = EventPriority.HIGH)
   public void onPrepareItemCraft(PrepareItemCraftEvent event) {
@@ -140,19 +142,20 @@ public class CraftingListener implements Listener {
     }
     Player player = (Player) event.getView().getPlayer();
 
-    // Check if player has reached the crafting limit for this fragment type (ORIGINAL SPECIFICATION)
-    // Burning Fragment: 2 max, Agility Fragment: 2 max, Immortal Fragment: 2 max, Corrupted Core: 1 max
-    if (!craftedCountManager.canCraft(player, resultFragmentType)) {
-      event.getInventory().setResult(null);
-      int current = craftedCountManager.getCraftedCount(player, resultFragmentType);
-      int max = craftedCountManager.getMaxCraftableCount(resultFragmentType);
-      player.sendMessage(miniMessage.deserialize(
-        "<red>⚠ Crafting limit reached for " + resultFragmentType.getDisplayName() + "!</red>"
-      ));
-      player.sendMessage(miniMessage.deserialize(
-        "<gray>You have crafted " + current + "/" + max + " maximum.</gray>"
-      ));
-      return;
+    // Check possession limit (Issue #5: allow different types, limit same type)
+    // Since crafting adds to inventory, possession limit IS the craft limit
+    if (plugin.getPossessionLimitSubcommand() != null) {
+      if (!plugin.getPossessionLimitSubcommand().canCraft(player, resultFragmentType)) {
+        event.getInventory().setResult(null);
+        int currentCount = org.cavarest.elementaldragon.util.FragmentCounter.countFragments(player, resultFragmentType);
+        int limit = plugin.getPossessionLimitSubcommand().getLimit(resultFragmentType);
+        player.sendMessage(miniMessage.deserialize(
+          "<red>⚠ Possession limit reached!</red>\n" +
+          "<gray>You have " + currentCount + " " + resultFragmentType.getDisplayName() + " (limit: " + limit + ").</gray>\n" +
+          "<gray>Drop some before crafting more.</gray>"
+        ));
+        return;
+      }
     }
 
     // Validate vanilla Heavy Core for all fragments (including Corrupted Core now)

@@ -9,6 +9,7 @@ import org.cavarest.elementaldragon.command.subcommands.CooldownSubcommand;
 import org.cavarest.elementaldragon.command.subcommands.GiveSubcommand;
 import org.cavarest.elementaldragon.command.subcommands.GlobalCooldownSubcommand;
 import org.cavarest.elementaldragon.command.subcommands.InfoSubcommand;
+import org.cavarest.elementaldragon.command.subcommands.PossessionLimitSubcommand;
 import org.cavarest.elementaldragon.command.subcommands.SetGlobalCountdownSymbolSubcommand;
 import org.cavarest.elementaldragon.command.util.ElementValidator;
 import org.cavarest.elementaldragon.command.util.PlayerResolver;
@@ -47,6 +48,7 @@ public class ElementalDragonCommand implements CommandExecutor, TabCompleter {
     private final CooldownSubcommand cooldownSubcommand;
     private final GlobalCooldownSubcommand globalCooldownSubcommand;
     private final SetGlobalCountdownSymbolSubcommand setCountdownSymbolSubcommand;
+    private final PossessionLimitSubcommand possessionLimitSubcommand;
 
     /**
      * Creates a new ElementalDragonCommand.
@@ -84,6 +86,7 @@ public class ElementalDragonCommand implements CommandExecutor, TabCompleter {
             plugin
         );
         this.setCountdownSymbolSubcommand = new SetGlobalCountdownSymbolSubcommand(plugin);
+        this.possessionLimitSubcommand = plugin.getPossessionLimitSubcommand();
     }
 
     @Override
@@ -127,6 +130,12 @@ public class ElementalDragonCommand implements CommandExecutor, TabCompleter {
             case "setcountdownsym":
                 return setCountdownSymbolSubcommand.execute(sender, subArgs);
 
+            case "setpossessionlimit":
+                return possessionLimitSubcommand.executeSetPossessionLimit(sender, subArgs);
+
+            case "getpossessionlimit":
+                return possessionLimitSubcommand.executeGetPossessionLimit(sender, subArgs);
+
             case "help":
             default:
                 showHelp(sender);
@@ -146,7 +155,8 @@ public class ElementalDragonCommand implements CommandExecutor, TabCompleter {
             // First level: subcommand names
             completions.addAll(Arrays.asList(
                 "give", "info", "setcooldown", "clearcooldown", "getcooldown",
-                "setglobalcooldown", "getglobalcooldown", "setcountdownsym", "help"
+                "setglobalcooldown", "getglobalcooldown", "setcountdownsym",
+                "setpossessionlimit", "getpossessionlimit", "help"
             ));
             String partial = args[0].toLowerCase();
             completions.removeIf(c -> !c.toLowerCase().startsWith(partial));
@@ -179,6 +189,12 @@ public class ElementalDragonCommand implements CommandExecutor, TabCompleter {
 
                 case "setcountdownsym":
                     return setCountdownSymbolSubcommand.tabComplete(sender, subArgs);
+
+                case "setpossessionlimit":
+                    return possessionLimitSubcommand.tabCompleteSetPossessionLimit(sender, subArgs);
+
+                case "getpossessionlimit":
+                    return possessionLimitSubcommand.tabComplete(sender, subArgs);
             }
         }
 
@@ -214,6 +230,10 @@ public class ElementalDragonCommand implements CommandExecutor, TabCompleter {
             .append(Component.text(" - Get global cooldowns", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/ed setcountdownsym <style> [width]", NamedTextColor.YELLOW)
             .append(Component.text(" - Set countdown progress bar style", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/ed setpossessionlimit <element> <count>", NamedTextColor.YELLOW)
+            .append(Component.text(" - Set possession limit (0 = unlimited)", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/ed getpossessionlimit", NamedTextColor.YELLOW)
+            .append(Component.text(" - View all possession limits", NamedTextColor.GRAY)));
 
         sender.sendMessage(Component.text("", NamedTextColor.WHITE));
         sender.sendMessage(Component.text("Player Selectors: @p (you), @a (all), @s (self), or player name", NamedTextColor.DARK_GRAY));

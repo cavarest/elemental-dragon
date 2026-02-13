@@ -1,6 +1,7 @@
 package org.cavarest.elementaldragon.fragment;
 
 import org.cavarest.elementaldragon.ElementalDragon;
+import org.cavarest.elementaldragon.util.DamageUtil;
 import org.cavarest.elementaldragon.visual.ParticleFX;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -21,8 +22,6 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
-import org.bukkit.damage.DamageSource;
-import org.bukkit.damage.DamageType;
 
 import java.util.Arrays;
 import java.util.List;
@@ -315,11 +314,8 @@ public class AgilityFragment extends AbstractFragment implements Listener {
             continue;
           }
 
-          // Deal damage that ignores armor (Issue #28)
-          DamageSource damageSource = DamageSource.builder(DamageType.MAGIC)
-              .withDirectEntity(player)
-              .build();
-          target.damage(DRACONIC_SURGE_COLLISION_DAMAGE, damageSource);
+          // Deal TRUE damage that ignores ALL protection (Issue #28)
+          DamageUtil.dealTrueDamage(target, DRACONIC_SURGE_COLLISION_DAMAGE);
 
           // Mark as hit so we don't hit them again
           hitEntities.add(target.getUniqueId());

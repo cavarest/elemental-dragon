@@ -24,10 +24,11 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 /**
- * Tests for FragmentManager one-fragment limit enforcement.
- * Tests that players cannot equip a fragment when they have a different fragment in inventory.
+ * Tests for FragmentManager possession limit enforcement.
+ * Tests that players can possess all 4 fragment types simultaneously,
+ * but duplicates of the same type are limited by possession limit (default: 1).
  */
-@DisplayName("FragmentManager One-Fragment Limit Tests")
+@DisplayName("FragmentManager Possession Limit Tests")
 public class FragmentManagerOneFragmentLimitTest {
 
     @Mock
@@ -64,7 +65,7 @@ public class FragmentManagerOneFragmentLimitTest {
     }
 
     @Test
-    @DisplayName("Equipping fragment when player has different fragment in inventory should fail")
+    @DisplayName("Equipping different fragment type when player has different fragment in inventory should succeed (Issue #5)")
     public void testEquipFragmentWhenPlayerHasDifferentFragmentInInventory() {
         try (MockedStatic<ElementalItems> mockedElementalItems = mockStatic(ElementalItems.class)) {
             // Mock: Player has Burning Fragment in inventory
@@ -75,15 +76,25 @@ public class FragmentManagerOneFragmentLimitTest {
             mockedElementalItems.when(() -> ElementalItems.getFragmentType(nonFragmentItem))
                 .thenReturn(null);
 
-            // Mock: getAnyFragmentExcept returns Burning Fragment when checking inventory
-            // This simulates the inventory check that prevents having multiple fragments
-            mockedElementalItems.when(() -> ElementalItems.getAnyFragmentExcept(eq(player), eq(FragmentType.CORRUPTED)))
-                .thenReturn(FragmentType.BURNING);
+            // Mock: hasFragmentInInventory checks
+            mockedElementalItems.when(() -> ElementalItems.hasFragmentInInventory(eq(player), eq(FragmentType.CORRUPTED)))
+                .thenReturn(false);
+            mockedElementalItems.when(() -> ElementalItems.hasFragmentInInventory(eq(player), eq(FragmentType.BURNING)))
+                .thenReturn(true);
+
+            // Mock: getAnyFragmentExcept returns null (no other fragments)
+            // With Issue #5, different fragment types are allowed
+            mockedElementalItems.when(() -> ElementalItems.getAnyFragmentExcept(eq(player), any()))
+                .thenReturn(null);
 
             // Set up inventory to contain Burning Fragment
             ItemStack[] inventoryContents = new ItemStack[36];
             inventoryContents[0] = burningFragmentItem;
             when(playerInventory.getContents()).thenReturn(inventoryContents);
+
+            // Mock possession limit to allow crafting (default limit = 1)
+            // Since player has 0 Corrupted Core, should allow
+            when(plugin.getPossessionLimitSubcommand()).thenReturn(null); // No subcommand = no check
 
             // Give admin permission to auto-give items
             when(player.hasPermission("elementaldragon.fragment.admin")).thenReturn(true);
@@ -91,13 +102,13 @@ public class FragmentManagerOneFragmentLimitTest {
             // Try to equip Corrupted Core while having Burning Fragment in inventory
             boolean result = fragmentManager.equipFragment(player, FragmentType.CORRUPTED);
 
-            // Should fail because player already has Burning Fragment in inventory
-            assertFalse(result, "Should not equip Corrupted Core when player has Burning Fragment in inventory");
+            // Should succeed because Issue #5 allows different fragment types
+            assertTrue(result, "Should equip Corrupted Core even when player has Burning Fragment (different types allowed)");
         }
     }
 
     @Test
-    @DisplayName("Equipping fragment when player has same fragment type in inventory should succeed")
+    @DisplayName("Equipping fragment when player has same fragment type in inventory should succeed (already at possession limit)")
     public void testEquipFragmentWhenPlayerHasSameFragmentTypeInInventory() {
         try (MockedStatic<ElementalItems> mockedElementalItems = mockStatic(ElementalItems.class)) {
             // Mock: Player has Corrupted Core in inventory

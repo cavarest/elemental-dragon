@@ -113,7 +113,7 @@ public class FragmentManager implements Listener {
 
   /**
    * Internal equip implementation.
-   * Requires players to drop their existing fragment before equipping a new one.
+   * Allows different fragment types, limits same type based on possession limit (Issue #5).
    */
   private boolean equipFragmentInternal(Player player, FragmentType fragmentType) {
     if (player == null || fragmentType == null) {
@@ -144,7 +144,24 @@ public class FragmentManager implements Listener {
       }
     }
 
-    // ONE-FRAGMENT LIMIT: Player must drop their existing fragment before equipping a new one
+    // Check possession limit (allow different fragment types, limit same type)
+    // Issue #5: Players can possess all 4 fragment types simultaneously
+    // Each fragment type has its own possession limit (default: 1)
+    if (plugin.getPossessionLimitSubcommand() != null) {
+      if (!plugin.getPossessionLimitSubcommand().canEquip(player, fragmentType)) {
+        // Possession limit reached for this fragment type
+        int currentCount = org.cavarest.elementaldragon.util.FragmentCounter.countFragments(player, fragmentType);
+        int limit = plugin.getPossessionLimitSubcommand().getLimit(fragmentType);
+        player.sendMessage(miniMessage.deserialize(
+          "<red>⚠ Possession limit reached!</red>\n" +
+          "<gray>You have " + currentCount + " " + fragmentType.getDisplayName() + " (limit: " + limit + ").</gray>\n" +
+          "<gray>Drop some before equipping more.</gray>"
+        ));
+        return false;
+      }
+    }
+
+    // ONE-FRAGMENT EQUIP LIMIT: Only one fragment can be equipped at a time
     FragmentType existingFragment = equippedFragments.get(playerUuid);
 
     // Check if same fragment is already equipped - allow re-equipping (no-op)
@@ -157,22 +174,10 @@ public class FragmentManager implements Listener {
     // Different fragment is equipped - prevent swapping
     if (existingFragment != null) {
       player.sendMessage(miniMessage.deserialize(
-        "<red>⚠ You can only carry one fragment at a time!</red>\n" +
-        "<gray>Drop your <white>" + existingFragment.getDisplayName() + "</white> before equipping the " +
+        "<red>⚠ You can only equip one fragment at a time!</red>\n" +
+        "<gray>Unequip your <white>" + existingFragment.getDisplayName() + "</white> before equipping the " +
         "<white>" + fragmentType.getDisplayName() + "</white>.</gray>\n" +
-        "<gray>Use <yellow>/withdrawability</yellow> to remove your current fragment first.</gray>"
-      ));
-      return false;
-    }
-
-    // CRITICAL: Also check if player has a DIFFERENT fragment in their inventory
-    // This prevents having multiple fragments even if none are equipped
-    FragmentType inventoryFragment = hasAnyFragmentInInventory(player, fragmentType);
-    if (inventoryFragment != null) {
-      player.sendMessage(miniMessage.deserialize(
-        "<red>⚠ You can only carry one fragment at a time!</red>\n" +
-        "<gray>You already have the <white>" + inventoryFragment.getDisplayName() + "</white> in your inventory.</gray>\n" +
-        "<gray>Drop it before equipping the <white>" + fragmentType.getDisplayName() + "</white>.</gray>"
+        "<gray>Use <yellow>/withdrawability</yellow> to unequip your current fragment first.</gray>"
       ));
       return false;
     }

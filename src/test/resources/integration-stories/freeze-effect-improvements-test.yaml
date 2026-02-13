@@ -1,0 +1,157 @@
+# Freeze Effect Improvements Test - Issue #32 Issue 4a & 4b
+# Tests that frozen entities:
+# - Do NOT drain hunger (Issue 4a)
+# - CAN eat food (Issue 4b)
+
+name: "Freeze Effect Improvements Test"
+description: "Test frozen entities can eat and don't lose hunger"
+
+setup:
+  - action: "connect_player"
+    player: "fragment_tester"
+    name: "Connect test player"
+
+  - action: "make_operator"
+    player: "fragment_tester"
+    name: "Make test player operator"
+
+  # Give Corrupted Core to wielder
+  - action: "execute_rcon_command"
+    command: "fragment give fragment_tester corrupt"
+    player: "fragment_tester"
+    name: "Give Corrupted Core to wielder"
+
+  - action: "wait"
+    duration: 1000
+    name: "Wait for fragment"
+
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/fragment equip corrupt"
+    name: "Equip Corrupted Core"
+
+  - action: "wait"
+    duration: 2000
+    name: "Wait for fragment equip"
+
+  # Connect a second player as the freeze victim
+  - action: "connect_player"
+    player: "freeze_victim"
+    name: "Connect freeze victim player"
+
+  - action: "make_operator"
+    player: "fragment_tester"
+    name: "Make wielder operator"
+
+  - action: "execute_rcon_command"
+    command: "effect give freeze_victim saturation 0 1"
+    player: "fragment_tester"
+    name: "Clear victim's saturation"
+
+  # Set initial food level for victim
+  - action: "execute_rcon_command"
+    command: "food set 15 freeze_victim"
+    player: "fragment_tester"
+    name: "Set victim food level to 15"
+
+  - action: "execute_rcon_command"
+    command: "effect give freeze_victim saturation 20 1"
+    player: "fragment_tester"
+    name: "Set victim saturation to 20"
+
+  - action: "wait"
+    duration: 1000
+    name: "Wait for effects"
+
+steps:
+  # Part 1: Test Dread Gaze freeze (Issue 4a - no hunger drain)
+  # Wielder readies Dread Gaze
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/corrupt 2"
+    name: "Ready Life Devourer (to access Dread Gaze)"
+
+  - action: "wait"
+    duration: 500
+    name: "Wait for ready"
+
+  # Wielder switches to Dread Gaze
+  - action: "execute_player_command"
+    player: "fragment_tester"
+    command: "/corrupt 1"
+    name: "Switch to Dread Gaze"
+
+  - action: "wait"
+    duration: 2000
+    name: "Wait for Dread Gaze activation"
+
+  # Victim should now be frozen
+  # Verify victim is frozen (has SLOWNESS 255 effect)
+  - action: "assertion"
+    assertion: "entity_effect"
+    entity: "freeze_victim"
+    effect: "SLOWNESS"
+    condition: "GREATER_THAN"
+    value: 0
+    name: "Verify victim has SLOWNESS effect (is frozen)"
+
+  # Record initial food level of frozen victim
+  - action: "record_food_level"
+    player: "freeze_victim"
+    name: "Record frozen victim's food level"
+
+  # Wait 10 seconds - normally sprinting/regenerating would drain hunger
+  # But frozen entity should NOT drain hunger (Issue 4a)
+  - action: "wait"
+    duration: 10000
+    name: "Wait 10 seconds"
+
+  # Verify food level did NOT decrease (hunger was frozen)
+  - assertion: "food_level"
+    player: "freeze_victim"
+    condition: "EQUALS"
+    value: 15
+    name: "Verify frozen victim's food level did NOT decrease (Issue 4a fix)"
+
+  # Part 2: Test that frozen entities CAN eat (Issue 4b)
+  # Give victim a cooked beef
+  - action: "execute_rcon_command"
+    command: "give freeze_victim cooked_beef 64"
+    player: "fragment_tester"
+    name: "Give frozen victim cooked beef"
+
+  - action: "wait"
+    duration: 500
+    name: "Wait for item"
+
+  # Victim should be able to eat even while frozen
+  - action: "execute_player_command"
+    player: "freeze_victim"
+    command: "/consume"
+    name: "Attempt to eat while frozen"
+
+  - action: "wait"
+    duration: 2000
+    name: "Wait for eating"
+
+  # Verify eating succeeded - food level should increase
+  - assertion: "food_level"
+    player: "freeze_victim"
+    condition: "GREATER_THAN"
+    value: 15
+    name: "Verify frozen victim could eat and food level increased (Issue 4b fix)"
+
+  # Verify frozen entity still has SLOWNESS (is still frozen)
+  - action: "assertion"
+    assertion: "entity_effect"
+    entity: "freeze_victim"
+    effect: "SLOWNESS"
+    condition: "GREATER_THAN"
+    value: 0
+    name: "Verify victim is still frozen after eating"
+
+  # Cleanup
+  - action: "execute_rcon_command"
+    command: "effect clear freeze_victim"
+    player: "fragment_tester"
+    name: "Clean up victim effects"

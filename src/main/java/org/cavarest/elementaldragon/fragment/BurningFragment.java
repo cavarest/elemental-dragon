@@ -2,6 +2,7 @@ package org.cavarest.elementaldragon.fragment;
 
 import org.cavarest.elementaldragon.ElementalDragon;
 import org.cavarest.elementaldragon.ability.EntityTargeter;
+import org.cavarest.elementaldragon.util.DamageUtil;
 import org.cavarest.elementaldragon.visual.ParticleFX;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -18,8 +19,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
-import org.bukkit.damage.DamageSource;
-import org.bukkit.damage.DamageType;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -417,12 +416,8 @@ public class BurningFragment extends AbstractFragment implements Listener {
           // Apply fire ticks (visual effect)
           target.setFireTicks(20); // 1 second of fire (20 ticks)
 
-          // Apply damage directly using modern API (Paper 1.21+)
-          // DamageSource.builder() with DamageType.MAGIC for ability damage
-          DamageSource damageSource = DamageSource.builder(DamageType.MAGIC)
-              .withDirectEntity(player)
-              .build();
-          target.damage(INFERNAL_DOMINION_DAMAGE_PER_TICK, damageSource);
+          // Apply TRUE damage (ignores armor, potions, enchantments)
+          DamageUtil.dealTrueDamage(target, INFERNAL_DOMINION_DAMAGE_PER_TICK);
 
           // Visual feedback for affected entity
           target.getWorld().spawnParticle(
@@ -623,11 +618,8 @@ public class BurningFragment extends AbstractFragment implements Listener {
       }
       Player shooter = (Player) fireball.getShooter();
 
-      // Apply damage directly using modern API (Paper 1.21+)
-      DamageSource damageSource = DamageSource.builder(DamageType.MAGIC)
-          .withDirectEntity(shooter)
-          .build();
-      target.damage(customDamage, damageSource);
+      // Apply TRUE damage (ignores armor, potions, enchantments)
+      DamageUtil.dealTrueDamage(target, customDamage);
 
       // Apply fire ticks
       target.setFireTicks(40); // 2 seconds of fire
@@ -686,12 +678,8 @@ public class BurningFragment extends AbstractFragment implements Listener {
         continue;
       }
 
-      // Apply damage directly using modern API (Paper 1.21+)
-      Entity damager = shooter != null ? shooter : target;
-      DamageSource damageSource = DamageSource.builder(DamageType.MAGIC)
-          .withDirectEntity(damager)
-          .build();
-      target.damage(damage, damageSource);
+      // Apply TRUE damage (ignores armor, potions, enchantments)
+      DamageUtil.dealTrueDamage(target, damage);
 
       // Apply fire ticks
       target.setFireTicks(40); // 2 seconds of fire
